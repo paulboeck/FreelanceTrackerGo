@@ -1,0 +1,22 @@
+{{define "title"}}Home{{end}}
+{{define "main"}}
+    <h2>Latest Clients</h2>
+    {{if .Clients}}
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Created</th>
+            </tr>
+            {{range .Clients}}
+                <tr>
+                    <td>{{.ID}}</td>
+                    <td><a href="client/view/{{.ID}}">{{.Name}}</a></td>
+                    <td>{{humanDate .Created}}</td>
+                </tr>
+            {{end}}
+        </table>
+    {{else}}
+        <p>There's nothing to see here... yet!</p>
+    {{end}}
+{{end}}

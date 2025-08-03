@@ -1,0 +1,18 @@
+{{define "title"}}Client - {{.Client.Name}}{{end}}
+
+{{define "main"}}
+    <div class="client">
+        <div class="metadata">
+            <strong>{{.Client.Name}}</strong>
+            <span>#{{.Client.ID}}</span>
+        </div>
+        <div>
+            Client Details
+        </div>
+        <div class="metadata">
+            <!-- Two ways of using template functions pipelining vs. not -->
+            <time>{{.Client.Updated | humanDate | printf "Updated: %s"}}</time>
+            <time>Created: {{humanDate .Client.Created}}</time>
+        </div>
+    </div>
+{{end}}

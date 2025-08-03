@@ -1,0 +1,16 @@
+{{define "title"}}Create a New Client{{end}}
+
+{{define "main"}}
+<form action='/client/create' method='POST'>
+    <div>
+        <label>Name:</label>
+        {{with .Form.FieldErrors.name}}
+            <label class="error">{{.}}</label>
+        {{end}}
+        <input type='text' name='name' value="{{.Form.Name}}">
+    </div>
+    <div>
+        <input type='submit' value='Create client'>
+    </div>
+</form>
+{{end}}
