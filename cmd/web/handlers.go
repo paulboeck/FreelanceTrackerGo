@@ -3,10 +3,11 @@ package main
 import (
 	"errors"
 	"fmt"
-	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
-	"github.com/paulboeck/FreelanceTrackerGo/internal/validator"
 	"net/http"
 	"strconv"
+
+	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
+	"github.com/paulboeck/FreelanceTrackerGo/internal/validator"
 )
 
 const NAME_LENGTH = 255
@@ -16,6 +17,7 @@ type clientCreateForm struct {
 	validator.Validator `form:"-"`
 }
 
+// home handles http requests to the root URl of the project
 func (app *application) home(res http.ResponseWriter, req *http.Request) {
 	clients, err := app.clients.GetAll()
 	if err != nil {
@@ -29,6 +31,8 @@ func (app *application) home(res http.ResponseWriter, req *http.Request) {
 	app.render(res, req, http.StatusOK, "home.html", data)
 }
 
+// clientView handles a GET request to the for a specific client ID,
+// queries the database for that client, and passes the result to be rendered
 func (app *application) clientView(res http.ResponseWriter, req *http.Request) {
 	id, err := strconv.Atoi(req.PathValue("id"))
 	if err != nil || id < 0 {
@@ -52,20 +56,22 @@ func (app *application) clientView(res http.ResponseWriter, req *http.Request) {
 	app.render(res, req, http.StatusOK, "client.html", data)
 }
 
+// clientCreate handles a GET request which returns an empty client detail form
 func (app *application) clientCreate(res http.ResponseWriter, req *http.Request) {
 	data := app.newTemplateData(req)
 	data.Form = clientCreateForm{}
 	app.render(res, req, http.StatusOK, "client_create.html", data)
 }
 
+// clientCreatePost handles a POST request with client form data which is then
+// validated and used to insert a new client into the database
 func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Request) {
-	err := req.ParseForm()
+	var form clientCreateForm
+	err := app.decodePostForm(req, &form)
 	if err != nil {
 		app.clientError(res, http.StatusBadRequest)
 		return
 	}
-
-	var form clientCreateForm
 
 	err = app.formDecoder.Decode(&form, req.PostForm)
 	if err != nil {
@@ -74,7 +80,7 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 	}
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
-	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters"))
+	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
 
 	if !form.Valid() {
 		data := app.newTemplateData(req)
