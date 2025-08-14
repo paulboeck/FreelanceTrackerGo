@@ -1,0 +1,316 @@
+package main
+
+import (
+	"fmt"
+	"html/template"
+	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"strconv"
+	"strings"
+	"testing"
+
+	"github.com/go-playground/form/v4"
+	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
+	"github.com/paulboeck/FreelanceTrackerGo/internal/testutil"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// createTestApp creates an application instance for testing
+func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
+	testDB := testutil.SetupTestMySQL(t)
+	
+	// Create a minimal template cache for testing with base template
+	templateCache := map[string]*template.Template{
+		"home.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<h1>Clients</h1>
+				{{range .Clients}}
+					<div>{{.Name}}</div>
+				{{end}}
+			</body></html>
+			{{end}}
+		`)),
+		"client.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<h1>{{.Client.Name}}</h1>
+				<p>ID: {{.Client.ID}}</p>
+			</body></html>
+			{{end}}
+		`)),
+		"client_create.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<form method="POST">
+					<input type="text" name="name" value="{{.Form.Name}}">
+					{{if .Form.FieldErrors.name}}<span>{{.Form.FieldErrors.name}}</span>{{end}}
+					<button type="submit">Create</button>
+				</form>
+			</body></html>
+			{{end}}
+		`)),
+	}
+	
+	app := &application{
+		logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		clients:       &models.ClientModel{DB: testDB.DB},
+		templateCache: templateCache,
+		formDecoder:   form.NewDecoder(),
+	}
+	
+	return app, testDB
+}
+
+func TestHomeHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("home with no clients", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rr := httptest.NewRecorder()
+		
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		assert.Contains(t, rr.Body.String(), "<h1>Clients</h1>")
+	})
+
+	t.Run("home with clients", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test clients
+		testDB.InsertTestClient(t, "Client A")
+		testDB.InsertTestClient(t, "Client B")
+		
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rr := httptest.NewRecorder()
+		
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Client A")
+		assert.Contains(t, body, "Client B")
+	})
+}
+
+func TestClientViewHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("view existing client", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert a test client
+		id := testDB.InsertTestClient(t, "Test Client")
+		
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/view/%d", id), nil)
+		req.SetPathValue("id", strconv.Itoa(id))
+		rr := httptest.NewRecorder()
+		
+		app.clientView(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Test Client")
+		assert.Contains(t, body, fmt.Sprintf("ID: %d", id))
+	})
+
+	t.Run("view non-existent client", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		req := httptest.NewRequest(http.MethodGet, "/client/view/999", nil)
+		req.SetPathValue("id", "999")
+		rr := httptest.NewRecorder()
+		
+		app.clientView(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("view with invalid ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/client/view/invalid", nil)
+		req.SetPathValue("id", "invalid")
+		rr := httptest.NewRecorder()
+		
+		app.clientView(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("view with negative ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/client/view/-1", nil)
+		req.SetPathValue("id", "-1")
+		rr := httptest.NewRecorder()
+		
+		app.clientView(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+}
+
+func TestClientCreateHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("show create form", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/client/create", nil)
+		rr := httptest.NewRecorder()
+		
+		app.clientCreate(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "<form method=\"POST\">")
+		assert.Contains(t, body, "name=\"name\"")
+	})
+}
+
+func TestClientCreatePostHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("successful client creation", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		form := url.Values{}
+		form.Add("name", "New Test Client")
+		
+		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientCreatePost(rr, req)
+		
+		// Should redirect to the new client view
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		assert.Contains(t, location, "/client/view/")
+		
+		// Verify the client was actually created in the database
+		clients, err := app.clients.GetAll()
+		require.NoError(t, err)
+		require.Len(t, clients, 1)
+		assert.Equal(t, "New Test Client", clients[0].Name)
+	})
+
+	t.Run("validation error - empty name", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		form := url.Values{}
+		form.Add("name", "")
+		
+		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientCreatePost(rr, req)
+		
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Name is required")
+		
+		// Verify no client was created
+		clients, err := app.clients.GetAll()
+		require.NoError(t, err)
+		assert.Empty(t, clients)
+	})
+
+	t.Run("validation error - name too long", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Create a name longer than 255 characters
+		longName := strings.Repeat("a", 256)
+		
+		form := url.Values{}
+		form.Add("name", longName)
+		
+		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientCreatePost(rr, req)
+		
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Name must be shorter than 255 characters")
+		
+		// Verify no client was created
+		clients, err := app.clients.GetAll()
+		require.NoError(t, err)
+		assert.Empty(t, clients)
+	})
+
+	t.Run("malformed form data", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader("invalid-form-data"))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientCreatePost(rr, req)
+		
+		// The form parsing doesn't fail on "invalid-form-data", but validation does
+		// since no proper "name" field is provided, leading to validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+	})
+}
+
+func TestHandlersIntegration(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("full workflow - create and view client", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// 1. Create a client via POST
+		form := url.Values{}
+		form.Add("name", "Integration Test Client")
+		
+		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientCreatePost(rr, req)
+		
+		// Extract the client ID from the redirect URL
+		require.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		require.Contains(t, location, "/client/view/")
+		
+		// Extract ID from URL
+		parts := strings.Split(location, "/")
+		idStr := parts[len(parts)-1]
+		id, err := strconv.Atoi(idStr)
+		require.NoError(t, err)
+		
+		// 2. View the created client
+		req = httptest.NewRequest(http.MethodGet, location, nil)
+		req.SetPathValue("id", idStr)
+		rr = httptest.NewRecorder()
+		
+		app.clientView(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Integration Test Client")
+		assert.Contains(t, body, fmt.Sprintf("ID: %d", id))
+		
+		// 3. Verify it appears on home page
+		req = httptest.NewRequest(http.MethodGet, "/", nil)
+		rr = httptest.NewRecorder()
+		
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body = rr.Body.String()
+		assert.Contains(t, body, "Integration Test Client")
+	})
+}

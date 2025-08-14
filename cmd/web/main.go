@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"github.com/go-playground/form/v4"
 	"html/template"
@@ -9,40 +8,84 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/paulboeck/FreelanceTrackerGo/internal/database"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 type application struct {
 	logger        *slog.Logger
-	clients       *models.ClientModel
+	clients       models.ClientModelInterface
 	templateCache map[string]*template.Template
 	formDecoder   *form.Decoder
 }
 
 func main() {
 	addr := flag.String("addr", ":8080", "http service address")
-	// Note: we need parseTime=true so the MySQL driver converts TIME and DATE fields correctly to time.Time
-	dsn := flag.String("dsn", "root:root@/freelance_tracker?parseTime=true", "MySQL data source name")
+	
+	// Determine database type from environment or default to SQLite
+	dbType := database.GetDatabaseTypeFromEnv()
+	defaultDSN := database.GetDefaultDSN(dbType)
+	
+	var dsnDescription string
+	switch dbType {
+	case database.DatabaseTypeMySQL:
+		dsnDescription = "MySQL data source name"
+	case database.DatabaseTypeSQLite:
+		dsnDescription = "SQLite database file path"
+	}
+	
+	dsn := flag.String("dsn", defaultDSN, dsnDescription)
 	flag.Parse()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	db, err := openDB(*dsn)
+	// Open database with type-aware configuration
+	dbConfig := database.Config{
+		Type: dbType,
+		DSN:  *dsn,
+	}
+	
+	db, err := database.OpenDB(dbConfig)
 	if err != nil {
-		logger.Error(err.Error())
+		logger.Error("Failed to open database", "error", err.Error(), "type", dbType)
+		os.Exit(1)
+	}
+	defer db.Close()
+
+	// Run migrations
+	if err := database.RunMigrations(db, dbType, "./migrations"); err != nil {
+		logger.Error("Failed to run migrations", "error", err.Error())
+		os.Exit(1)
+	}
+	
+	logger.Info("Database initialized", "type", dbType, "dsn", *dsn)
+
+	templateCache, err := newTemplateCache()
+	if err != nil {
+		logger.Error("Failed to create template cache", "error", err.Error())
+		os.Exit(1)
+	}
+	formDecoder := form.NewDecoder()
+
+	// Choose client implementation based on database type
+	var clientModel models.ClientModelInterface
+	switch dbType {
+	case database.DatabaseTypeSQLite:
+		// Use the new SQLC-generated adapter for SQLite
+		clientModel = models.NewClientAdapter(db)
+		logger.Info("Using SQLC-generated client adapter")
+	case database.DatabaseTypeMySQL:
+		// Use the original implementation for MySQL (for now)
+		clientModel = &models.ClientModel{DB: db}
+		logger.Info("Using original client model")
+	default:
+		logger.Error("Unsupported database type", "type", dbType)
 		os.Exit(1)
 	}
 
-	defer db.Close()
-
-	templateCache, err := newTemplateCache()
-	formDecoder := form.NewDecoder()
-
 	app := &application{
 		logger:        logger,
-		clients:       &models.ClientModel{DB: db},
+		clients:       clientModel,
 		templateCache: templateCache,
 		formDecoder:   formDecoder,
 	}
@@ -56,17 +99,3 @@ func main() {
 	}
 }
 
-func openDB(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return nil, err
-	}
-
-	err = db.Ping()
-	if err != nil {
-		db.Close()
-		return nil, err
-	}
-
-	return db, nil
-}
