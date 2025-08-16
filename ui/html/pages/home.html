@@ -15,10 +15,18 @@
                     <td><a href="client/view/{{.ID}}">{{.Name}}</a></td>
                     <td>{{humanDate .Created}}</td>
                     <td>
-                        <a href="/client/update/{{.ID}}">Edit</a>
-                        <form method="POST" action="/client/delete/{{.ID}}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this client?');">
-                            <button type="submit">Delete</button>
-                        </form>
+                        <div class="action-buttons">
+                            <a href="/client/update/{{.ID}}" class="btn-icon btn-edit" title="Edit client">
+                                <i class="fas fa-edit"></i>
+                                ✏️
+                            </a>
+                            <form method="POST" action="/client/delete/{{.ID}}" onsubmit="return confirm('Are you sure you want to delete this client?');">
+                                <button type="submit" class="btn-icon btn-delete" title="Delete client">
+                                    <i class="fas fa-trash"></i>
+                                    🗑️
+                                </button>
+                            </form>
+                        </div>
                     </td>
                 </tr>
             {{end}}

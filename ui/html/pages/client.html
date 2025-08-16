@@ -9,11 +9,19 @@
         <div>
             Client Details
         </div>
-        <div>
-            <a href="/client/update/{{.Client.ID}}">Edit</a>
-            <form method="POST" action="/client/delete/{{.Client.ID}}" style="display: inline;" onsubmit="return confirm('Are you sure you want to delete this client?');">
-                <button type="submit">Delete</button>
-            </form>
+        <div style="padding: 1rem; border-top: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+            <div class="action-buttons" style="justify-content: flex-start; gap: 1rem;">
+                <a href="/client/update/{{.Client.ID}}" class="btn-icon btn-edit" title="Edit client">
+                    <i class="fas fa-edit"></i>
+                    ✏️
+                </a>
+                <form method="POST" action="/client/delete/{{.Client.ID}}" onsubmit="return confirm('Are you sure you want to delete this client?');">
+                    <button type="submit" class="btn-icon btn-delete" title="Delete client">
+                        <i class="fas fa-trash"></i>
+                        🗑️
+                    </button>
+                </form>
+            </div>
         </div>
         <div class="metadata">
             <!-- Two ways of using template functions pipelining vs. not -->
