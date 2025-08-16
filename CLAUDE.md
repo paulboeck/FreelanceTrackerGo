@@ -29,19 +29,12 @@ go run ./cmd/web
 
 # Run with SQLite on custom port and database file
 go run ./cmd/web -addr=":8081" -dsn="./my_database.db"
-
-# Run with MySQL (set environment variable)
-DATABASE_TYPE=mysql go run ./cmd/web -dsn="root:root@/freelance_tracker?parseTime=true"
 ```
 
 ### Database Migrations
 ```bash
 # Migrations run automatically on startup, but you can also run manually:
-# For SQLite
 goose -dir migrations sqlite3 ./freelance_tracker.db up
-
-# For MySQL  
-goose -dir migrations mysql "root:root@/freelance_tracker?parseTime=true" up
 ```
 
 ### Code Generation
@@ -64,11 +57,8 @@ go mod tidy
 
 ### Testing
 ```bash
-# Run all tests (uses MySQL via testcontainers)
+# Run all tests (uses SQLite)
 go test ./...
-
-# Test with MySQL explicitly
-DATABASE_TYPE=mysql go test ./...
 
 # Run with verbose output
 go test -v ./...
@@ -82,26 +72,17 @@ go test ./internal/models -v
 ### Application Structure
 The main application struct in `cmd/web/main.go` contains:
 - `logger`: Structured logging using slog
-- `clients`: Database model interface supporting multiple implementations
+- `clients`: SQLite database model using SQLC-generated code
 - `templateCache`: Pre-compiled HTML templates  
 - `formDecoder`: Form data decoder for POST requests
 
-### Database Layer (Dual Support)
-**SQLite (Default)**:
+### Database Layer
+**SQLite**:
 - Uses `modernc.org/sqlite` (CGO-free) driver
 - SQLC-generated type-safe queries in `internal/db/`
 - Automatic migrations via Goose
 - Single-file database for easy deployment
-
-**MySQL (Legacy Support)**:  
-- Uses `github.com/go-sql-driver/mysql` driver
-- Original hand-written models in `internal/models/`
-- DSN requires `parseTime=true` for proper time handling
-
-**Configuration**:
-- Database type determined by `DATABASE_TYPE` environment variable
-- Defaults to SQLite if not specified
-- Both implementations satisfy `ClientModelInterface`
+- Client model implementation in `internal/models/clients.go`
 
 ### Modern Code Generation
 **Migrations**: 
@@ -126,14 +107,16 @@ The main application struct in `cmd/web/main.go` contains:
 - `GET /client/view/{id}` - View specific client details  
 - `GET /client/create` - Show client creation form
 - `POST /client/create` - Process new client creation
+- `GET /client/update/{id}` - Show client update form
+- `POST /client/update/{id}` - Process client updates
 - `GET /static/` - Serve static files
 
 ### Database Schema
-The application supports both SQLite and MySQL with a `client` table containing:
-- `id` (integer primary key / auto increment)
-- `name` (text/varchar, max 255 chars)
-- `created_at` (datetime/timestamp)
-- `updated_at` (datetime/timestamp)
+The application uses SQLite with a `client` table containing:
+- `id` (integer primary key autoincrement)
+- `name` (text, max 255 chars)
+- `created_at` (datetime)
+- `updated_at` (datetime)
 
 ## Key Patterns
 
@@ -143,7 +126,7 @@ The application supports both SQLite and MySQL with a `client` table containing:
 - Stack trace logging for server errors
 
 ### Form Processing
-- Form structs with validation tags (see `clientCreateForm` in `cmd/web/handlers.go:15-18`)
+- Form structs with validation tags (see `clientForm` in `cmd/web/handlers.go` - reused for create and update)
 - Server-side validation using the custom validator package
 - Form data persisted on validation errors for better UX
 
@@ -154,25 +137,25 @@ The application supports both SQLite and MySQL with a `client` table containing:
 
 ## Migration History
 
-This application was successfully migrated from MySQL-only to dual MySQL/SQLite support:
+This application was migrated from MySQL to SQLite-only for simplified deployment:
 
 **What Changed**:
-- Added SQLite support with modernc.org/sqlite driver (CGO-free)
+- Replaced MySQL with SQLite using modernc.org/sqlite driver (CGO-free)
 - Implemented Goose migration framework for database versioning
 - Added SQLC for type-safe SQL code generation
-- Created adapter pattern for gradual migration between implementations
-- Established comprehensive integration test suite using testcontainers
+- Removed dual database support for simplicity
+- Updated test suite to use in-memory SQLite databases
 
 **Current State**:
-- ✅ SQLite: Default database using SQLC-generated type-safe code
-- ✅ MySQL: Legacy support using original hand-written models  
-- ✅ Full test coverage for both implementations
+- ✅ SQLite: Single database solution using SQLC-generated type-safe code
+- ✅ Full test coverage with fast SQLite tests
 - ✅ Automatic migrations on startup
-- ✅ Zero-downtime deployment capability
+- ✅ Zero-dependency deployment (no external database required)
+- ✅ Client CRUD operations (Create, Read, Update)
 
 **Benefits Achieved**:
-- **Simplified Deployment**: No external database required for new installations
+- **Simplified Deployment**: No external database required
 - **Type Safety**: SQLC eliminates SQL runtime errors
-- **Maintainability**: Structured migrations and code generation
-- **Testing**: Isolated tests with containerized databases
-- **Flexibility**: Easy switching between database types
+- **Maintainability**: Single database implementation to maintain
+- **Fast Testing**: In-memory SQLite tests run quickly
+- **Easy Distribution**: Single binary + database file deployment

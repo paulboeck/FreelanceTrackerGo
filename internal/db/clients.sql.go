@@ -10,17 +10,30 @@ import (
 	"time"
 )
 
+const deleteClient = `-- name: DeleteClient :exec
+UPDATE client 
+SET deleted_at = CURRENT_TIMESTAMP 
+WHERE id = ? AND deleted_at IS NULL
+`
+
+func (q *Queries) DeleteClient(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, deleteClient, id)
+	return err
+}
+
 const getAllClients = `-- name: GetAllClients :many
-SELECT id, name, updated_at, created_at 
+SELECT id, name, updated_at, created_at, deleted_at 
 FROM client 
+WHERE deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
 type GetAllClientsRow struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	UpdatedAt time.Time `json:"updated_at"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int64       `json:"id"`
+	Name      string      `json:"name"`
+	UpdatedAt time.Time   `json:"updated_at"`
+	CreatedAt time.Time   `json:"created_at"`
+	DeletedAt interface{} `json:"deleted_at"`
 }
 
 func (q *Queries) GetAllClients(ctx context.Context) ([]GetAllClientsRow, error) {
@@ -37,6 +50,7 @@ func (q *Queries) GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 			&i.Name,
 			&i.UpdatedAt,
 			&i.CreatedAt,
+			&i.DeletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -52,16 +66,17 @@ func (q *Queries) GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 }
 
 const getClient = `-- name: GetClient :one
-SELECT id, name, updated_at, created_at 
+SELECT id, name, updated_at, created_at, deleted_at 
 FROM client 
-WHERE id = ?
+WHERE id = ? AND deleted_at IS NULL
 `
 
 type GetClientRow struct {
-	ID        int64     `json:"id"`
-	Name      string    `json:"name"`
-	UpdatedAt time.Time `json:"updated_at"`
-	CreatedAt time.Time `json:"created_at"`
+	ID        int64       `json:"id"`
+	Name      string      `json:"name"`
+	UpdatedAt time.Time   `json:"updated_at"`
+	CreatedAt time.Time   `json:"created_at"`
+	DeletedAt interface{} `json:"deleted_at"`
 }
 
 func (q *Queries) GetClient(ctx context.Context, id int64) (GetClientRow, error) {
@@ -72,19 +87,36 @@ func (q *Queries) GetClient(ctx context.Context, id int64) (GetClientRow, error)
 		&i.Name,
 		&i.UpdatedAt,
 		&i.CreatedAt,
+		&i.DeletedAt,
 	)
 	return i, err
 }
 
-const insertClient = `-- name: InsertClient :one
+const insertClient = `-- name: InsertClient :execlastid
 INSERT INTO client (name) 
 VALUES (?)
-RETURNING id
 `
 
 func (q *Queries) InsertClient(ctx context.Context, name string) (int64, error) {
-	row := q.db.QueryRowContext(ctx, insertClient, name)
-	var id int64
-	err := row.Scan(&id)
-	return id, err
+	result, err := q.db.ExecContext(ctx, insertClient, name)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+const updateClient = `-- name: UpdateClient :exec
+UPDATE client 
+SET name = ?, updated_at = CURRENT_TIMESTAMP 
+WHERE id = ? AND deleted_at IS NULL
+`
+
+type UpdateClientParams struct {
+	Name string `json:"name"`
+	ID   int64  `json:"id"`
+}
+
+func (q *Queries) UpdateClient(ctx context.Context, arg UpdateClientParams) error {
+	_, err := q.db.ExecContext(ctx, updateClient, arg.Name, arg.ID)
+	return err
 }

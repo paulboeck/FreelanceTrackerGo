@@ -1,7 +1,9 @@
-{{define "title"}}Create a New Client{{end}}
+{{define "title"}}
+{{if .Client}}Update Client{{else}}Create a New Client{{end}}
+{{end}}
 
 {{define "main"}}
-<form action='/client/create' method='POST'>
+<form action='{{if .Client}}/client/update/{{.Client.ID}}{{else}}/client/create{{end}}' method='POST'>
     <div>
         <label>Name:</label>
         {{with .Form.FieldErrors.name}}
@@ -10,7 +12,7 @@
         <input type='text' name='name' value="{{.Form.Name}}">
     </div>
     <div>
-        <input type='submit' value='Create client'>
+        <input type='submit' value='{{if .Client}}Update client{{else}}Create client{{end}}'>
     </div>
 </form>
 {{end}}

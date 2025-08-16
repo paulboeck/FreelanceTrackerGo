@@ -9,7 +9,7 @@ import (
 
 type templateData struct {
 	CurrentYear int
-	Client      models.Client
+	Client      *models.Client
 	Clients     []models.Client
 	Form        any
 }

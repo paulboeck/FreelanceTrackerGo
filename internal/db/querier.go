@@ -9,9 +9,11 @@ import (
 )
 
 type Querier interface {
+	DeleteClient(ctx context.Context, id int64) error
 	GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 	GetClient(ctx context.Context, id int64) (GetClientRow, error)
 	InsertClient(ctx context.Context, name string) (int64, error)
+	UpdateClient(ctx context.Context, arg UpdateClientParams) error
 }
 
 var _ Querier = (*Queries)(nil)

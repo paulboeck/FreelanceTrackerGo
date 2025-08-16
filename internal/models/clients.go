@@ -1,79 +1,127 @@
 package models
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"time"
+
+	"github.com/paulboeck/FreelanceTrackerGo/internal/db"
 )
 
+// Client represents a client in the system
 type Client struct {
-	ID      int
-	Name    string
-	Updated time.Time
-	Created time.Time
+	ID        int
+	Name      string
+	Updated   time.Time
+	Created   time.Time
+	DeletedAt *time.Time
 }
 
+// ClientModel wraps the generated SQLC Queries for client operations
 type ClientModel struct {
-	DB *sql.DB
+	queries *db.Queries
 }
 
-func (c *ClientModel) Insert(name string) (int, error) {
-	stmt := "INSERT INTO client (name) VALUES (?)"
-
-	result, err := c.DB.Exec(stmt, name)
-	if err != nil {
-		return 0, err
+// NewClientModel creates a new ClientModel
+func NewClientModel(database *sql.DB) *ClientModel {
+	return &ClientModel{
+		queries: db.New(database),
 	}
+}
 
-	id, err := result.LastInsertId()
+// Insert adds a new client to the database and returns its ID
+func (c *ClientModel) Insert(name string) (int, error) {
+	ctx := context.Background()
+	id, err := c.queries.InsertClient(ctx, name)
 	if err != nil {
 		return 0, err
 	}
 	return int(id), nil
 }
 
+// Get retrieves a client by ID
 func (c *ClientModel) Get(id int) (Client, error) {
-	stmt := "SELECT id, name, updated_at, created_at FROM client WHERE id=?"
-
-	row := c.DB.QueryRow(stmt, id)
-
-	var client Client
-	err := row.Scan(&client.ID, &client.Name, &client.Updated, &client.Created)
+	ctx := context.Background()
+	row, err := c.queries.GetClient(ctx, int64(id))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Client{}, ErrNoRecord
-		} else {
-			return Client{}, err
+		}
+		return Client{}, err
+	}
+
+	var deletedAt *time.Time
+	if row.DeletedAt != nil {
+		if dt, ok := row.DeletedAt.(time.Time); ok {
+			deletedAt = &dt
 		}
 	}
+
+	client := Client{
+		ID:        int(row.ID),
+		Name:      row.Name,
+		Updated:   row.UpdatedAt,
+		Created:   row.CreatedAt,
+		DeletedAt: deletedAt,
+	}
+
 	return client, nil
 }
 
+// GetAll retrieves all clients from the database
 func (c *ClientModel) GetAll() ([]Client, error) {
-	stmt := "SELECT id, name, updated_at, created_at FROM client"
-
-	rows, err := c.DB.Query(stmt)
+	ctx := context.Background()
+	rows, err := c.queries.GetAllClients(ctx)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var clients []Client
-	for rows.Next() {
-		var client Client
-		err := rows.Scan(&client.ID, &client.Name, &client.Updated, &client.Created)
-		if err != nil {
-			return nil, err
+	clients := make([]Client, len(rows))
+	for i, row := range rows {
+		var deletedAt *time.Time
+		if row.DeletedAt != nil {
+			if dt, ok := row.DeletedAt.(time.Time); ok {
+				deletedAt = &dt
+			}
 		}
-		clients = append(clients, client)
+
+		clients[i] = Client{
+			ID:        int(row.ID),
+			Name:      row.Name,
+			Updated:   row.UpdatedAt,
+			Created:   row.CreatedAt,
+			DeletedAt: deletedAt,
+		}
 	}
 
-	// When the rows.Next() loop has finished we call rows.Err() to retrieve any
-	// error that was encountered during the iteration. It's important to
-	// call this - don't assume the iteration completed successfully over the
-	// entire result set.
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
 	return clients, nil
 }
+
+// Update modifies an existing client in the database
+func (c *ClientModel) Update(id int, name string) error {
+	ctx := context.Background()
+	params := db.UpdateClientParams{
+		ID:   int64(id),
+		Name: name,
+	}
+	return c.queries.UpdateClient(ctx, params)
+}
+
+// Delete soft deletes a client by setting the deleted_at timestamp
+func (c *ClientModel) Delete(id int) error {
+	ctx := context.Background()
+	return c.queries.DeleteClient(ctx, int64(id))
+}
+
+// ClientModelInterface defines the interface for client operations
+type ClientModelInterface interface {
+	Insert(name string) (int, error)
+	Get(id int) (Client, error)
+	GetAll() ([]Client, error)
+	Update(id int, name string) error
+	Delete(id int) error
+}
+
+// Ensure implementation satisfies the interface
+var _ ClientModelInterface = (*ClientModel)(nil)

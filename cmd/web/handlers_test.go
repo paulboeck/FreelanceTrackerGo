@@ -21,7 +21,7 @@ import (
 
 // createTestApp creates an application instance for testing
 func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
-	testDB := testutil.SetupTestMySQL(t)
+	testDB := testutil.SetupTestSQLite(t)
 	
 	// Create a minimal template cache for testing with base template
 	templateCache := map[string]*template.Template{
@@ -58,7 +58,7 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 	
 	app := &application{
 		logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
-		clients:       &models.ClientModel{DB: testDB.DB},
+		clients:       models.NewClientModel(testDB.DB),
 		templateCache: templateCache,
 		formDecoder:   form.NewDecoder(),
 	}
@@ -312,5 +312,370 @@ func TestHandlersIntegration(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
 		assert.Contains(t, body, "Integration Test Client")
+	})
+}
+
+func TestClientUpdateHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("show update form for existing client", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert a test client
+		id := testDB.InsertTestClient(t, "Test Client")
+		
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/update/%d", id), nil)
+		req.SetPathValue("id", strconv.Itoa(id))
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdate(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "<form method=\"POST\">")
+		assert.Contains(t, body, "name=\"name\"")
+		assert.Contains(t, body, "value=\"Test Client\"") // Form should be pre-populated
+	})
+
+	t.Run("update form for non-existent client", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		req := httptest.NewRequest(http.MethodGet, "/client/update/999", nil)
+		req.SetPathValue("id", "999")
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdate(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("update form with invalid ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/client/update/invalid", nil)
+		req.SetPathValue("id", "invalid")
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdate(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("update form with negative ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/client/update/-1", nil)
+		req.SetPathValue("id", "-1")
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdate(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+}
+
+func TestClientUpdatePostHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("successful client update", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert a test client
+		id := testDB.InsertTestClient(t, "Original Name")
+		
+		form := url.Values{}
+		form.Add("name", "Updated Name")
+		
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
+		req.SetPathValue("id", strconv.Itoa(id))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdatePost(rr, req)
+		
+		// Should redirect to the client view
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		assert.Equal(t, fmt.Sprintf("/client/view/%d", id), location)
+		
+		// Verify the client was actually updated in the database
+		client, err := app.clients.Get(id)
+		require.NoError(t, err)
+		assert.Equal(t, "Updated Name", client.Name)
+	})
+
+	t.Run("update non-existent client", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		form := url.Values{}
+		form.Add("name", "Updated Name")
+		
+		req := httptest.NewRequest(http.MethodPost, "/client/update/999", strings.NewReader(form.Encode()))
+		req.SetPathValue("id", "999")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdatePost(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("update with invalid ID", func(t *testing.T) {
+		form := url.Values{}
+		form.Add("name", "Updated Name")
+		
+		req := httptest.NewRequest(http.MethodPost, "/client/update/invalid", strings.NewReader(form.Encode()))
+		req.SetPathValue("id", "invalid")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdatePost(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("validation error - empty name", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert a test client
+		id := testDB.InsertTestClient(t, "Original Name")
+		
+		form := url.Values{}
+		form.Add("name", "")
+		
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
+		req.SetPathValue("id", strconv.Itoa(id))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdatePost(rr, req)
+		
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Name is required")
+		
+		// Verify the client was not updated
+		client, err := app.clients.Get(id)
+		require.NoError(t, err)
+		assert.Equal(t, "Original Name", client.Name)
+	})
+
+	t.Run("validation error - name too long", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert a test client
+		id := testDB.InsertTestClient(t, "Original Name")
+		
+		// Create a name longer than 255 characters
+		longName := strings.Repeat("a", 256)
+		
+		form := url.Values{}
+		form.Add("name", longName)
+		
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
+		req.SetPathValue("id", strconv.Itoa(id))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdatePost(rr, req)
+		
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Name must be shorter than 255 characters")
+		
+		// Verify the client was not updated
+		client, err := app.clients.Get(id)
+		require.NoError(t, err)
+		assert.Equal(t, "Original Name", client.Name)
+	})
+}
+
+func TestUpdateHandlersIntegration(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("full update workflow", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// 1. Create a client
+		originalName := "Original Client Name"
+		id := testDB.InsertTestClient(t, originalName)
+		
+		// 2. Get the update form
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/update/%d", id), nil)
+		req.SetPathValue("id", strconv.Itoa(id))
+		rr := httptest.NewRecorder()
+		
+		app.clientUpdate(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, originalName) // Should show current name
+		
+		// 3. Submit the update
+		newName := "Updated Client Name"
+		form := url.Values{}
+		form.Add("name", newName)
+		
+		req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
+		req.SetPathValue("id", strconv.Itoa(id))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr = httptest.NewRecorder()
+		
+		app.clientUpdatePost(rr, req)
+		
+		// Should redirect to client view
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		assert.Equal(t, fmt.Sprintf("/client/view/%d", id), location)
+		
+		// 4. Verify the client view shows updated name
+		req = httptest.NewRequest(http.MethodGet, location, nil)
+		req.SetPathValue("id", strconv.Itoa(id))
+		rr = httptest.NewRecorder()
+		
+		app.clientView(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body = rr.Body.String()
+		assert.Contains(t, body, newName)
+		assert.NotContains(t, body, originalName)
+		
+		// 5. Verify home page shows updated name
+		req = httptest.NewRequest(http.MethodGet, "/", nil)
+		rr = httptest.NewRecorder()
+		
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body = rr.Body.String()
+		assert.Contains(t, body, newName)
+	})
+}
+
+func TestClientDeleteHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("successful client delete", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert a test client
+		id := testDB.InsertTestClient(t, "Client to Delete")
+		
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/delete/%d", id), nil)
+		req.SetPathValue("id", strconv.Itoa(id))
+		rr := httptest.NewRecorder()
+		
+		app.clientDelete(rr, req)
+		
+		// Should redirect to home page
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		assert.Equal(t, "/", location)
+		
+		// Verify the client was soft deleted (no longer appears in GetAll)
+		clients, err := app.clients.GetAll()
+		require.NoError(t, err)
+		assert.Empty(t, clients)
+		
+		// Verify the client can't be retrieved via Get
+		_, err = app.clients.Get(id)
+		assert.Error(t, err)
+		assert.Equal(t, models.ErrNoRecord, err)
+	})
+
+	t.Run("delete non-existent client", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		req := httptest.NewRequest(http.MethodPost, "/client/delete/999", nil)
+		req.SetPathValue("id", "999")
+		rr := httptest.NewRecorder()
+		
+		app.clientDelete(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("delete with invalid ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/client/delete/invalid", nil)
+		req.SetPathValue("id", "invalid")
+		rr := httptest.NewRecorder()
+		
+		app.clientDelete(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+
+	t.Run("delete with negative ID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, "/client/delete/-1", nil)
+		req.SetPathValue("id", "-1")
+		rr := httptest.NewRecorder()
+		
+		app.clientDelete(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+}
+
+func TestDeleteHandlersIntegration(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("full delete workflow", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// 1. Create clients
+		client1ID := testDB.InsertTestClient(t, "Client 1")
+		client2ID := testDB.InsertTestClient(t, "Client 2")
+		_ = testDB.InsertTestClient(t, "Client 3")
+		
+		// 2. Verify all clients appear in home page
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rr := httptest.NewRecorder()
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Client 1")
+		assert.Contains(t, body, "Client 2")
+		assert.Contains(t, body, "Client 3")
+		
+		// 3. Delete one client
+		req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/delete/%d", client2ID), nil)
+		req.SetPathValue("id", strconv.Itoa(client2ID))
+		rr = httptest.NewRecorder()
+		app.clientDelete(rr, req)
+		
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		
+		// 4. Verify home page only shows remaining clients
+		req = httptest.NewRequest(http.MethodGet, "/", nil)
+		rr = httptest.NewRecorder()
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body = rr.Body.String()
+		assert.Contains(t, body, "Client 1")
+		assert.NotContains(t, body, "Client 2") // Deleted client should not appear
+		assert.Contains(t, body, "Client 3")
+		
+		// 5. Verify deleted client detail page returns 404
+		req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/view/%d", client2ID), nil)
+		req.SetPathValue("id", strconv.Itoa(client2ID))
+		rr = httptest.NewRecorder()
+		app.clientView(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+		
+		// 6. Verify remaining clients still accessible
+		req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/view/%d", client1ID), nil)
+		req.SetPathValue("id", strconv.Itoa(client1ID))
+		rr = httptest.NewRecorder()
+		app.clientView(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body = rr.Body.String()
+		assert.Contains(t, body, "Client 1")
 	})
 }

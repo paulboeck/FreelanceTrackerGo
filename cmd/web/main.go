@@ -21,44 +21,26 @@ type application struct {
 
 func main() {
 	addr := flag.String("addr", ":8080", "http service address")
-	
-	// Determine database type from environment or default to SQLite
-	dbType := database.GetDatabaseTypeFromEnv()
-	defaultDSN := database.GetDefaultDSN(dbType)
-	
-	var dsnDescription string
-	switch dbType {
-	case database.DatabaseTypeMySQL:
-		dsnDescription = "MySQL data source name"
-	case database.DatabaseTypeSQLite:
-		dsnDescription = "SQLite database file path"
-	}
-	
-	dsn := flag.String("dsn", defaultDSN, dsnDescription)
+	dsn := flag.String("dsn", "./freelance_tracker.db", "SQLite database file path")
 	flag.Parse()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
 
-	// Open database with type-aware configuration
-	dbConfig := database.Config{
-		Type: dbType,
-		DSN:  *dsn,
-	}
-	
-	db, err := database.OpenDB(dbConfig)
+	// Open SQLite database
+	db, err := database.OpenDB(*dsn)
 	if err != nil {
-		logger.Error("Failed to open database", "error", err.Error(), "type", dbType)
+		logger.Error("Failed to open database", "error", err.Error())
 		os.Exit(1)
 	}
 	defer db.Close()
 
 	// Run migrations
-	if err := database.RunMigrations(db, dbType, "./migrations"); err != nil {
+	if err := database.RunMigrations(db, "./migrations"); err != nil {
 		logger.Error("Failed to run migrations", "error", err.Error())
 		os.Exit(1)
 	}
 	
-	logger.Info("Database initialized", "type", dbType, "dsn", *dsn)
+	logger.Info("Database initialized", "dsn", *dsn)
 
 	templateCache, err := newTemplateCache()
 	if err != nil {
@@ -67,21 +49,9 @@ func main() {
 	}
 	formDecoder := form.NewDecoder()
 
-	// Choose client implementation based on database type
-	var clientModel models.ClientModelInterface
-	switch dbType {
-	case database.DatabaseTypeSQLite:
-		// Use the new SQLC-generated adapter for SQLite
-		clientModel = models.NewClientAdapter(db)
-		logger.Info("Using SQLC-generated client adapter")
-	case database.DatabaseTypeMySQL:
-		// Use the original implementation for MySQL (for now)
-		clientModel = &models.ClientModel{DB: db}
-		logger.Info("Using original client model")
-	default:
-		logger.Error("Unsupported database type", "type", dbType)
-		os.Exit(1)
-	}
+	// Create SQLite client model
+	clientModel := models.NewClientModel(db)
+	logger.Info("Using SQLite client model")
 
 	app := &application{
 		logger:        logger,
