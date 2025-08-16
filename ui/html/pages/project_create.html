@@ -1,0 +1,27 @@
+{{define "title"}}
+{{if .Form.Name}}Update Project{{else}}Create a New Project{{end}} - {{.Client.Name}}
+{{end}}
+
+{{define "main"}}
+<div style="margin-bottom: 1rem;">
+    <a href="/client/view/{{.Client.ID}}" style="color: #3b82f6; text-decoration: none;">
+        ← Back to {{.Client.Name}}
+    </a>
+</div>
+
+<h2>{{if .Form.Name}}Update Project{{else}}Create a New Project{{end}}</h2>
+<p style="color: #6b7280; margin-bottom: 1.5rem;">Client: <strong>{{.Client.Name}}</strong></p>
+
+<form method='POST'>
+    <div>
+        <label>Project Name:</label>
+        {{with .Form.FieldErrors.name}}
+            <label class="error">{{.}}</label>
+        {{end}}
+        <input type='text' name='name' value="{{.Form.Name}}" placeholder="Enter project name">
+    </div>
+    <div>
+        <input type='submit' value='{{if .Form.Name}}Update project{{else}}Create project{{end}}'>
+    </div>
+</form>
+{{end}}

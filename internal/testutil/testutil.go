@@ -62,6 +62,16 @@ func createSchema(db *sql.DB) error {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME NULL
 		);
+		
+		CREATE TABLE IF NOT EXISTS project (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			client_id INTEGER NOT NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			deleted_at DATETIME NULL,
+			FOREIGN KEY (client_id) REFERENCES client(id)
+		);
 	`
 	
 	_, err := db.Exec(schema)

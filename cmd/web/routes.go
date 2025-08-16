@@ -19,6 +19,11 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("GET /client/update/{id}", app.clientUpdate)
 	mux.HandleFunc("POST /client/update/{id}", app.clientUpdatePost)
 	mux.HandleFunc("POST /client/delete/{id}", app.clientDelete)
+	mux.HandleFunc("GET /client/{id}/project/create", app.projectCreate)
+	mux.HandleFunc("POST /client/{id}/project/create", app.projectCreatePost)
+	mux.HandleFunc("GET /project/update/{id}", app.projectUpdate)
+	mux.HandleFunc("POST /project/update/{id}", app.projectUpdatePost)
+	mux.HandleFunc("POST /project/delete/{id}", app.projectDelete)
 
 	standardChain := alice.New(app.recoverPanic, app.logRequest, commonHeaders)
 	return standardChain.Then(mux)

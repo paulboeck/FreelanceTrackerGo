@@ -15,3 +15,12 @@ type Client struct {
 	UpdatedAt time.Time   `json:"updated_at"`
 	DeletedAt interface{} `json:"deleted_at"`
 }
+
+type Project struct {
+	ID        int64       `json:"id"`
+	Name      string      `json:"name"`
+	ClientID  int64       `json:"client_id"`
+	CreatedAt time.Time   `json:"created_at"`
+	UpdatedAt time.Time   `json:"updated_at"`
+	DeletedAt interface{} `json:"deleted_at"`
+}

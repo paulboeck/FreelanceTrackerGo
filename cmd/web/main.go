@@ -15,6 +15,7 @@ import (
 type application struct {
 	logger        *slog.Logger
 	clients       models.ClientModelInterface
+	projects      models.ProjectModelInterface
 	templateCache map[string]*template.Template
 	formDecoder   *form.Decoder
 }
@@ -49,13 +50,15 @@ func main() {
 	}
 	formDecoder := form.NewDecoder()
 
-	// Create SQLite client model
+	// Create SQLite models
 	clientModel := models.NewClientModel(db)
-	logger.Info("Using SQLite client model")
+	projectModel := models.NewProjectModel(db)
+	logger.Info("Using SQLite models")
 
 	app := &application{
 		logger:        logger,
 		clients:       clientModel,
+		projects:      projectModel,
 		templateCache: templateCache,
 		formDecoder:   formDecoder,
 	}

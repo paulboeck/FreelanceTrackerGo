@@ -17,6 +17,11 @@ type clientForm struct {
 	validator.Validator `form:"-"`
 }
 
+type projectForm struct {
+	Name                string `form:"name"`
+	validator.Validator `form:"-"`
+}
+
 // home handles http requests to the root URl of the project
 func (app *application) home(res http.ResponseWriter, req *http.Request) {
 	clients, err := app.clients.GetAll()
@@ -50,8 +55,16 @@ func (app *application) clientView(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// Get projects for this client
+	projects, err := app.projects.GetByClient(id)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
 	data := app.newTemplateData(req)
 	data.Client = &client
+	data.Projects = projects
 
 	app.render(res, req, http.StatusOK, "client.html", data)
 }
@@ -211,4 +224,208 @@ func (app *application) clientDelete(res http.ResponseWriter, req *http.Request)
 
 	// Redirect to home page after successful deletion
 	http.Redirect(res, req, "/", http.StatusSeeOther)
+}
+
+// projectCreate handles a GET request which returns an empty project creation form
+func (app *application) projectCreate(res http.ResponseWriter, req *http.Request) {
+	clientID, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || clientID < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if client exists
+	client, err := app.clients.Get(clientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Form = projectForm{}
+	data.Client = &client
+	app.render(res, req, http.StatusOK, "project_create.html", data)
+}
+
+// projectCreatePost handles a POST request with project form data which is then
+// validated and used to insert a new project into the database
+func (app *application) projectCreatePost(res http.ResponseWriter, req *http.Request) {
+	clientID, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || clientID < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if client exists
+	client, err := app.clients.Get(clientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	var form projectForm
+	err = app.decodePostForm(req, &form)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	err = app.formDecoder.Decode(&form, req.PostForm)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
+	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
+
+	if !form.Valid() {
+		data := app.newTemplateData(req)
+		data.Form = form
+		data.Client = &client
+		app.render(res, req, http.StatusUnprocessableEntity, "project_create.html", data)
+		return
+	}
+
+	_, err = app.projects.Insert(form.Name, clientID)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+	http.Redirect(res, req, fmt.Sprintf("/client/view/%d", clientID), http.StatusSeeOther)
+}
+
+// projectUpdate handles a GET request which returns a project update form pre-populated with project data
+func (app *application) projectUpdate(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	project, err := app.projects.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the client for context
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Form = projectForm{
+		Name: project.Name,
+	}
+	data.Client = &client
+	app.render(res, req, http.StatusOK, "project_create.html", data)
+}
+
+// projectUpdatePost handles a POST request with project form data which is then
+// validated and used to update an existing project in the database
+func (app *application) projectUpdatePost(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Get the project to ensure it exists and get the client ID
+	project, err := app.projects.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	var form projectForm
+	err = app.decodePostForm(req, &form)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	err = app.formDecoder.Decode(&form, req.PostForm)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
+	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
+
+	if !form.Valid() {
+		client, err := app.clients.Get(project.ClientID)
+		if err != nil {
+			if errors.Is(err, models.ErrNoRecord) {
+				http.NotFound(res, req)
+			} else {
+				app.serverError(res, req, err)
+			}
+			return
+		}
+		data := app.newTemplateData(req)
+		data.Form = form
+		data.Client = &client
+		app.render(res, req, http.StatusUnprocessableEntity, "project_create.html", data)
+		return
+	}
+
+	err = app.projects.Update(id, form.Name)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+	http.Redirect(res, req, fmt.Sprintf("/client/view/%d", project.ClientID), http.StatusSeeOther)
+}
+
+// projectDelete handles a POST request to soft delete a project
+func (app *application) projectDelete(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if project exists before deleting and get client ID for redirect
+	project, err := app.projects.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	err = app.projects.Delete(id)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Redirect to client view page after successful deletion
+	http.Redirect(res, req, fmt.Sprintf("/client/view/%d", project.ClientID), http.StatusSeeOther)
 }

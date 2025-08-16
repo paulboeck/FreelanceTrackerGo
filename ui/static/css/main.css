@@ -255,6 +255,55 @@ button:hover {
     float: right;
 }
 
+.client-actions {
+    padding: 1rem;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.delete-form {
+    margin: 0;
+    display: inline-block;
+}
+
+.btn-client-action {
+    background-color: #3b82f6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+    min-height: 36px;
+    line-height: 1.25;
+    font-family: inherit;
+}
+
+.btn-client-action:hover {
+    background-color: #1d4ed8;
+    transform: translateY(-1px);
+    text-decoration: none;
+    color: white;
+}
+
+.btn-client-action.btn-delete {
+    background-color: #ef4444;
+}
+
+.btn-client-action.btn-delete:hover {
+    background-color: #dc2626;
+}
+
 div.flash {
     color: #FFFFFF;
     font-weight: bold;
@@ -392,6 +441,146 @@ tr:hover {
 
 .btn-icon:not(:has(i:before)) i {
     display: none;
+}
+
+/* Projects Section Styles */
+.projects-section {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.projects-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.projects-header h3 {
+    margin: 0;
+    color: #1f2937;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.btn-add-project {
+    background-color: #3b82f6;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease;
+}
+
+.btn-add-project:hover {
+    background-color: #1d4ed8;
+    transform: translateY(-1px);
+    text-decoration: none;
+    color: white;
+}
+
+.projects-list {
+    background-color: #f8fafc;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.project-item {
+    padding: 1rem;
+    background-color: white;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.project-item:nth-child(even) {
+    background-color: #f8fafc;
+}
+
+.project-item:hover {
+    background-color: #f1f5f9;
+}
+
+.project-item:last-child {
+    border-bottom: none;
+}
+
+.project-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.project-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.project-name {
+    color: #111827;
+    font-weight: 600;
+}
+
+.project-id {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.project-meta {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: #6b7280;
+    overflow: auto;
+}
+
+.project-meta time {
+    display: inline-block;
+}
+
+.project-meta time:first-child {
+    float: left;
+}
+
+.project-meta time:last-child {
+    float: right;
+}
+
+.projects-empty {
+    background-color: #f8fafc;
+    border-radius: 6px;
+    padding: 2rem;
+    text-align: center;
+    border: 1px solid #e5e7eb;
+}
+
+.empty-message {
+    color: #6b7280;
+    font-style: italic;
+    margin: 0 0 0.5rem 0;
+}
+
+.empty-action {
+    margin: 0;
+}
+
+.empty-action a {
+    color: #3b82f6;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.empty-action a:hover {
+    text-decoration: underline;
 }
 
 footer {
