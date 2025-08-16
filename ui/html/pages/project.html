@@ -37,4 +37,47 @@
             <p class="empty-action">Created: {{humanDate .Client.Created}}</p>
         </div>
     </div>
+
+    <div class="projects-section">
+        <div class="projects-header">
+            <h3>Timesheets</h3>
+            <a href="/project/{{.Project.ID}}/timesheet/create" class="btn-add-project" title="Add new timesheet">
+                ➕ Add Timesheet
+            </a>
+        </div>
+        
+        {{if .Timesheets}}
+            <div class="projects-list">
+                {{range .Timesheets}}
+                    <div class="project-item">
+                        <div class="project-content">
+                            <div class="project-info">
+                                <strong class="project-name">{{.WorkDate.Format "2006-01-02"}}</strong>
+                                <span class="project-id">{{printf "%.2f" .HoursWorked}} hours</span>
+                            </div>
+                            <div class="action-buttons">
+                                <a href="/timesheet/update/{{.ID}}" class="btn-icon btn-edit" title="Edit timesheet">
+                                    ✏️
+                                </a>
+                                <form method="POST" action="/timesheet/delete/{{.ID}}" onsubmit="return confirm('Are you sure you want to delete this timesheet?');">
+                                    <button type="submit" class="btn-icon btn-delete" title="Delete timesheet">
+                                        🗑️
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="project-meta">
+                            <time>{{.Updated | humanDate | printf "Updated: %s"}}</time>
+                            <time>Created: {{humanDate .Created}}</time>
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        {{else}}
+            <div class="projects-empty">
+                <p class="empty-message">No timesheets yet.</p>
+                <p class="empty-action"><a href="/project/{{.Project.ID}}/timesheet/create">Add the first timesheet</a></p>
+            </div>
+        {{end}}
+    </div>
 {{end}}

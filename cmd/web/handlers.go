@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/validator"
@@ -19,6 +20,12 @@ type clientForm struct {
 
 type projectForm struct {
 	Name                string `form:"name"`
+	validator.Validator `form:"-"`
+}
+
+type timesheetForm struct {
+	WorkDate            string  `form:"work_date"`
+	HoursWorked         string  `form:"hours_worked"`
 	validator.Validator `form:"-"`
 }
 
@@ -99,9 +106,17 @@ func (app *application) projectView(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	// Get timesheets for this project
+	timesheets, err := app.timesheets.GetByProject(id)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
 	data := app.newTemplateData(req)
 	data.Project = &project
 	data.Client = &client
+	data.Timesheets = timesheets
 
 	app.render(res, req, http.StatusOK, "project.html", data)
 }
@@ -465,4 +480,294 @@ func (app *application) projectDelete(res http.ResponseWriter, req *http.Request
 
 	// Redirect to client view page after successful deletion
 	http.Redirect(res, req, fmt.Sprintf("/client/view/%d", project.ClientID), http.StatusSeeOther)
+}
+
+// timesheetCreate handles a GET request which returns an empty timesheet creation form
+func (app *application) timesheetCreate(res http.ResponseWriter, req *http.Request) {
+	projectID, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || projectID < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if project exists
+	project, err := app.projects.Get(projectID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the client for context
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Form = timesheetForm{}
+	data.Project = &project
+	data.Client = &client
+	app.render(res, req, http.StatusOK, "timesheet_create.html", data)
+}
+
+// timesheetCreatePost handles a POST request with timesheet form data which is then
+// validated and used to insert a new timesheet into the database
+func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.Request) {
+	projectID, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || projectID < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if project exists
+	project, err := app.projects.Get(projectID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the client for context
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	var form timesheetForm
+	err = app.decodePostForm(req, &form)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	err = app.formDecoder.Decode(&form, req.PostForm)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.WorkDate), "work_date", "Work date is required")
+	form.CheckField(validator.NotBlank(form.HoursWorked), "hours_worked", "Hours worked is required")
+
+	// Parse and validate work date
+	var workDate time.Time
+	if form.Valid() {
+		workDate, err = time.Parse("2006-01-02", form.WorkDate)
+		if err != nil {
+			form.AddFieldError("work_date", "Work date must be in YYYY-MM-DD format")
+		}
+	}
+
+	// Parse and validate hours worked
+	var hoursWorked float64
+	if form.Valid() {
+		hoursWorked, err = strconv.ParseFloat(form.HoursWorked, 64)
+		if err != nil || hoursWorked < 0 {
+			form.AddFieldError("hours_worked", "Hours worked must be a positive number")
+		}
+	}
+
+	if !form.Valid() {
+		data := app.newTemplateData(req)
+		data.Form = form
+		data.Project = &project
+		data.Client = &client
+		app.render(res, req, http.StatusUnprocessableEntity, "timesheet_create.html", data)
+		return
+	}
+
+	_, err = app.timesheets.Insert(projectID, workDate, hoursWorked)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", projectID), http.StatusSeeOther)
+}
+
+// timesheetUpdate handles a GET request which returns a timesheet update form pre-populated with timesheet data
+func (app *application) timesheetUpdate(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	timesheet, err := app.timesheets.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the project for context
+	project, err := app.projects.Get(timesheet.ProjectID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the client for context
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Form = timesheetForm{
+		WorkDate:    timesheet.WorkDate.Format("2006-01-02"),
+		HoursWorked: fmt.Sprintf("%.2f", timesheet.HoursWorked),
+	}
+	data.Project = &project
+	data.Client = &client
+	app.render(res, req, http.StatusOK, "timesheet_create.html", data)
+}
+
+// timesheetUpdatePost handles a POST request with timesheet form data which is then
+// validated and used to update an existing timesheet in the database
+func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Get the timesheet to ensure it exists and get the project ID
+	timesheet, err := app.timesheets.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get project and client for context
+	project, err := app.projects.Get(timesheet.ProjectID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	var form timesheetForm
+	err = app.decodePostForm(req, &form)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	err = app.formDecoder.Decode(&form, req.PostForm)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.WorkDate), "work_date", "Work date is required")
+	form.CheckField(validator.NotBlank(form.HoursWorked), "hours_worked", "Hours worked is required")
+
+	// Parse and validate work date
+	var workDate time.Time
+	if form.Valid() {
+		workDate, err = time.Parse("2006-01-02", form.WorkDate)
+		if err != nil {
+			form.AddFieldError("work_date", "Work date must be in YYYY-MM-DD format")
+		}
+	}
+
+	// Parse and validate hours worked
+	var hoursWorked float64
+	if form.Valid() {
+		hoursWorked, err = strconv.ParseFloat(form.HoursWorked, 64)
+		if err != nil || hoursWorked < 0 {
+			form.AddFieldError("hours_worked", "Hours worked must be a positive number")
+		}
+	}
+
+	if !form.Valid() {
+		data := app.newTemplateData(req)
+		data.Form = form
+		data.Project = &project
+		data.Client = &client
+		app.render(res, req, http.StatusUnprocessableEntity, "timesheet_create.html", data)
+		return
+	}
+
+	err = app.timesheets.Update(id, workDate, hoursWorked)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", timesheet.ProjectID), http.StatusSeeOther)
+}
+
+// timesheetDelete handles a POST request to soft delete a timesheet
+func (app *application) timesheetDelete(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if timesheet exists before deleting and get project ID for redirect
+	timesheet, err := app.timesheets.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	err = app.timesheets.Delete(id)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Redirect to project view page after successful deletion
+	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", timesheet.ProjectID), http.StatusSeeOther)
 }

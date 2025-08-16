@@ -72,6 +72,17 @@ func createSchema(db *sql.DB) error {
 			deleted_at DATETIME NULL,
 			FOREIGN KEY (client_id) REFERENCES client(id)
 		);
+		
+		CREATE TABLE IF NOT EXISTS timesheet (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			project_id INTEGER NOT NULL,
+			work_date DATE NOT NULL,
+			hours_worked DECIMAL(5,2) NOT NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			deleted_at DATETIME NULL,
+			FOREIGN KEY (project_id) REFERENCES project(id)
+		);
 	`
 	
 	_, err := db.Exec(schema)

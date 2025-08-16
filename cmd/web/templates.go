@@ -13,6 +13,7 @@ type templateData struct {
 	Clients     []models.Client
 	Project     *models.Project
 	Projects    []models.Project
+	Timesheets  []models.Timesheet
 	Form        any
 }
 

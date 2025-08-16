@@ -60,6 +60,7 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 		logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
 		clients:       models.NewClientModel(testDB.DB),
 		projects:      models.NewProjectModel(testDB.DB),
+		timesheets:    models.NewTimesheetModel(testDB.DB),
 		templateCache: templateCache,
 		formDecoder:   form.NewDecoder(),
 	}

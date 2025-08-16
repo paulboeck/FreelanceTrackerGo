@@ -1,0 +1,38 @@
+{{define "title"}}
+{{if .Form.WorkDate}}Update Timesheet{{else}}Create a New Timesheet{{end}} - {{.Project.Name}}
+{{end}}
+
+{{define "main"}}
+<div style="margin-bottom: 1rem;">
+    <a href="/project/view/{{.Project.ID}}" style="color: #3b82f6; text-decoration: none;">
+        ← Back to {{.Project.Name}}
+    </a>
+</div>
+
+<h2>{{if .Form.WorkDate}}Update Timesheet{{else}}Create a New Timesheet{{end}}</h2>
+<p style="color: #6b7280; margin-bottom: 1.5rem;">
+    Project: <strong>{{.Project.Name}}</strong> | 
+    Client: <strong>{{.Client.Name}}</strong>
+</p>
+
+<form method='POST'>
+    <div>
+        <label>Work Date:</label>
+        {{with .Form.FieldErrors.work_date}}
+            <label class="error">{{.}}</label>
+        {{end}}
+        <input type='date' name='work_date' value="{{.Form.WorkDate}}" required>
+    </div>
+    <div>
+        <label>Hours Worked:</label>
+        {{with .Form.FieldErrors.hours_worked}}
+            <label class="error">{{.}}</label>
+        {{end}}
+        <input type='number' name='hours_worked' value="{{.Form.HoursWorked}}" step="0.25" min="0" max="24" placeholder="e.g., 8.5" required>
+        <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Enter hours in decimal format (e.g., 8.25 for 8 hours 15 minutes)</small>
+    </div>
+    <div>
+        <input type='submit' value='{{if .Form.WorkDate}}Update timesheet{{else}}Create timesheet{{end}}'>
+    </div>
+</form>
+{{end}}

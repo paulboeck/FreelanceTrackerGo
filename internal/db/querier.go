@@ -11,14 +11,19 @@ import (
 type Querier interface {
 	DeleteClient(ctx context.Context, id int64) error
 	DeleteProject(ctx context.Context, id int64) error
+	DeleteTimesheet(ctx context.Context, id int64) error
 	GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 	GetClient(ctx context.Context, id int64) (GetClientRow, error)
 	GetProject(ctx context.Context, id int64) (GetProjectRow, error)
 	GetProjectsByClient(ctx context.Context, clientID int64) ([]GetProjectsByClientRow, error)
+	GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, error)
+	GetTimesheetsByProject(ctx context.Context, projectID int64) ([]GetTimesheetsByProjectRow, error)
 	InsertClient(ctx context.Context, name string) (int64, error)
 	InsertProject(ctx context.Context, arg InsertProjectParams) (int64, error)
+	InsertTimesheet(ctx context.Context, arg InsertTimesheetParams) (int64, error)
 	UpdateClient(ctx context.Context, arg UpdateClientParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
+	UpdateTimesheet(ctx context.Context, arg UpdateTimesheetParams) error
 }
 
 var _ Querier = (*Queries)(nil)
