@@ -69,6 +69,43 @@ func (app *application) clientView(res http.ResponseWriter, req *http.Request) {
 	app.render(res, req, http.StatusOK, "client.html", data)
 }
 
+// projectView handles a GET request to view a specific project ID,
+// queries the database for that project and its client, and passes the result to be rendered
+func (app *application) projectView(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	project, err := app.projects.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the client for this project
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Project = &project
+	data.Client = &client
+
+	app.render(res, req, http.StatusOK, "project.html", data)
+}
+
 // clientCreate handles a GET request which returns an empty client detail form
 func (app *application) clientCreate(res http.ResponseWriter, req *http.Request) {
 	data := app.newTemplateData(req)

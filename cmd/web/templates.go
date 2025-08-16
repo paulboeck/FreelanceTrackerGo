@@ -11,6 +11,7 @@ type templateData struct {
 	CurrentYear int
 	Client      *models.Client
 	Clients     []models.Client
+	Project     *models.Project
 	Projects    []models.Project
 	Form        any
 }

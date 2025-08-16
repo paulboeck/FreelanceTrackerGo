@@ -21,6 +21,7 @@ func (app *application) routes() http.Handler {
 	mux.HandleFunc("POST /client/delete/{id}", app.clientDelete)
 	mux.HandleFunc("GET /client/{id}/project/create", app.projectCreate)
 	mux.HandleFunc("POST /client/{id}/project/create", app.projectCreatePost)
+	mux.HandleFunc("GET /project/view/{id}", app.projectView)
 	mux.HandleFunc("GET /project/update/{id}", app.projectUpdate)
 	mux.HandleFunc("POST /project/update/{id}", app.projectUpdatePost)
 	mux.HandleFunc("POST /project/delete/{id}", app.projectDelete)
