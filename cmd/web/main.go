@@ -2,11 +2,12 @@ package main
 
 import (
 	"flag"
-	"github.com/go-playground/form/v4"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/go-playground/form/v4"
 
 	"github.com/paulboeck/FreelanceTrackerGo/internal/database"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
@@ -37,11 +38,11 @@ func main() {
 	defer db.Close()
 
 	// Run migrations
-	if err := database.RunMigrations(db, "./migrations"); err != nil {
+	if database.RunMigrations(db, "./migrations"); err != nil {
 		logger.Error("Failed to run migrations", "error", err.Error())
 		os.Exit(1)
 	}
-	
+
 	logger.Info("Database initialized", "dsn", *dsn)
 
 	templateCache, err := newTemplateCache()
@@ -74,4 +75,3 @@ func main() {
 		os.Exit(1)
 	}
 }
-

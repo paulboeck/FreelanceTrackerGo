@@ -32,6 +32,14 @@
         <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Enter hours in decimal format (e.g., 8.25 for 8 hours 15 minutes)</small>
     </div>
     <div>
+        <label>Description:</label>
+        {{with .Form.FieldErrors.description}}
+            <label class="error">{{.}}</label>
+        {{end}}
+        <input type='text' name='description' value="{{.Form.Description}}" maxlength="255" placeholder="Brief description of work performed">
+        <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Optional: Brief description (max 255 characters)</small>
+    </div>
+    <div>
         <input type='submit' value='{{if .Form.WorkDate}}Update timesheet{{else}}Create timesheet{{end}}'>
     </div>
 </form>

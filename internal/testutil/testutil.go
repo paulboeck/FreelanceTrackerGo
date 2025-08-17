@@ -78,6 +78,7 @@ func createSchema(db *sql.DB) error {
 			project_id INTEGER NOT NULL,
 			work_date DATE NOT NULL,
 			hours_worked DECIMAL(5,2) NOT NULL,
+			description VARCHAR(255),
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME NULL,

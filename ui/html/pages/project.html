@@ -29,17 +29,6 @@
     
     <div class="projects-section">
         <div class="projects-header">
-            <h3>Client Information</h3>
-        </div>
-        
-        <div class="projects-empty">
-            <p class="empty-message">Client: <a href="/client/view/{{.Client.ID}}" style="color: #3b82f6; text-decoration: none; font-weight: 500;">{{.Client.Name}}</a></p>
-            <p class="empty-action">Created: {{humanDate .Client.Created}}</p>
-        </div>
-    </div>
-
-    <div class="projects-section">
-        <div class="projects-header">
             <h3>Timesheets</h3>
             <a href="/project/{{.Project.ID}}/timesheet/create" class="btn-add-project" title="Add new timesheet">
                 ➕ Add Timesheet
@@ -66,6 +55,11 @@
                                 </form>
                             </div>
                         </div>
+                        {{if .Description}}
+                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6;">
+                            <p style="color: #374151; font-size: 0.875rem; margin: 0;">{{.Description}}</p>
+                        </div>
+                        {{end}}
                         <div class="project-meta">
                             <time>{{.Updated | humanDate | printf "Updated: %s"}}</time>
                             <time>Created: {{humanDate .Created}}</time>

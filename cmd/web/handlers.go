@@ -26,6 +26,7 @@ type projectForm struct {
 type timesheetForm struct {
 	WorkDate            string  `form:"work_date"`
 	HoursWorked         string  `form:"hours_worked"`
+	Description         string  `form:"description"`
 	validator.Validator `form:"-"`
 }
 
@@ -565,6 +566,7 @@ func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.R
 
 	form.CheckField(validator.NotBlank(form.WorkDate), "work_date", "Work date is required")
 	form.CheckField(validator.NotBlank(form.HoursWorked), "hours_worked", "Hours worked is required")
+	form.CheckField(validator.MaxChars(form.Description, NAME_LENGTH), "description", fmt.Sprintf("Description must be shorter than %d characters", NAME_LENGTH))
 
 	// Parse and validate work date
 	var workDate time.Time
@@ -593,7 +595,7 @@ func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	_, err = app.timesheets.Insert(projectID, workDate, hoursWorked)
+	_, err = app.timesheets.Insert(projectID, workDate, hoursWorked, form.Description)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
@@ -645,6 +647,7 @@ func (app *application) timesheetUpdate(res http.ResponseWriter, req *http.Reque
 	data.Form = timesheetForm{
 		WorkDate:    timesheet.WorkDate.Format("2006-01-02"),
 		HoursWorked: fmt.Sprintf("%.2f", timesheet.HoursWorked),
+		Description: timesheet.Description,
 	}
 	data.Project = &project
 	data.Client = &client
@@ -707,6 +710,7 @@ func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.R
 
 	form.CheckField(validator.NotBlank(form.WorkDate), "work_date", "Work date is required")
 	form.CheckField(validator.NotBlank(form.HoursWorked), "hours_worked", "Hours worked is required")
+	form.CheckField(validator.MaxChars(form.Description, NAME_LENGTH), "description", fmt.Sprintf("Description must be shorter than %d characters", NAME_LENGTH))
 
 	// Parse and validate work date
 	var workDate time.Time
@@ -735,7 +739,7 @@ func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	err = app.timesheets.Update(id, workDate, hoursWorked)
+	err = app.timesheets.Update(id, workDate, hoursWorked, form.Description)
 	if err != nil {
 		app.serverError(res, req, err)
 		return

@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -22,19 +23,20 @@ func (q *Queries) DeleteTimesheet(ctx context.Context, id int64) error {
 }
 
 const getTimesheet = `-- name: GetTimesheet :one
-SELECT id, project_id, work_date, hours_worked, updated_at, created_at, deleted_at 
+SELECT id, project_id, work_date, hours_worked, description, updated_at, created_at, deleted_at 
 FROM timesheet 
 WHERE id = ? AND deleted_at IS NULL
 `
 
 type GetTimesheetRow struct {
-	ID          int64       `json:"id"`
-	ProjectID   int64       `json:"project_id"`
-	WorkDate    time.Time   `json:"work_date"`
-	HoursWorked float64     `json:"hours_worked"`
-	UpdatedAt   time.Time   `json:"updated_at"`
-	CreatedAt   time.Time   `json:"created_at"`
-	DeletedAt   interface{} `json:"deleted_at"`
+	ID          int64          `json:"id"`
+	ProjectID   int64          `json:"project_id"`
+	WorkDate    time.Time      `json:"work_date"`
+	HoursWorked float64        `json:"hours_worked"`
+	Description sql.NullString `json:"description"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	DeletedAt   interface{}    `json:"deleted_at"`
 }
 
 func (q *Queries) GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, error) {
@@ -45,6 +47,7 @@ func (q *Queries) GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, 
 		&i.ProjectID,
 		&i.WorkDate,
 		&i.HoursWorked,
+		&i.Description,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.DeletedAt,
@@ -53,20 +56,21 @@ func (q *Queries) GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, 
 }
 
 const getTimesheetsByProject = `-- name: GetTimesheetsByProject :many
-SELECT id, project_id, work_date, hours_worked, updated_at, created_at, deleted_at 
+SELECT id, project_id, work_date, hours_worked, description, updated_at, created_at, deleted_at 
 FROM timesheet 
 WHERE project_id = ? AND deleted_at IS NULL
 ORDER BY work_date DESC, created_at DESC
 `
 
 type GetTimesheetsByProjectRow struct {
-	ID          int64       `json:"id"`
-	ProjectID   int64       `json:"project_id"`
-	WorkDate    time.Time   `json:"work_date"`
-	HoursWorked float64     `json:"hours_worked"`
-	UpdatedAt   time.Time   `json:"updated_at"`
-	CreatedAt   time.Time   `json:"created_at"`
-	DeletedAt   interface{} `json:"deleted_at"`
+	ID          int64          `json:"id"`
+	ProjectID   int64          `json:"project_id"`
+	WorkDate    time.Time      `json:"work_date"`
+	HoursWorked float64        `json:"hours_worked"`
+	Description sql.NullString `json:"description"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	CreatedAt   time.Time      `json:"created_at"`
+	DeletedAt   interface{}    `json:"deleted_at"`
 }
 
 func (q *Queries) GetTimesheetsByProject(ctx context.Context, projectID int64) ([]GetTimesheetsByProjectRow, error) {
@@ -83,6 +87,7 @@ func (q *Queries) GetTimesheetsByProject(ctx context.Context, projectID int64) (
 			&i.ProjectID,
 			&i.WorkDate,
 			&i.HoursWorked,
+			&i.Description,
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.DeletedAt,
@@ -101,18 +106,24 @@ func (q *Queries) GetTimesheetsByProject(ctx context.Context, projectID int64) (
 }
 
 const insertTimesheet = `-- name: InsertTimesheet :execlastid
-INSERT INTO timesheet (project_id, work_date, hours_worked) 
-VALUES (?, ?, ?)
+INSERT INTO timesheet (project_id, work_date, hours_worked, description) 
+VALUES (?, ?, ?, ?)
 `
 
 type InsertTimesheetParams struct {
-	ProjectID   int64     `json:"project_id"`
-	WorkDate    time.Time `json:"work_date"`
-	HoursWorked float64   `json:"hours_worked"`
+	ProjectID   int64          `json:"project_id"`
+	WorkDate    time.Time      `json:"work_date"`
+	HoursWorked float64        `json:"hours_worked"`
+	Description sql.NullString `json:"description"`
 }
 
 func (q *Queries) InsertTimesheet(ctx context.Context, arg InsertTimesheetParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, insertTimesheet, arg.ProjectID, arg.WorkDate, arg.HoursWorked)
+	result, err := q.db.ExecContext(ctx, insertTimesheet,
+		arg.ProjectID,
+		arg.WorkDate,
+		arg.HoursWorked,
+		arg.Description,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -121,17 +132,23 @@ func (q *Queries) InsertTimesheet(ctx context.Context, arg InsertTimesheetParams
 
 const updateTimesheet = `-- name: UpdateTimesheet :exec
 UPDATE timesheet 
-SET work_date = ?, hours_worked = ?, updated_at = CURRENT_TIMESTAMP 
+SET work_date = ?, hours_worked = ?, description = ?, updated_at = CURRENT_TIMESTAMP 
 WHERE id = ? AND deleted_at IS NULL
 `
 
 type UpdateTimesheetParams struct {
-	WorkDate    time.Time `json:"work_date"`
-	HoursWorked float64   `json:"hours_worked"`
-	ID          int64     `json:"id"`
+	WorkDate    time.Time      `json:"work_date"`
+	HoursWorked float64        `json:"hours_worked"`
+	Description sql.NullString `json:"description"`
+	ID          int64          `json:"id"`
 }
 
 func (q *Queries) UpdateTimesheet(ctx context.Context, arg UpdateTimesheetParams) error {
-	_, err := q.db.ExecContext(ctx, updateTimesheet, arg.WorkDate, arg.HoursWorked, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateTimesheet,
+		arg.WorkDate,
+		arg.HoursWorked,
+		arg.Description,
+		arg.ID,
+	)
 	return err
 }

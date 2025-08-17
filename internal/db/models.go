@@ -5,6 +5,7 @@
 package db
 
 import (
+	"database/sql"
 	"time"
 )
 
@@ -26,11 +27,12 @@ type Project struct {
 }
 
 type Timesheet struct {
-	ID          int64       `json:"id"`
-	ProjectID   int64       `json:"project_id"`
-	WorkDate    time.Time   `json:"work_date"`
-	HoursWorked float64     `json:"hours_worked"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
-	DeletedAt   interface{} `json:"deleted_at"`
+	ID          int64          `json:"id"`
+	ProjectID   int64          `json:"project_id"`
+	WorkDate    time.Time      `json:"work_date"`
+	HoursWorked float64        `json:"hours_worked"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   interface{}    `json:"deleted_at"`
+	Description sql.NullString `json:"description"`
 }
