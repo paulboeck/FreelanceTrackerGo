@@ -125,7 +125,12 @@ nav a.live:hover {
     text-decoration: none;
 }
 
-a.button, input[type="submit"] {
+:root {
+    --form-button-height: 44px;
+}
+
+/* Form command buttons - controlled by single height variable */
+a.button, input[type="submit"], .btn-cancel {
     background-color: #3b82f6;
     border-radius: 0.5rem;
     color: #ffffff;
@@ -137,6 +142,16 @@ a.button, input[type="submit"] {
     font-size: 0.875rem;
     transition: all 0.2s ease;
     cursor: pointer;
+    text-decoration: none;
+    vertical-align: top;
+    box-sizing: border-box;
+    height: var(--form-button-height);
+    line-height: 1.25;
+}
+
+.btn-cancel {
+    background-color: #ef4444;
+    margin-left: 1rem;
 }
 
 a.button:hover, input[type="submit"]:hover {
@@ -144,6 +159,22 @@ a.button:hover, input[type="submit"]:hover {
     color: #ffffff;
     text-decoration: none;
     transform: translateY(-1px);
+}
+
+.btn-cancel:hover {
+    background-color: #dc2626;
+    color: #ffffff;
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.form-container {
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 2rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    margin-top: 1rem;
 }
 
 form div {
@@ -159,12 +190,12 @@ form input[type="radio"] {
     margin-left: 1rem;
 }
 
-form input[type="text"], form input[type="password"], form input[type="email"] {
+form input[type="text"], form input[type="password"], form input[type="email"], form input[type="date"], form input[type="number"] {
     padding: 0.75rem 1rem;
     width: 100%;
 }
 
-form input[type=text], form input[type="password"], form input[type="email"], textarea {
+form input[type=text], form input[type="password"], form input[type="email"], form input[type="date"], form input[type="number"], textarea {
     color: #1e293b;
     background: #ffffff;
     border: 1px solid #d1d5db;
@@ -172,7 +203,7 @@ form input[type=text], form input[type="password"], form input[type="email"], te
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
-form input[type=text]:focus, form input[type="password"]:focus, form input[type="email"]:focus, textarea:focus {
+form input[type=text]:focus, form input[type="password"]:focus, form input[type="email"]:focus, form input[type="date"]:focus, form input[type="number"]:focus, textarea:focus {
     outline: none;
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
