@@ -93,6 +93,9 @@
                                 <span class="project-id">{{.InvoiceDate.Format "2006-01-02"}}</span>
                             </div>
                             <div class="action-buttons">
+                                <a href="/invoice/print/{{.ID}}" class="btn-icon btn-print" title="Print invoice PDF">
+                                    🖨️
+                                </a>
                                 <a href="/invoice/update/{{.ID}}" class="btn-icon btn-edit" title="Edit invoice">
                                     ✏️
                                 </a>

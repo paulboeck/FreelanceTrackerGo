@@ -22,3 +22,14 @@ WHERE id = ? AND deleted_at IS NULL;
 UPDATE invoice 
 SET deleted_at = CURRENT_TIMESTAMP 
 WHERE id = ? AND deleted_at IS NULL;
+
+-- name: GetInvoiceForPDF :one
+SELECT 
+    i.id, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due,
+    i.updated_at, i.created_at, i.deleted_at,
+    p.name as project_name,
+    c.name as client_name
+FROM invoice i
+JOIN project p ON i.project_id = p.id
+JOIN client c ON p.client_id = c.id
+WHERE i.id = ? AND i.deleted_at IS NULL;

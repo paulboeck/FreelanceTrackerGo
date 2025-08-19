@@ -56,6 +56,51 @@ func (q *Queries) GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, erro
 	return i, err
 }
 
+const getInvoiceForPDF = `-- name: GetInvoiceForPDF :one
+SELECT 
+    i.id, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due,
+    i.updated_at, i.created_at, i.deleted_at,
+    p.name as project_name,
+    c.name as client_name
+FROM invoice i
+JOIN project p ON i.project_id = p.id
+JOIN client c ON p.client_id = c.id
+WHERE i.id = ? AND i.deleted_at IS NULL
+`
+
+type GetInvoiceForPDFRow struct {
+	ID           int64       `json:"id"`
+	ProjectID    int64       `json:"project_id"`
+	InvoiceDate  time.Time   `json:"invoice_date"`
+	DatePaid     interface{} `json:"date_paid"`
+	PaymentTerms string      `json:"payment_terms"`
+	AmountDue    float64     `json:"amount_due"`
+	UpdatedAt    time.Time   `json:"updated_at"`
+	CreatedAt    time.Time   `json:"created_at"`
+	DeletedAt    interface{} `json:"deleted_at"`
+	ProjectName  string      `json:"project_name"`
+	ClientName   string      `json:"client_name"`
+}
+
+func (q *Queries) GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceForPDFRow, error) {
+	row := q.db.QueryRowContext(ctx, getInvoiceForPDF, id)
+	var i GetInvoiceForPDFRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.InvoiceDate,
+		&i.DatePaid,
+		&i.PaymentTerms,
+		&i.AmountDue,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.DeletedAt,
+		&i.ProjectName,
+		&i.ClientName,
+	)
+	return i, err
+}
+
 const getInvoicesByProject = `-- name: GetInvoicesByProject :many
 SELECT id, project_id, invoice_date, date_paid, payment_terms, amount_due, updated_at, created_at, deleted_at 
 FROM invoice 

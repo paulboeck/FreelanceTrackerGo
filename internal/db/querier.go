@@ -16,6 +16,7 @@ type Querier interface {
 	GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 	GetClient(ctx context.Context, id int64) (GetClientRow, error)
 	GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, error)
+	GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceForPDFRow, error)
 	GetInvoicesByProject(ctx context.Context, projectID int64) ([]GetInvoicesByProjectRow, error)
 	GetProject(ctx context.Context, id int64) (GetProjectRow, error)
 	GetProjectsByClient(ctx context.Context, clientID int64) ([]GetProjectsByClientRow, error)

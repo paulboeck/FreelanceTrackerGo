@@ -1116,3 +1116,35 @@ func (app *application) invoiceDelete(res http.ResponseWriter, req *http.Request
 	// Redirect to project view page after successful deletion
 	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", invoice.ProjectID), http.StatusSeeOther)
 }
+
+// invoicePrint handles a GET request to generate and download an invoice PDF
+func (app *application) invoicePrint(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Generate PDF
+	pdfBytes, err := app.invoices.GeneratePDF(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Set headers for PDF download
+	res.Header().Set("Content-Type", "application/pdf")
+	res.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"invoice_%d.pdf\"", id))
+	res.Header().Set("Content-Length", fmt.Sprintf("%d", len(pdfBytes)))
+
+	// Write PDF to response
+	_, err = res.Write(pdfBytes)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+}
