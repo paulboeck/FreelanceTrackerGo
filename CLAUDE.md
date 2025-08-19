@@ -63,6 +63,9 @@ go test -v ./...
 
 # Test specific package
 go test ./internal/models -v
+
+# Clean up any orphaned processes after testing
+pkill -f "web -addr"
 ```
 
 ## Architecture Details

@@ -530,7 +530,9 @@ func (app *application) timesheetCreate(res http.ResponseWriter, req *http.Reque
 	}
 
 	data := app.newTemplateData(req)
-	data.Form = timesheetForm{}
+	data.Form = timesheetForm{
+		WorkDate: time.Now().Format("2006-01-02"),
+	}
 	data.Project = &project
 	data.Client = &client
 	app.render(res, req, http.StatusOK, "timesheet_create.html", data)
