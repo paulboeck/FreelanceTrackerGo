@@ -30,6 +30,14 @@ type timesheetForm struct {
 	validator.Validator `form:"-"`
 }
 
+type invoiceForm struct {
+	InvoiceDate         string  `form:"invoice_date"`
+	DatePaid            string  `form:"date_paid"`
+	PaymentTerms        string  `form:"payment_terms"`
+	AmountDue           string  `form:"amount_due"`
+	validator.Validator `form:"-"`
+}
+
 // home handles http requests to the root URl of the project
 func (app *application) home(res http.ResponseWriter, req *http.Request) {
 	clients, err := app.clients.GetAll()
@@ -114,10 +122,18 @@ func (app *application) projectView(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
+	// Get invoices for this project
+	invoices, err := app.invoices.GetByProject(id)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
 	data := app.newTemplateData(req)
 	data.Project = &project
 	data.Client = &client
 	data.Timesheets = timesheets
+	data.Invoices = invoices
 
 	app.render(res, req, http.StatusOK, "project.html", data)
 }
@@ -774,4 +790,327 @@ func (app *application) timesheetDelete(res http.ResponseWriter, req *http.Reque
 
 	// Redirect to project view page after successful deletion
 	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", timesheet.ProjectID), http.StatusSeeOther)
+}
+
+// invoiceCreate handles a GET request which returns an empty invoice creation form
+func (app *application) invoiceCreate(res http.ResponseWriter, req *http.Request) {
+	projectID, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || projectID < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if project exists
+	project, err := app.projects.Get(projectID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the client for context
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Form = invoiceForm{
+		InvoiceDate: time.Now().Format("2006-01-02"),
+	}
+	data.Project = &project
+	data.Client = &client
+	app.render(res, req, http.StatusOK, "invoice_create.html", data)
+}
+
+// invoiceCreatePost handles a POST request with invoice form data which is then
+// validated and used to insert a new invoice into the database
+func (app *application) invoiceCreatePost(res http.ResponseWriter, req *http.Request) {
+	projectID, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || projectID < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if project exists
+	project, err := app.projects.Get(projectID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the client for context
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	var form invoiceForm
+	err = app.decodePostForm(req, &form)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	err = app.formDecoder.Decode(&form, req.PostForm)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.InvoiceDate), "invoice_date", "Invoice date is required")
+	form.CheckField(validator.NotBlank(form.AmountDue), "amount_due", "Amount due is required")
+	form.CheckField(validator.MaxChars(form.PaymentTerms, NAME_LENGTH), "payment_terms", fmt.Sprintf("Payment terms must be shorter than %d characters", NAME_LENGTH))
+
+	// Parse and validate invoice date
+	var invoiceDate time.Time
+	if form.Valid() {
+		invoiceDate, err = time.Parse("2006-01-02", form.InvoiceDate)
+		if err != nil {
+			form.AddFieldError("invoice_date", "Invoice date must be in YYYY-MM-DD format")
+		}
+	}
+
+	// Parse and validate amount due
+	var amountDue float64
+	if form.Valid() {
+		amountDue, err = strconv.ParseFloat(form.AmountDue, 64)
+		if err != nil || amountDue < 0 {
+			form.AddFieldError("amount_due", "Amount due must be a positive number")
+		}
+	}
+
+	// Parse date paid if provided
+	var datePaid *time.Time
+	if form.Valid() && form.DatePaid != "" {
+		parsedDatePaid, err := time.Parse("2006-01-02", form.DatePaid)
+		if err != nil {
+			form.AddFieldError("date_paid", "Date paid must be in YYYY-MM-DD format")
+		} else {
+			datePaid = &parsedDatePaid
+		}
+	}
+
+	if !form.Valid() {
+		data := app.newTemplateData(req)
+		data.Form = form
+		data.Project = &project
+		data.Client = &client
+		app.render(res, req, http.StatusUnprocessableEntity, "invoice_create.html", data)
+		return
+	}
+
+	_, err = app.invoices.Insert(projectID, invoiceDate, datePaid, form.PaymentTerms, amountDue)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", projectID), http.StatusSeeOther)
+}
+
+// invoiceUpdate handles a GET request which returns an invoice update form pre-populated with invoice data
+func (app *application) invoiceUpdate(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	invoice, err := app.invoices.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the project for context
+	project, err := app.projects.Get(invoice.ProjectID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get the client for context
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	var datePaidStr string
+	if invoice.DatePaid != nil {
+		datePaidStr = invoice.DatePaid.Format("2006-01-02")
+	}
+
+	data := app.newTemplateData(req)
+	data.Form = invoiceForm{
+		InvoiceDate:  invoice.InvoiceDate.Format("2006-01-02"),
+		DatePaid:     datePaidStr,
+		PaymentTerms: invoice.PaymentTerms,
+		AmountDue:    fmt.Sprintf("%.2f", invoice.AmountDue),
+	}
+	data.Project = &project
+	data.Client = &client
+	app.render(res, req, http.StatusOK, "invoice_create.html", data)
+}
+
+// invoiceUpdatePost handles a POST request with invoice form data which is then
+// validated and used to update an existing invoice in the database
+func (app *application) invoiceUpdatePost(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Get the invoice to ensure it exists and get the project ID
+	invoice, err := app.invoices.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	// Get project and client for context
+	project, err := app.projects.Get(invoice.ProjectID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	var form invoiceForm
+	err = app.decodePostForm(req, &form)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	err = app.formDecoder.Decode(&form, req.PostForm)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.InvoiceDate), "invoice_date", "Invoice date is required")
+	form.CheckField(validator.NotBlank(form.AmountDue), "amount_due", "Amount due is required")
+	form.CheckField(validator.MaxChars(form.PaymentTerms, NAME_LENGTH), "payment_terms", fmt.Sprintf("Payment terms must be shorter than %d characters", NAME_LENGTH))
+
+	// Parse and validate invoice date
+	var invoiceDate time.Time
+	if form.Valid() {
+		invoiceDate, err = time.Parse("2006-01-02", form.InvoiceDate)
+		if err != nil {
+			form.AddFieldError("invoice_date", "Invoice date must be in YYYY-MM-DD format")
+		}
+	}
+
+	// Parse and validate amount due
+	var amountDue float64
+	if form.Valid() {
+		amountDue, err = strconv.ParseFloat(form.AmountDue, 64)
+		if err != nil || amountDue < 0 {
+			form.AddFieldError("amount_due", "Amount due must be a positive number")
+		}
+	}
+
+	// Parse date paid if provided
+	var datePaid *time.Time
+	if form.Valid() && form.DatePaid != "" {
+		parsedDatePaid, err := time.Parse("2006-01-02", form.DatePaid)
+		if err != nil {
+			form.AddFieldError("date_paid", "Date paid must be in YYYY-MM-DD format")
+		} else {
+			datePaid = &parsedDatePaid
+		}
+	}
+
+	if !form.Valid() {
+		data := app.newTemplateData(req)
+		data.Form = form
+		data.Project = &project
+		data.Client = &client
+		app.render(res, req, http.StatusUnprocessableEntity, "invoice_create.html", data)
+		return
+	}
+
+	err = app.invoices.Update(id, invoiceDate, datePaid, form.PaymentTerms, amountDue)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", invoice.ProjectID), http.StatusSeeOther)
+}
+
+// invoiceDelete handles a POST request to soft delete an invoice
+func (app *application) invoiceDelete(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Check if invoice exists before deleting and get project ID for redirect
+	invoice, err := app.invoices.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	err = app.invoices.Delete(id)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Redirect to project view page after successful deletion
+	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", invoice.ProjectID), http.StatusSeeOther)
 }

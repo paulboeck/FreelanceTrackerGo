@@ -10,18 +10,23 @@ import (
 
 type Querier interface {
 	DeleteClient(ctx context.Context, id int64) error
+	DeleteInvoice(ctx context.Context, id int64) error
 	DeleteProject(ctx context.Context, id int64) error
 	DeleteTimesheet(ctx context.Context, id int64) error
 	GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 	GetClient(ctx context.Context, id int64) (GetClientRow, error)
+	GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, error)
+	GetInvoicesByProject(ctx context.Context, projectID int64) ([]GetInvoicesByProjectRow, error)
 	GetProject(ctx context.Context, id int64) (GetProjectRow, error)
 	GetProjectsByClient(ctx context.Context, clientID int64) ([]GetProjectsByClientRow, error)
 	GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, error)
 	GetTimesheetsByProject(ctx context.Context, projectID int64) ([]GetTimesheetsByProjectRow, error)
 	InsertClient(ctx context.Context, name string) (int64, error)
+	InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error)
 	InsertProject(ctx context.Context, arg InsertProjectParams) (int64, error)
 	InsertTimesheet(ctx context.Context, arg InsertTimesheetParams) (int64, error)
 	UpdateClient(ctx context.Context, arg UpdateClientParams) error
+	UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
 	UpdateTimesheet(ctx context.Context, arg UpdateTimesheetParams) error
 }

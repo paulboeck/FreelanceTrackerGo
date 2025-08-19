@@ -1,0 +1,59 @@
+{{define "title"}}
+{{if .Form.AmountDue}}Update Invoice{{else}}Create a New Invoice{{end}} - {{.Project.Name}}
+{{end}}
+
+{{define "main"}}
+<div style="margin-bottom: 1rem;">
+    <a href="/project/view/{{.Project.ID}}" style="color: #3b82f6; text-decoration: none;">
+        ← Back to {{.Project.Name}}
+    </a>
+</div>
+
+<h2>{{if .Form.AmountDue}}Update Invoice{{else}}Create a New Invoice{{end}}</h2>
+<p style="color: #6b7280; margin-bottom: 1.5rem;">
+    Project: <strong>{{.Project.Name}}</strong> | 
+    Client: <strong>{{.Client.Name}}</strong>
+</p>
+
+<div class="form-container">
+    <form method='POST'>
+        <div>
+            <label>Invoice Date:</label>
+            {{with .Form.FieldErrors.invoice_date}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='date' name='invoice_date' value="{{.Form.InvoiceDate}}" required>
+        </div>
+        <div>
+            <label>Amount Due:</label>
+            {{with .Form.FieldErrors.amount_due}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='number' name='amount_due' value="{{.Form.AmountDue}}" step="0.01" min="0" placeholder="e.g., 1250.00" required>
+            <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Enter amount in decimal format (e.g., 1250.00)</small>
+        </div>
+        <div>
+            <label>Payment Terms:</label>
+            {{with .Form.FieldErrors.payment_terms}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='text' name='payment_terms' value="{{.Form.PaymentTerms}}" maxlength="255" placeholder="e.g., Net 30">
+            <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Optional: Payment terms (max 255 characters)</small>
+        </div>
+        <div>
+            <label>Date Paid:</label>
+            {{with .Form.FieldErrors.date_paid}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='date' name='date_paid' value="{{.Form.DatePaid}}">
+            <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Optional: Date when payment was received</small>
+        </div>
+        <div>
+            <input type='submit' value='{{if .Form.AmountDue}}Update invoice{{else}}Create invoice{{end}}'>
+            {{if .Form.AmountDue}}
+            <a href="/project/view/{{.Project.ID}}" class="btn-cancel">Cancel</a>
+            {{end}}
+        </div>
+    </form>
+</div>
+{{end}}

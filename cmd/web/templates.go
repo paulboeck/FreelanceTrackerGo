@@ -14,6 +14,7 @@ type templateData struct {
 	Project     *models.Project
 	Projects    []models.Project
 	Timesheets  []models.Timesheet
+	Invoices    []models.Invoice
 	Form        any
 }
 
