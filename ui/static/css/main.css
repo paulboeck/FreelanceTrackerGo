@@ -622,3 +622,110 @@ footer {
     text-align: center;
     font-size: 0.875rem;
 }
+
+/* Custom Confirmation Dialog */
+.confirmation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.confirmation-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.confirmation-dialog {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    max-width: 400px;
+    width: 90%;
+    padding: 2rem;
+    transform: scale(0.95) translateY(-20px);
+    transition: transform 0.3s ease;
+}
+
+.confirmation-overlay.show .confirmation-dialog {
+    transform: scale(1) translateY(0);
+}
+
+.confirmation-icon {
+    width: 3rem;
+    height: 3rem;
+    background-color: #fef2f2;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem auto;
+}
+
+.confirmation-icon svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    color: #ef4444;
+}
+
+.confirmation-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #1f2937;
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+
+.confirmation-message {
+    color: #6b7280;
+    text-align: center;
+    margin-bottom: 2rem;
+    line-height: 1.5;
+}
+
+.confirmation-buttons {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.confirmation-btn {
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 600;
+    font-size: 0.875rem;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+.confirmation-btn-cancel {
+    background-color: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+}
+
+.confirmation-btn-cancel:hover {
+    background-color: #e5e7eb;
+    transform: translateY(-1px);
+}
+
+.confirmation-btn-confirm {
+    background-color: #ef4444;
+    color: #ffffff;
+}
+
+.confirmation-btn-confirm:hover {
+    background-color: #dc2626;
+    transform: translateY(-1px);
+}
