@@ -19,6 +19,7 @@ type application struct {
 	projects      models.ProjectModelInterface
 	timesheets    models.TimesheetModelInterface
 	invoices      models.InvoiceModelInterface
+	settings      models.SettingModelInterface
 	templateCache map[string]*template.Template
 	formDecoder   *form.Decoder
 }
@@ -58,6 +59,7 @@ func main() {
 	projectModel := models.NewProjectModel(db)
 	timesheetModel := models.NewTimesheetModel(db)
 	invoiceModel := models.NewInvoiceModel(db)
+	settingModel := models.NewSettingModel(db)
 	logger.Info("Using SQLite models")
 
 	app := &application{
@@ -66,6 +68,7 @@ func main() {
 		projects:      projectModel,
 		timesheets:    timesheetModel,
 		invoices:      invoiceModel,
+		settings:      settingModel,
 		templateCache: templateCache,
 		formDecoder:   formDecoder,
 	}

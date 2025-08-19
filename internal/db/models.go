@@ -38,6 +38,15 @@ type Project struct {
 	DeletedAt interface{} `json:"deleted_at"`
 }
 
+type Setting struct {
+	Key         string         `json:"key"`
+	Value       string         `json:"value"`
+	DataType    string         `json:"data_type"`
+	Description sql.NullString `json:"description"`
+	CreatedAt   sql.NullTime   `json:"created_at"`
+	UpdatedAt   sql.NullTime   `json:"updated_at"`
+}
+
 type Timesheet struct {
 	ID          int64          `json:"id"`
 	ProjectID   int64          `json:"project_id"`

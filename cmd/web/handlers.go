@@ -38,6 +38,11 @@ type invoiceForm struct {
 	validator.Validator `form:"-"`
 }
 
+type settingsForm struct {
+	Settings            map[string]string `form:"-"`
+	validator.Validator `form:"-"`
+}
+
 // home handles http requests to the root URl of the project
 func (app *application) home(res http.ResponseWriter, req *http.Request) {
 	clients, err := app.clients.GetAll()
@@ -1125,8 +1130,15 @@ func (app *application) invoicePrint(res http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	// Generate PDF
-	pdfBytes, err := app.invoices.GeneratePDF(id)
+	// Get settings for PDF generation
+	allSettings, err := app.settings.GetAll()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Generate PDF with settings
+	pdfBytes, err := app.invoices.GeneratePDFWithSettings(id, allSettings)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRecord) {
 			http.NotFound(res, req)
@@ -1147,4 +1159,107 @@ func (app *application) invoicePrint(res http.ResponseWriter, req *http.Request)
 		app.serverError(res, req, err)
 		return
 	}
+}
+
+// settingsView handles a GET request to view all application settings
+func (app *application) settingsView(res http.ResponseWriter, req *http.Request) {
+	settings, err := app.settings.GetAllDetailed()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Settings = settings
+
+	app.render(res, req, http.StatusOK, "settings.html", data)
+}
+
+// settingsEdit handles a GET request to display the settings edit form
+func (app *application) settingsEdit(res http.ResponseWriter, req *http.Request) {
+	settings, err := app.settings.GetAllDetailed()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Settings = settings
+	data.Form = settingsForm{}
+
+	app.render(res, req, http.StatusOK, "settings_edit.html", data)
+}
+
+// settingsEditPost handles a POST request to update application settings
+func (app *application) settingsEditPost(res http.ResponseWriter, req *http.Request) {
+	// Get current settings to know what to expect
+	settings, err := app.settings.GetAllDetailed()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Parse form
+	err = req.ParseForm()
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	var form settingsForm
+	form.Settings = make(map[string]string)
+	
+	// Extract values from form for each setting
+	for _, setting := range settings {
+		if value := req.PostForm.Get(setting.Key); value != "" {
+			form.Settings[setting.Key] = value
+		}
+	}
+
+	// Validate each setting based on its data type
+	for _, setting := range settings {
+		value, exists := form.Settings[setting.Key]
+		if !exists {
+			form.AddFieldError(setting.Key, "This field is required")
+			continue
+		}
+
+		switch setting.DataType {
+		case "decimal", "float":
+			if _, err := strconv.ParseFloat(value, 64); err != nil {
+				form.AddFieldError(setting.Key, "Must be a valid number")
+			}
+		case "int":
+			if _, err := strconv.Atoi(value); err != nil {
+				form.AddFieldError(setting.Key, "Must be a valid integer")
+			}
+		case "bool":
+			if value != "true" && value != "false" {
+				form.AddFieldError(setting.Key, "Must be true or false")
+			}
+		}
+	}
+
+	// If there are validation errors, redisplay the form
+	if !form.Valid() {
+		data := app.newTemplateData(req)
+		data.Settings = settings
+		data.Form = form
+		app.render(res, req, http.StatusUnprocessableEntity, "settings_edit.html", data)
+		return
+	}
+
+	// Update each setting value
+	for _, setting := range settings {
+		if newValue, exists := form.Settings[setting.Key]; exists {
+			err = app.settings.UpdateValue(setting.Key, newValue)
+			if err != nil {
+				app.serverError(res, req, err)
+				return
+			}
+		}
+	}
+
+	// Redirect to settings view
+	http.Redirect(res, req, "/settings", http.StatusSeeOther)
 }

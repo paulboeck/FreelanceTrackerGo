@@ -14,12 +14,14 @@ type Querier interface {
 	DeleteProject(ctx context.Context, id int64) error
 	DeleteTimesheet(ctx context.Context, id int64) error
 	GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
+	GetAllSettings(ctx context.Context) ([]Setting, error)
 	GetClient(ctx context.Context, id int64) (GetClientRow, error)
 	GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, error)
 	GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceForPDFRow, error)
 	GetInvoicesByProject(ctx context.Context, projectID int64) ([]GetInvoicesByProjectRow, error)
 	GetProject(ctx context.Context, id int64) (GetProjectRow, error)
 	GetProjectsByClient(ctx context.Context, clientID int64) ([]GetProjectsByClientRow, error)
+	GetSetting(ctx context.Context, key string) (Setting, error)
 	GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, error)
 	GetTimesheetsByProject(ctx context.Context, projectID int64) ([]GetTimesheetsByProjectRow, error)
 	InsertClient(ctx context.Context, name string) (int64, error)
@@ -29,6 +31,7 @@ type Querier interface {
 	UpdateClient(ctx context.Context, arg UpdateClientParams) error
 	UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
+	UpdateSetting(ctx context.Context, arg UpdateSettingParams) error
 	UpdateTimesheet(ctx context.Context, arg UpdateTimesheetParams) error
 }
 

@@ -390,6 +390,153 @@ func (i *InvoiceModel) GeneratePDF(id int) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// GeneratePDFWithSettings generates a PDF invoice using provided settings
+func (i *InvoiceModel) GeneratePDFWithSettings(id int, settings map[string]SettingValue) ([]byte, error) {
+	data, err := i.GetForPDF(id)
+	if err != nil {
+		return nil, err
+	}
+
+	// Helper to get setting value with fallback
+	getSetting := func(key, fallback string) string {
+		if setting, exists := settings[key]; exists {
+			return setting.AsString()
+		}
+		return fallback
+	}
+
+	pdf := gofpdf.New("P", "mm", "A4", "")
+	pdf.AddPage()
+	pdf.SetMargins(20, 20, 20)
+
+	// Add simple decorative element (like the wheat symbol in example)
+	pdf.SetFont("Arial", "", 14)
+	pdf.Cell(0, 8, "🌾 🌾 🌾")
+	pdf.Ln(12)
+
+	// Title - centered and larger (from settings)
+	invoiceTitle := getSetting("invoice_title", "Invoice for Academic Editing")
+	pdf.SetFont("Arial", "B", 18)
+	titleWidth := pdf.GetStringWidth(invoiceTitle)
+	pdf.SetX((210 - titleWidth) / 2) // Center on page
+	pdf.Cell(titleWidth, 10, invoiceTitle)
+	pdf.Ln(20)
+
+	// Date and Invoice Number with proper spacing
+	pdf.SetFont("Arial", "", 12)
+	pdf.Cell(95, 8, fmt.Sprintf("Date: %s", data.Invoice.InvoiceDate.Format("Jan. 2, 2006")))
+	pdf.SetX(120) // Position invoice number on right
+	pdf.Cell(70, 8, fmt.Sprintf("Invoice No: %d", data.Invoice.ID))
+	pdf.Ln(20)
+
+	// Two column layout for Invoiced To and Pay To
+	leftColX := 20.0
+	rightColX := 110.0
+	
+	// Section headers
+	pdf.SetFont("Arial", "B", 12)
+	pdf.SetX(leftColX)
+	pdf.Cell(80, 8, "Invoiced To:")
+	pdf.SetX(rightColX)
+	pdf.Cell(80, 8, "Pay To:")
+	pdf.Ln(8)
+
+	// Left column - Client info
+	pdf.SetFont("Arial", "", 11)
+	pdf.SetX(leftColX)
+	pdf.Cell(80, 6, fmt.Sprintf("Client: %s", data.ClientName))
+	
+	// Right column - Freelancer info (from settings)
+	pdf.SetX(rightColX)
+	pdf.Cell(80, 6, getSetting("freelancer_name", "Your Name Here"))
+	pdf.Ln(6)
+	
+	pdf.SetX(leftColX)
+	pdf.Cell(80, 6, "Purchase Order Info") // Placeholder
+	pdf.SetX(rightColX)
+	pdf.Cell(80, 6, getSetting("freelancer_address", "Your Address"))
+	pdf.Ln(6)
+	
+	pdf.SetX(rightColX)
+	pdf.Cell(80, 6, "Your City, State ZIP") // Could add more address settings
+	pdf.Ln(6)
+	
+	pdf.SetX(rightColX)
+	pdf.Cell(80, 6, getSetting("freelancer_phone", "Your Phone"))
+	pdf.Ln(6)
+	
+	pdf.SetX(rightColX)
+	pdf.Cell(80, 6, getSetting("freelancer_email", "your.email@example.com"))
+	pdf.Ln(25)
+
+	// Table with borders and proper formatting
+	
+	// Table header with background and borders
+	pdf.SetFillColor(240, 240, 240) // Light gray background
+	pdf.SetFont("Arial", "B", 11)
+	
+	// Header row
+	pdf.CellFormat(80, 10, "DESCRIPTION", "1", 0, "L", true, 0, "")
+	pdf.CellFormat(25, 10, "HOURS", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(30, 10, "RATE", "1", 0, "C", true, 0, "")
+	pdf.CellFormat(35, 10, "TOTAL", "1", 1, "C", true, 0, "")
+
+	// Calculate totals
+	totalHours := 0.0
+	for _, ts := range data.Timesheets {
+		totalHours += ts.HoursWorked
+	}
+	
+	var hourlyRate float64
+	if totalHours > 0 {
+		hourlyRate = data.Invoice.AmountDue / totalHours
+	}
+
+	// Table content row
+	pdf.SetFillColor(255, 255, 255) // White background
+	pdf.SetFont("Arial", "", 11)
+	
+	description := fmt.Sprintf("%s: %s", data.ProjectName, data.Invoice.InvoiceDate.Format("January-2006"))
+	pdf.CellFormat(80, 10, description, "1", 0, "L", true, 0, "")
+	pdf.CellFormat(25, 10, fmt.Sprintf("%.2f", totalHours), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(30, 10, fmt.Sprintf("USD $%.2f", hourlyRate), "1", 0, "C", true, 0, "")
+	pdf.CellFormat(35, 10, fmt.Sprintf("USD $%.2f", data.Invoice.AmountDue), "1", 1, "C", true, 0, "")
+
+	pdf.Ln(10)
+
+	// Total row - right aligned
+	pdf.SetFont("Arial", "B", 11)
+	pdf.Cell(135, 10, "Total")
+	pdf.CellFormat(35, 10, fmt.Sprintf("USD $%.2f", data.Invoice.AmountDue), "", 1, "C", false, 0, "")
+	
+	pdf.Ln(15)
+
+	// Notes section
+	pdf.SetFont("Arial", "B", 12)
+	pdf.Cell(0, 8, "Notes:")
+	pdf.Ln(8)
+
+	pdf.SetFont("Arial", "", 11)
+	// Split payment terms into multiple lines if needed
+	pdf.MultiCell(0, 5, data.Invoice.PaymentTerms, "", "L", false)
+	pdf.Ln(10)
+
+	// Thank you message - centered and italic
+	pdf.SetFont("Arial", "I", 12)
+	thankYouText := "Thank you for your business!"
+	thankYouWidth := pdf.GetStringWidth(thankYouText)
+	pdf.SetX((210 - thankYouWidth) / 2)
+	pdf.Cell(thankYouWidth, 8, thankYouText)
+
+	var buf bytes.Buffer
+	err = pdf.Output(&buf)
+	if err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
 // InvoiceModelInterface defines the interface for invoice operations
 type InvoiceModelInterface interface {
 	Insert(projectID int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64) (int, error)
@@ -399,6 +546,7 @@ type InvoiceModelInterface interface {
 	Delete(id int) error
 	GetForPDF(id int) (InvoiceData, error)
 	GeneratePDF(id int) ([]byte, error)
+	GeneratePDFWithSettings(id int, settings map[string]SettingValue) ([]byte, error)
 }
 
 // Ensure implementation satisfies the interface

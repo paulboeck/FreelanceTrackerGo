@@ -1,0 +1,45 @@
+{{define "title"}}Settings{{end}}
+
+{{define "main"}}
+    <div class="client">
+        <div class="metadata">
+            <strong>Application Settings</strong>
+        </div>
+        <div>
+            Configure values for application-wide settings
+        </div>
+        <div class="client-actions">
+            <a href="/settings/edit" class="btn-client-action">Edit Setting Values</a>
+        </div>
+    </div>
+    
+    <div class="projects-section">
+        <div class="projects-header">
+            <h3>Current Settings</h3>
+        </div>
+        
+        {{if .Settings}}
+            <div class="projects-list">
+                {{range .Settings}}
+                    <div class="project-item">
+                        <div class="project-content">
+                            <div class="project-info">
+                                <strong class="project-name">{{.Description}}</strong>
+                            </div>
+                            <div class="project-value">
+                                <span style="color: #374151; font-weight: 500;">{{.Value}}</span>
+                            </div>
+                        </div>
+                        <div class="project-meta">
+                            <time>{{.Updated | humanDate | printf "Updated: %s"}}</time>
+                        </div>
+                    </div>
+                {{end}}
+            </div>
+        {{else}}
+            <div class="projects-empty">
+                <p class="empty-message">No settings configured.</p>
+            </div>
+        {{end}}
+    </div>
+{{end}}
