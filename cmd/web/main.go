@@ -22,7 +22,7 @@ type application struct {
 	projects       models.ProjectModelInterface
 	timesheets     models.TimesheetModelInterface
 	invoices       models.InvoiceModelInterface
-	settings       models.SettingModelInterface
+	settings       models.AppSettingModelInterface
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
 	sessionManager *scs.SessionManager
@@ -67,7 +67,7 @@ func main() {
 	projectModel := models.NewProjectModel(db)
 	timesheetModel := models.NewTimesheetModel(db)
 	invoiceModel := models.NewInvoiceModel(db)
-	settingModel := models.NewSettingModel(db)
+	settingModel := models.NewAppSettingModel(db)
 	logger.Info("Using SQLite models")
 
 	app := &application{

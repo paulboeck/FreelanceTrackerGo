@@ -6,14 +6,14 @@ import (
 	"github.com/paulboeck/FreelanceTrackerGo/internal/testutil"
 )
 
-func TestSettingModel_GetString(t *testing.T) {
+func TestAppSettingModel_GetString(t *testing.T) {
 	if testing.Short() {
 		t.Skip("models: skipping integration test")
 	}
 
 	testDB := testutil.SetupTestSQLite(t)
 	defer testDB.Cleanup(t)
-	model := NewSettingModel(testDB.DB)
+	model := NewAppSettingModel(testDB.DB)
 
 	// Test getting a string setting that should exist after migration
 	value, err := model.GetString("invoice_title")
@@ -26,14 +26,14 @@ func TestSettingModel_GetString(t *testing.T) {
 	}
 }
 
-func TestSettingModel_GetDecimal(t *testing.T) {
+func TestAppSettingModel_GetDecimal(t *testing.T) {
 	if testing.Short() {
 		t.Skip("models: skipping integration test")
 	}
 
 	testDB := testutil.SetupTestSQLite(t)
 	defer testDB.Cleanup(t)
-	model := NewSettingModel(testDB.DB)
+	model := NewAppSettingModel(testDB.DB)
 
 	// Test getting a decimal setting
 	rate, err := model.GetDecimal("default_hourly_rate")
@@ -46,14 +46,14 @@ func TestSettingModel_GetDecimal(t *testing.T) {
 	}
 }
 
-func TestSettingModel_GetAll(t *testing.T) {
+func TestAppSettingModel_GetAll(t *testing.T) {
 	if testing.Short() {
 		t.Skip("models: skipping integration test")
 	}
 
 	testDB := testutil.SetupTestSQLite(t)
 	defer testDB.Cleanup(t)
-	model := NewSettingModel(testDB.DB)
+	model := NewAppSettingModel(testDB.DB)
 
 	// Test getting all settings
 	settings, err := model.GetAll()
@@ -79,14 +79,14 @@ func TestSettingModel_GetAll(t *testing.T) {
 	}
 }
 
-func TestSettingModel_UpdateValue(t *testing.T) {
+func TestAppSettingModel_UpdateValue(t *testing.T) {
 	if testing.Short() {
 		t.Skip("models: skipping integration test")
 	}
 
 	testDB := testutil.SetupTestSQLite(t)
 	defer testDB.Cleanup(t)
-	model := NewSettingModel(testDB.DB)
+	model := NewAppSettingModel(testDB.DB)
 
 	// Update a setting value
 	err := model.UpdateValue("default_hourly_rate", "95.00")

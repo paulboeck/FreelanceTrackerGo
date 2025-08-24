@@ -391,7 +391,7 @@ func (i *InvoiceModel) GeneratePDF(id int) ([]byte, error) {
 }
 
 // GeneratePDFWithSettings generates a PDF invoice using provided settings
-func (i *InvoiceModel) GeneratePDFWithSettings(id int, settings map[string]SettingValue) ([]byte, error) {
+func (i *InvoiceModel) GeneratePDFWithSettings(id int, settings map[string]AppSettingValue) ([]byte, error) {
 	data, err := i.GetForPDF(id)
 	if err != nil {
 		return nil, err
@@ -546,7 +546,7 @@ type InvoiceModelInterface interface {
 	Delete(id int) error
 	GetForPDF(id int) (InvoiceData, error)
 	GeneratePDF(id int) ([]byte, error)
-	GeneratePDFWithSettings(id int, settings map[string]SettingValue) ([]byte, error)
+	GeneratePDFWithSettings(id int, settings map[string]AppSettingValue) ([]byte, error)
 }
 
 // Ensure implementation satisfies the interface

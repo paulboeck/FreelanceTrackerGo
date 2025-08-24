@@ -1,5 +1,5 @@
 {{define "title"}}
-{{if .Form.WorkDate}}Update Timesheet{{else}}Create a New Timesheet{{end}} - {{.Project.Name}}
+{{if .Form.IsUpdate}}Update Timesheet{{else}}Create a New Timesheet{{end}} - {{.Project.Name}}
 {{end}}
 
 {{define "main"}}
@@ -9,7 +9,7 @@
     </a>
 </div>
 
-<h2>{{if .Form.WorkDate}}Update Timesheet{{else}}Create a New Timesheet{{end}}</h2>
+<h2>{{if .Form.IsUpdate}}Update Timesheet{{else}}Create a New Timesheet{{end}}</h2>
 <p style="color: #6b7280; margin-bottom: 1.5rem;">
     Project: <strong>{{.Project.Name}}</strong> | 
     Client: <strong>{{.Client.Name}}</strong>
@@ -41,8 +41,8 @@
             <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Optional: Brief description (max 255 characters)</small>
         </div>
         <div>
-            <input type='submit' value='{{if .Form.WorkDate}}Update timesheet{{else}}Create timesheet{{end}}'>
-            {{if .Form.WorkDate}}
+            <input type='submit' value='{{if .Form.IsUpdate}}Update timesheet{{else}}Create timesheet{{end}}'>
+            {{if .Form.IsUpdate}}
             <a href="/project/view/{{.Project.ID}}" class="btn-cancel">Cancel</a>
             {{end}}
         </div>

@@ -15,7 +15,7 @@ type templateData struct {
 	Projects    []models.Project
 	Timesheets  []models.Timesheet
 	Invoices    []models.Invoice
-	Settings    []models.Setting
+	Settings    []models.AppSetting
 	Form        any
 }
 

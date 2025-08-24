@@ -10,8 +10,8 @@ import (
 	"github.com/paulboeck/FreelanceTrackerGo/internal/db"
 )
 
-// Setting represents a configuration setting in the system
-type Setting struct {
+// AppSetting represents a configuration setting in the system
+type AppSetting struct {
 	Key         string
 	Value       string
 	DataType    string
@@ -20,19 +20,19 @@ type Setting struct {
 	Updated     time.Time
 }
 
-// SettingValue provides type-safe access to setting values
-type SettingValue struct {
+// AppSettingValue provides type-safe access to setting values
+type AppSettingValue struct {
 	Value    string
 	DataType string
 }
 
 // AsString returns the setting value as a string
-func (sv SettingValue) AsString() string {
+func (sv AppSettingValue) AsString() string {
 	return sv.Value
 }
 
 // AsInt returns the setting value as an integer
-func (sv SettingValue) AsInt() (int, error) {
+func (sv AppSettingValue) AsInt() (int, error) {
 	if sv.DataType != "int" {
 		return 0, errors.New("setting is not an integer")
 	}
@@ -40,7 +40,7 @@ func (sv SettingValue) AsInt() (int, error) {
 }
 
 // AsFloat returns the setting value as a float64
-func (sv SettingValue) AsFloat() (float64, error) {
+func (sv AppSettingValue) AsFloat() (float64, error) {
 	if sv.DataType != "float" && sv.DataType != "decimal" {
 		return 0, errors.New("setting is not a float or decimal")
 	}
@@ -48,39 +48,39 @@ func (sv SettingValue) AsFloat() (float64, error) {
 }
 
 // AsDecimal returns the setting value as a float64 (alias for AsFloat)
-func (sv SettingValue) AsDecimal() (float64, error) {
+func (sv AppSettingValue) AsDecimal() (float64, error) {
 	return sv.AsFloat()
 }
 
 // AsBool returns the setting value as a boolean
-func (sv SettingValue) AsBool() (bool, error) {
+func (sv AppSettingValue) AsBool() (bool, error) {
 	if sv.DataType != "bool" {
 		return false, errors.New("setting is not a boolean")
 	}
 	return strconv.ParseBool(sv.Value)
 }
 
-// SettingModel wraps the generated SQLC Queries for setting operations
-type SettingModel struct {
+// AppSettingModel wraps the generated SQLC Queries for setting operations
+type AppSettingModel struct {
 	queries *db.Queries
 }
 
-// NewSettingModel creates a new SettingModel
-func NewSettingModel(database *sql.DB) *SettingModel {
-	return &SettingModel{
+// NewAppSettingModel creates a new AppSettingModel
+func NewAppSettingModel(database *sql.DB) *AppSettingModel {
+	return &AppSettingModel{
 		queries: db.New(database),
 	}
 }
 
 // Get retrieves a specific setting by key
-func (s *SettingModel) Get(key string) (Setting, error) {
+func (s *AppSettingModel) Get(key string) (AppSetting, error) {
 	ctx := context.Background()
 	row, err := s.queries.GetSetting(ctx, key)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return Setting{}, ErrNoRecord
+			return AppSetting{}, ErrNoRecord
 		}
-		return Setting{}, err
+		return AppSetting{}, err
 	}
 
 	description := ""
@@ -96,7 +96,7 @@ func (s *SettingModel) Get(key string) (Setting, error) {
 		updated = row.UpdatedAt.Time
 	}
 
-	setting := Setting{
+	setting := AppSetting{
 		Key:         row.Key,
 		Value:       row.Value,
 		DataType:    row.DataType,
@@ -109,16 +109,16 @@ func (s *SettingModel) Get(key string) (Setting, error) {
 }
 
 // GetValue retrieves a setting value with type information
-func (s *SettingModel) GetValue(key string) (SettingValue, error) {
+func (s *AppSettingModel) GetValue(key string) (AppSettingValue, error) {
 	setting, err := s.Get(key)
 	if err != nil {
-		return SettingValue{}, err
+		return AppSettingValue{}, err
 	}
-	return SettingValue{Value: setting.Value, DataType: setting.DataType}, nil
+	return AppSettingValue{Value: setting.Value, DataType: setting.DataType}, nil
 }
 
 // GetString retrieves a string setting value
-func (s *SettingModel) GetString(key string) (string, error) {
+func (s *AppSettingModel) GetString(key string) (string, error) {
 	value, err := s.GetValue(key)
 	if err != nil {
 		return "", err
@@ -130,7 +130,7 @@ func (s *SettingModel) GetString(key string) (string, error) {
 }
 
 // GetInt retrieves an integer setting value
-func (s *SettingModel) GetInt(key string) (int, error) {
+func (s *AppSettingModel) GetInt(key string) (int, error) {
 	value, err := s.GetValue(key)
 	if err != nil {
 		return 0, err
@@ -139,7 +139,7 @@ func (s *SettingModel) GetInt(key string) (int, error) {
 }
 
 // GetFloat retrieves a float setting value
-func (s *SettingModel) GetFloat(key string) (float64, error) {
+func (s *AppSettingModel) GetFloat(key string) (float64, error) {
 	value, err := s.GetValue(key)
 	if err != nil {
 		return 0, err
@@ -148,7 +148,7 @@ func (s *SettingModel) GetFloat(key string) (float64, error) {
 }
 
 // GetDecimal retrieves a decimal setting value
-func (s *SettingModel) GetDecimal(key string) (float64, error) {
+func (s *AppSettingModel) GetDecimal(key string) (float64, error) {
 	value, err := s.GetValue(key)
 	if err != nil {
 		return 0, err
@@ -157,7 +157,7 @@ func (s *SettingModel) GetDecimal(key string) (float64, error) {
 }
 
 // GetBool retrieves a boolean setting value
-func (s *SettingModel) GetBool(key string) (bool, error) {
+func (s *AppSettingModel) GetBool(key string) (bool, error) {
 	value, err := s.GetValue(key)
 	if err != nil {
 		return false, err
@@ -166,16 +166,16 @@ func (s *SettingModel) GetBool(key string) (bool, error) {
 }
 
 // GetAll retrieves all settings as a map for bulk access
-func (s *SettingModel) GetAll() (map[string]SettingValue, error) {
+func (s *AppSettingModel) GetAll() (map[string]AppSettingValue, error) {
 	ctx := context.Background()
 	rows, err := s.queries.GetAllSettings(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	settings := make(map[string]SettingValue)
+	settings := make(map[string]AppSettingValue)
 	for _, row := range rows {
-		settings[row.Key] = SettingValue{
+		settings[row.Key] = AppSettingValue{
 			Value:    row.Value,
 			DataType: row.DataType,
 		}
@@ -185,14 +185,14 @@ func (s *SettingModel) GetAll() (map[string]SettingValue, error) {
 }
 
 // GetAllDetailed retrieves all settings with full information
-func (s *SettingModel) GetAllDetailed() ([]Setting, error) {
+func (s *AppSettingModel) GetAllDetailed() ([]AppSetting, error) {
 	ctx := context.Background()
 	rows, err := s.queries.GetAllSettings(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	settings := make([]Setting, len(rows))
+	settings := make([]AppSetting, len(rows))
 	for i, row := range rows {
 		description := ""
 		if row.Description.Valid {
@@ -207,7 +207,7 @@ func (s *SettingModel) GetAllDetailed() ([]Setting, error) {
 			updated = row.UpdatedAt.Time
 		}
 
-		settings[i] = Setting{
+		settings[i] = AppSetting{
 			Key:         row.Key,
 			Value:       row.Value,
 			DataType:    row.DataType,
@@ -221,7 +221,7 @@ func (s *SettingModel) GetAllDetailed() ([]Setting, error) {
 }
 
 // UpdateValue modifies only the value of an existing setting
-func (s *SettingModel) UpdateValue(key, value string) error {
+func (s *AppSettingModel) UpdateValue(key, value string) error {
 	ctx := context.Background()
 	params := db.UpdateSettingParams{
 		Key:   key,
@@ -230,19 +230,19 @@ func (s *SettingModel) UpdateValue(key, value string) error {
 	return s.queries.UpdateSetting(ctx, params)
 }
 
-// SettingModelInterface defines the interface for setting operations
-type SettingModelInterface interface {
-	Get(key string) (Setting, error)
-	GetValue(key string) (SettingValue, error)
+// AppSettingModelInterface defines the interface for setting operations
+type AppSettingModelInterface interface {
+	Get(key string) (AppSetting, error)
+	GetValue(key string) (AppSettingValue, error)
 	GetString(key string) (string, error)
 	GetInt(key string) (int, error)
 	GetFloat(key string) (float64, error)
 	GetDecimal(key string) (float64, error)
 	GetBool(key string) (bool, error)
-	GetAll() (map[string]SettingValue, error)
-	GetAllDetailed() ([]Setting, error)
+	GetAll() (map[string]AppSettingValue, error)
+	GetAllDetailed() ([]AppSetting, error)
 	UpdateValue(key, value string) error
 }
 
 // Ensure implementation satisfies the interface
-var _ SettingModelInterface = (*SettingModel)(nil)
+var _ AppSettingModelInterface = (*AppSettingModel)(nil)

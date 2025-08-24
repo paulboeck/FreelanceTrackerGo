@@ -29,6 +29,7 @@ type timesheetForm struct {
 	WorkDate            string `form:"work_date"`
 	HoursWorked         string `form:"hours_worked"`
 	Description         string `form:"description"`
+	IsUpdate            bool   `form:"-"`
 	validator.Validator `form:"-"`
 }
 
@@ -643,6 +644,7 @@ func (app *application) timesheetUpdate(res http.ResponseWriter, req *http.Reque
 		WorkDate:    timesheet.WorkDate.Format("2006-01-02"),
 		HoursWorked: fmt.Sprintf("%.2f", timesheet.HoursWorked),
 		Description: timesheet.Description,
+		IsUpdate:    true,
 	}
 	data.Project = &project
 	data.Client = &client
@@ -720,6 +722,7 @@ func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.R
 	}
 
 	if !form.Valid() {
+		form.IsUpdate = true
 		data := app.newTemplateData(req)
 		data.Form = form
 		data.Project = &project
