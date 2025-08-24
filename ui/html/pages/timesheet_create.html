@@ -22,14 +22,14 @@
             {{with .Form.FieldErrors.work_date}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='date' name='work_date' value="{{.Form.WorkDate}}" required>
+            <input type='date' name='work_date' value="{{.Form.WorkDate}}">
         </div>
         <div>
             <label>Hours Worked:</label>
             {{with .Form.FieldErrors.hours_worked}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='number' name='hours_worked' value="{{.Form.HoursWorked}}" step="0.25" min="0" max="24" placeholder="e.g., 8.5" required>
+            <input type='number' name='hours_worked' value="{{.Form.HoursWorked}}" step="0.25" min="0" max="24" placeholder="e.g., 8.5">
             <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Enter hours in decimal format (e.g., 8.25 for 8 hours 15 minutes)</small>
         </div>
         <div>
