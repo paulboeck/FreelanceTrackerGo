@@ -6,7 +6,10 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/alexedwards/scs/sqlite3store"
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 
 	"github.com/paulboeck/FreelanceTrackerGo/internal/database"
@@ -14,14 +17,15 @@ import (
 )
 
 type application struct {
-	logger        *slog.Logger
-	clients       models.ClientModelInterface
-	projects      models.ProjectModelInterface
-	timesheets    models.TimesheetModelInterface
-	invoices      models.InvoiceModelInterface
-	settings      models.SettingModelInterface
-	templateCache map[string]*template.Template
-	formDecoder   *form.Decoder
+	logger         *slog.Logger
+	clients        models.ClientModelInterface
+	projects       models.ProjectModelInterface
+	timesheets     models.TimesheetModelInterface
+	invoices       models.InvoiceModelInterface
+	settings       models.SettingModelInterface
+	templateCache  map[string]*template.Template
+	formDecoder    *form.Decoder
+	sessionManager *scs.SessionManager
 }
 
 func main() {
@@ -54,6 +58,10 @@ func main() {
 	}
 	formDecoder := form.NewDecoder()
 
+	sessionManager := scs.New()
+	sessionManager.Store = sqlite3store.New(db)
+	sessionManager.Lifetime = 12 * time.Hour
+
 	// Create SQLite models
 	clientModel := models.NewClientModel(db)
 	projectModel := models.NewProjectModel(db)
@@ -63,14 +71,15 @@ func main() {
 	logger.Info("Using SQLite models")
 
 	app := &application{
-		logger:        logger,
-		clients:       clientModel,
-		projects:      projectModel,
-		timesheets:    timesheetModel,
-		invoices:      invoiceModel,
-		settings:      settingModel,
-		templateCache: templateCache,
-		formDecoder:   formDecoder,
+		logger:         logger,
+		clients:        clientModel,
+		projects:       projectModel,
+		timesheets:     timesheetModel,
+		invoices:       invoiceModel,
+		settings:       settingModel,
+		templateCache:  templateCache,
+		formDecoder:    formDecoder,
+		sessionManager: sessionManager,
 	}
 
 	logger.Info("Starting server", slog.String("addr", *addr))

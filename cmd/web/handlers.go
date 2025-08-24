@@ -13,6 +13,8 @@ import (
 
 const NAME_LENGTH = 255
 
+// use `form:"-"` so the go-playground form library will ignore that attribute
+// when parsing a request and populating a form struct
 type clientForm struct {
 	Name                string `form:"name"`
 	validator.Validator `form:"-"`
@@ -24,17 +26,17 @@ type projectForm struct {
 }
 
 type timesheetForm struct {
-	WorkDate            string  `form:"work_date"`
-	HoursWorked         string  `form:"hours_worked"`
-	Description         string  `form:"description"`
+	WorkDate            string `form:"work_date"`
+	HoursWorked         string `form:"hours_worked"`
+	Description         string `form:"description"`
 	validator.Validator `form:"-"`
 }
 
 type invoiceForm struct {
-	InvoiceDate         string  `form:"invoice_date"`
-	DatePaid            string  `form:"date_paid"`
-	PaymentTerms        string  `form:"payment_terms"`
-	AmountDue           string  `form:"amount_due"`
+	InvoiceDate         string `form:"invoice_date"`
+	DatePaid            string `form:"date_paid"`
+	PaymentTerms        string `form:"payment_terms"`
+	AmountDue           string `form:"amount_due"`
 	validator.Validator `form:"-"`
 }
 
@@ -160,12 +162,6 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	err = app.formDecoder.Decode(&form, req.PostForm)
-	if err != nil {
-		app.clientError(res, http.StatusBadRequest)
-		return
-	}
-
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
 
@@ -221,12 +217,6 @@ func (app *application) clientUpdatePost(res http.ResponseWriter, req *http.Requ
 
 	var form clientForm
 	err = app.decodePostForm(req, &form)
-	if err != nil {
-		app.clientError(res, http.StatusBadRequest)
-		return
-	}
-
-	err = app.formDecoder.Decode(&form, req.PostForm)
 	if err != nil {
 		app.clientError(res, http.StatusBadRequest)
 		return
@@ -352,12 +342,6 @@ func (app *application) projectCreatePost(res http.ResponseWriter, req *http.Req
 		return
 	}
 
-	err = app.formDecoder.Decode(&form, req.PostForm)
-	if err != nil {
-		app.clientError(res, http.StatusBadRequest)
-		return
-	}
-
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
 
@@ -436,12 +420,6 @@ func (app *application) projectUpdatePost(res http.ResponseWriter, req *http.Req
 
 	var form projectForm
 	err = app.decodePostForm(req, &form)
-	if err != nil {
-		app.clientError(res, http.StatusBadRequest)
-		return
-	}
-
-	err = app.formDecoder.Decode(&form, req.PostForm)
 	if err != nil {
 		app.clientError(res, http.StatusBadRequest)
 		return
@@ -581,12 +559,6 @@ func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	err = app.formDecoder.Decode(&form, req.PostForm)
-	if err != nil {
-		app.clientError(res, http.StatusBadRequest)
-		return
-	}
-
 	form.CheckField(validator.NotBlank(form.WorkDate), "work_date", "Work date is required")
 	form.CheckField(validator.NotBlank(form.HoursWorked), "hours_worked", "Hours worked is required")
 	form.CheckField(validator.MaxChars(form.Description, NAME_LENGTH), "description", fmt.Sprintf("Description must be shorter than %d characters", NAME_LENGTH))
@@ -720,12 +692,6 @@ func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.R
 
 	var form timesheetForm
 	err = app.decodePostForm(req, &form)
-	if err != nil {
-		app.clientError(res, http.StatusBadRequest)
-		return
-	}
-
-	err = app.formDecoder.Decode(&form, req.PostForm)
 	if err != nil {
 		app.clientError(res, http.StatusBadRequest)
 		return
@@ -871,12 +837,6 @@ func (app *application) invoiceCreatePost(res http.ResponseWriter, req *http.Req
 
 	var form invoiceForm
 	err = app.decodePostForm(req, &form)
-	if err != nil {
-		app.clientError(res, http.StatusBadRequest)
-		return
-	}
-
-	err = app.formDecoder.Decode(&form, req.PostForm)
 	if err != nil {
 		app.clientError(res, http.StatusBadRequest)
 		return
@@ -1032,12 +992,6 @@ func (app *application) invoiceUpdatePost(res http.ResponseWriter, req *http.Req
 
 	var form invoiceForm
 	err = app.decodePostForm(req, &form)
-	if err != nil {
-		app.clientError(res, http.StatusBadRequest)
-		return
-	}
-
-	err = app.formDecoder.Decode(&form, req.PostForm)
 	if err != nil {
 		app.clientError(res, http.StatusBadRequest)
 		return
@@ -1208,7 +1162,7 @@ func (app *application) settingsEditPost(res http.ResponseWriter, req *http.Requ
 
 	var form settingsForm
 	form.Settings = make(map[string]string)
-	
+
 	// Extract values from form for each setting
 	for _, setting := range settings {
 		if value := req.PostForm.Get(setting.Key); value != "" {
