@@ -136,3 +136,43 @@ func (td *TestDatabase) InsertTestClient(t *testing.T, name string) int {
 	
 	return int(id)
 }
+
+// InsertTestProject inserts a test project and returns its ID
+func (td *TestDatabase) InsertTestProject(t *testing.T, name string, clientID int) int {
+	result, err := td.DB.Exec("INSERT INTO project (name, client_id) VALUES (?, ?)", name, clientID)
+	require.NoError(t, err)
+	
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+	
+	return int(id)
+}
+
+// InsertTestTimesheet inserts a test timesheet and returns its ID
+func (td *TestDatabase) InsertTestTimesheet(t *testing.T, projectID int, workDate, hoursWorked, description string) int {
+	result, err := td.DB.Exec("INSERT INTO timesheet (project_id, work_date, hours_worked, description) VALUES (?, ?, ?, ?)", 
+		projectID, workDate, hoursWorked, description)
+	require.NoError(t, err)
+	
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+	
+	return int(id)
+}
+
+// InsertTestInvoice inserts a test invoice and returns its ID
+func (td *TestDatabase) InsertTestInvoice(t *testing.T, projectID int, invoiceDate, datePaid, paymentTerms, amountDue string) int {
+	var datePaidParam interface{}
+	if datePaid != "" {
+		datePaidParam = datePaid
+	}
+	
+	result, err := td.DB.Exec("INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due) VALUES (?, ?, ?, ?, ?)", 
+		projectID, invoiceDate, datePaidParam, paymentTerms, amountDue)
+	require.NoError(t, err)
+	
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+	
+	return int(id)
+}
