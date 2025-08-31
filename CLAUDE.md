@@ -73,9 +73,14 @@ pkill -f "web -addr"
 ### Application Structure
 The main application struct in `cmd/web/main.go` contains:
 - `logger`: Structured logging using slog
-- `clients`: SQLite database model using SQLC-generated code
+- `clients`: Client database model interface
+- `projects`: Project database model interface
+- `timesheets`: Timesheet database model interface
+- `invoices`: Invoice database model interface
+- `settings`: Application settings database model interface
 - `templateCache`: Pre-compiled HTML templates  
 - `formDecoder`: Form data decoder for POST requests
+- `sessionManager`: Session management using SCS with SQLite store
 
 ### Database Layer
 **SQLite**:
