@@ -74,6 +74,7 @@ type invoiceForm struct {
 	DatePaid            string `form:"date_paid"`
 	PaymentTerms        string `form:"payment_terms"`
 	AmountDue           string `form:"amount_due"`
+	DisplayDetails      bool   `form:"display_details"`
 	validator.Validator `form:"-"`
 }
 
@@ -1311,7 +1312,7 @@ func (app *application) invoiceCreatePost(res http.ResponseWriter, req *http.Req
 		return
 	}
 
-	_, err = app.invoices.Insert(projectID, invoiceDate, datePaid, form.PaymentTerms, amountDue)
+	_, err = app.invoices.Insert(projectID, invoiceDate, datePaid, form.PaymentTerms, amountDue, form.DisplayDetails)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
@@ -1366,10 +1367,11 @@ func (app *application) invoiceUpdate(res http.ResponseWriter, req *http.Request
 
 	data := app.newTemplateData(req)
 	data.Form = invoiceForm{
-		InvoiceDate:  invoice.InvoiceDate.Format("2006-01-02"),
-		DatePaid:     datePaidStr,
-		PaymentTerms: invoice.PaymentTerms,
-		AmountDue:    fmt.Sprintf("%.2f", invoice.AmountDue),
+		InvoiceDate:    invoice.InvoiceDate.Format("2006-01-02"),
+		DatePaid:       datePaidStr,
+		PaymentTerms:   invoice.PaymentTerms,
+		AmountDue:      fmt.Sprintf("%.2f", invoice.AmountDue),
+		DisplayDetails: invoice.DisplayDetails,
 	}
 	data.Project = &project
 	data.Client = &client
@@ -1466,7 +1468,7 @@ func (app *application) invoiceUpdatePost(res http.ResponseWriter, req *http.Req
 		return
 	}
 
-	err = app.invoices.Update(id, invoiceDate, datePaid, form.PaymentTerms, amountDue)
+	err = app.invoices.Update(id, invoiceDate, datePaid, form.PaymentTerms, amountDue, form.DisplayDetails)
 	if err != nil {
 		app.serverError(res, req, err)
 		return

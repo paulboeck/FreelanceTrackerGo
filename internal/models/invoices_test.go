@@ -31,7 +31,7 @@ func TestInvoiceModel_Insert(t *testing.T) {
 		paymentTerms := "Net 30"
 		amountDue := 1250.00
 		
-		id, err := model.Insert(projectID, invoiceDate, &datePaid, paymentTerms, amountDue)
+		id, err := model.Insert(projectID, invoiceDate, &datePaid, paymentTerms, amountDue, false)
 		
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
@@ -64,7 +64,7 @@ func TestInvoiceModel_Insert(t *testing.T) {
 		paymentTerms := "Net 30"
 		amountDue := 1250.00
 		
-		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue)
+		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue, false)
 		
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
@@ -94,7 +94,7 @@ func TestInvoiceModel_Insert(t *testing.T) {
 		paymentTerms := "Net 30"
 		amountDue := 1250.00
 		
-		id, err := model.Insert(999, invoiceDate, nil, paymentTerms, amountDue) // Non-existent project
+		id, err := model.Insert(999, invoiceDate, nil, paymentTerms, amountDue, false) // Non-existent project
 		
 		// SQLite might not enforce foreign key constraints by default in tests
 		// Just verify it doesn't crash
@@ -116,7 +116,7 @@ func TestInvoiceModel_Insert(t *testing.T) {
 		paymentTerms := "Net 30"
 		amountDue := 0.0
 		
-		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue)
+		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue, false)
 		
 		// Should succeed at database level (validation happens at handler level)
 		require.NoError(t, err)
@@ -302,7 +302,7 @@ func TestInvoiceModel_Update(t *testing.T) {
 		newDatePaid := time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC)
 		newPaymentTerms := "Net 15"
 		newAmountDue := 950.00
-		err := model.Update(id, newInvoiceDate, &newDatePaid, newPaymentTerms, newAmountDue)
+		err := model.Update(id, newInvoiceDate, &newDatePaid, newPaymentTerms, newAmountDue, false)
 		require.NoError(t, err)
 		
 		// Verify the invoice was updated
@@ -340,7 +340,7 @@ func TestInvoiceModel_Update(t *testing.T) {
 		newInvoiceDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 		newPaymentTerms := "Net 15"
 		newAmountDue := 950.00
-		err := model.Update(id, newInvoiceDate, nil, newPaymentTerms, newAmountDue)
+		err := model.Update(id, newInvoiceDate, nil, newPaymentTerms, newAmountDue, false)
 		require.NoError(t, err)
 		
 		// Verify the invoice was updated
@@ -358,7 +358,7 @@ func TestInvoiceModel_Update(t *testing.T) {
 		newInvoiceDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 		newPaymentTerms := "Net 15"
 		newAmountDue := 950.00
-		err := model.Update(999, newInvoiceDate, nil, newPaymentTerms, newAmountDue)
+		err := model.Update(999, newInvoiceDate, nil, newPaymentTerms, newAmountDue, false)
 		
 		// Should not return an error (SQLite UPDATE doesn't fail for non-existent rows)
 		require.NoError(t, err)
@@ -383,7 +383,7 @@ func TestInvoiceModel_Update(t *testing.T) {
 		newInvoiceDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 		newPaymentTerms := "Net 15"
 		newAmountDue := 0.0
-		err := model.Update(id, newInvoiceDate, nil, newPaymentTerms, newAmountDue)
+		err := model.Update(id, newInvoiceDate, nil, newPaymentTerms, newAmountDue, false)
 		require.NoError(t, err)
 		
 		// Verify the invoice was updated
@@ -502,7 +502,7 @@ func TestInvoiceModel_Integration(t *testing.T) {
 		invoiceDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 		paymentTerms := "Net 30"
 		amountDue := 1250.00
-		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue)
+		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue, false)
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
 		
@@ -528,7 +528,7 @@ func TestInvoiceModel_Integration(t *testing.T) {
 		datePaid := time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC)
 		newPaymentTerms := "Net 15"
 		newAmountDue := 950.00
-		err = model.Update(id, newInvoiceDate, &datePaid, newPaymentTerms, newAmountDue)
+		err = model.Update(id, newInvoiceDate, &datePaid, newPaymentTerms, newAmountDue, false)
 		require.NoError(t, err)
 		
 		// 6. Verify update
@@ -584,7 +584,7 @@ func TestInvoiceModelInterface(t *testing.T) {
 			amountDue := 1250.00
 			
 			// Insert
-			id, err := test.impl.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue)
+			id, err := test.impl.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue, false)
 			require.NoError(t, err)
 			assert.Greater(t, id, 0)
 			
@@ -608,7 +608,7 @@ func TestInvoiceModelInterface(t *testing.T) {
 			datePaid := time.Date(2024, 2, 15, 0, 0, 0, 0, time.UTC)
 			newPaymentTerms := "Net 15"
 			newAmountDue := 950.00
-			err = test.impl.Update(id, newInvoiceDate, &datePaid, newPaymentTerms, newAmountDue)
+			err = test.impl.Update(id, newInvoiceDate, &datePaid, newPaymentTerms, newAmountDue, false)
 			require.NoError(t, err)
 			
 			updatedInvoice, err := test.impl.Get(id)
@@ -626,4 +626,125 @@ func TestInvoiceModelInterface(t *testing.T) {
 			assert.Equal(t, ErrNoRecord, err)
 		})
 	}
+}
+
+func TestInvoiceModel_DisplayDetails(t *testing.T) {
+	// Setup test database
+	testDB := testutil.SetupTestSQLite(t)
+	defer testDB.Cleanup(t)
+
+	// Create model instance
+	model := NewInvoiceModel(testDB.DB)
+
+	t.Run("insert with display details true", func(t *testing.T) {
+		testDB.TruncateTable(t, "invoice")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Create test client and project
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
+		
+		invoiceDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+		paymentTerms := "Net 30"
+		amountDue := 1250.00
+		displayDetails := true
+		
+		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue, displayDetails)
+		
+		require.NoError(t, err)
+		assert.Greater(t, id, 0)
+		
+		// Verify the display details was inserted correctly
+		invoice, err := model.Get(id)
+		require.NoError(t, err)
+		assert.True(t, invoice.DisplayDetails)
+	})
+
+	t.Run("insert with display details false", func(t *testing.T) {
+		testDB.TruncateTable(t, "invoice")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Create test client and project
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
+		
+		invoiceDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+		paymentTerms := "Net 30"
+		amountDue := 1250.00
+		displayDetails := false
+		
+		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue, displayDetails)
+		
+		require.NoError(t, err)
+		assert.Greater(t, id, 0)
+		
+		// Verify the display details was inserted correctly
+		invoice, err := model.Get(id)
+		require.NoError(t, err)
+		assert.False(t, invoice.DisplayDetails)
+	})
+
+	t.Run("update display details from false to true", func(t *testing.T) {
+		testDB.TruncateTable(t, "invoice")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Create test client and project
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
+		
+		// Insert invoice with display details false
+		invoiceDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+		paymentTerms := "Net 30"
+		amountDue := 1250.00
+		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue, false)
+		require.NoError(t, err)
+		
+		// Verify initially false
+		invoice, err := model.Get(id)
+		require.NoError(t, err)
+		assert.False(t, invoice.DisplayDetails)
+		
+		// Update to display details true
+		err = model.Update(id, invoiceDate, nil, paymentTerms, amountDue, true)
+		require.NoError(t, err)
+		
+		// Verify the display details was updated
+		updatedInvoice, err := model.Get(id)
+		require.NoError(t, err)
+		assert.True(t, updatedInvoice.DisplayDetails)
+	})
+
+	t.Run("update display details from true to false", func(t *testing.T) {
+		testDB.TruncateTable(t, "invoice")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Create test client and project
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
+		
+		// Insert invoice with display details true
+		invoiceDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+		paymentTerms := "Net 30"
+		amountDue := 1250.00
+		id, err := model.Insert(projectID, invoiceDate, nil, paymentTerms, amountDue, true)
+		require.NoError(t, err)
+		
+		// Verify initially true
+		invoice, err := model.Get(id)
+		require.NoError(t, err)
+		assert.True(t, invoice.DisplayDetails)
+		
+		// Update to display details false
+		err = model.Update(id, invoiceDate, nil, paymentTerms, amountDue, false)
+		require.NoError(t, err)
+		
+		// Verify the display details was updated
+		updatedInvoice, err := model.Get(id)
+		require.NoError(t, err)
+		assert.False(t, updatedInvoice.DisplayDetails)
+	})
 }

@@ -48,6 +48,13 @@
             <input type='date' name='date_paid' value="{{.Form.DatePaid}}" {{with .Form.FieldErrors.date_paid}}class="form-input error"{{else}}class="form-input"{{end}}>
             <small class="form-help">Optional: Date when payment was received</small>
         </div>
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type='checkbox' name='display_details' {{if .Form.DisplayDetails}}checked{{end}}>
+                Display Details
+            </label>
+            <small class="form-help">Show detailed breakdown on invoice</small>
+        </div>
         <div class="form-actions">
             <input type='submit' value='{{if .Form.AmountDue}}Update invoice{{else}}Create invoice{{end}}'>
             {{if .Form.AmountDue}}

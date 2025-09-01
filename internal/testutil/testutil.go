@@ -127,6 +127,7 @@ func createSchema(db *sql.DB) error {
 			date_paid DATE NULL,
 			payment_terms TEXT NOT NULL,
 			amount_due DECIMAL(10,2) NOT NULL,
+			display_details BOOLEAN NOT NULL DEFAULT false,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME NULL,
@@ -204,8 +205,8 @@ func (td *TestDatabase) InsertTestInvoice(t *testing.T, projectID int, invoiceDa
 		datePaidParam = datePaid
 	}
 	
-	result, err := td.DB.Exec("INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due) VALUES (?, ?, ?, ?, ?)", 
-		projectID, invoiceDate, datePaidParam, paymentTerms, amountDue)
+	result, err := td.DB.Exec("INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due, display_details) VALUES (?, ?, ?, ?, ?, ?)", 
+		projectID, invoiceDate, datePaidParam, paymentTerms, amountDue, false)
 	require.NoError(t, err)
 	
 	id, err := result.LastInsertId()

@@ -14,15 +14,16 @@ import (
 
 // Invoice represents an invoice in the system
 type Invoice struct {
-	ID           int
-	ProjectID    int
-	InvoiceDate  time.Time
-	DatePaid     *time.Time
-	PaymentTerms string
-	AmountDue    float64
-	Updated      time.Time
-	Created      time.Time
-	DeletedAt    *time.Time
+	ID             int
+	ProjectID      int
+	InvoiceDate    time.Time
+	DatePaid       *time.Time
+	PaymentTerms   string
+	AmountDue      float64
+	DisplayDetails bool
+	Updated        time.Time
+	Created        time.Time
+	DeletedAt      *time.Time
 }
 
 // InvoiceModel wraps the generated SQLC Queries for invoice operations
@@ -38,7 +39,7 @@ func NewInvoiceModel(database *sql.DB) *InvoiceModel {
 }
 
 // Insert adds a new invoice to the database and returns its ID
-func (i *InvoiceModel) Insert(projectID int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64) (int, error) {
+func (i *InvoiceModel) Insert(projectID int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64, displayDetails bool) (int, error) {
 	ctx := context.Background()
 	
 	var datePaidPtr interface{}
@@ -47,11 +48,12 @@ func (i *InvoiceModel) Insert(projectID int, invoiceDate time.Time, datePaid *ti
 	}
 	
 	params := db.InsertInvoiceParams{
-		ProjectID:    int64(projectID),
-		InvoiceDate:  invoiceDate,
-		DatePaid:     datePaidPtr,
-		PaymentTerms: paymentTerms,
-		AmountDue:    amountDue,
+		ProjectID:      int64(projectID),
+		InvoiceDate:    invoiceDate,
+		DatePaid:       datePaidPtr,
+		PaymentTerms:   paymentTerms,
+		AmountDue:      amountDue,
+		DisplayDetails: displayDetails,
 	}
 	id, err := i.queries.InsertInvoice(ctx, params)
 	if err != nil {
@@ -86,15 +88,16 @@ func (i *InvoiceModel) Get(id int) (Invoice, error) {
 	}
 
 	invoice := Invoice{
-		ID:           int(row.ID),
-		ProjectID:    int(row.ProjectID),
-		InvoiceDate:  row.InvoiceDate,
-		DatePaid:     datePaid,
-		PaymentTerms: row.PaymentTerms,
-		AmountDue:    row.AmountDue,
-		Updated:      row.UpdatedAt,
-		Created:      row.CreatedAt,
-		DeletedAt:    deletedAt,
+		ID:             int(row.ID),
+		ProjectID:      int(row.ProjectID),
+		InvoiceDate:    row.InvoiceDate,
+		DatePaid:       datePaid,
+		PaymentTerms:   row.PaymentTerms,
+		AmountDue:      row.AmountDue,
+		DisplayDetails: row.DisplayDetails,
+		Updated:        row.UpdatedAt,
+		Created:        row.CreatedAt,
+		DeletedAt:      deletedAt,
 	}
 
 	return invoice, nil
@@ -125,15 +128,16 @@ func (i *InvoiceModel) GetByProject(projectID int) ([]Invoice, error) {
 		}
 
 		invoices[j] = Invoice{
-			ID:           int(row.ID),
-			ProjectID:    int(row.ProjectID),
-			InvoiceDate:  row.InvoiceDate,
-			DatePaid:     datePaid,
-			PaymentTerms: row.PaymentTerms,
-			AmountDue:    row.AmountDue,
-			Updated:      row.UpdatedAt,
-			Created:      row.CreatedAt,
-			DeletedAt:    deletedAt,
+			ID:             int(row.ID),
+			ProjectID:      int(row.ProjectID),
+			InvoiceDate:    row.InvoiceDate,
+			DatePaid:       datePaid,
+			PaymentTerms:   row.PaymentTerms,
+			AmountDue:      row.AmountDue,
+			DisplayDetails: row.DisplayDetails,
+			Updated:        row.UpdatedAt,
+			Created:        row.CreatedAt,
+			DeletedAt:      deletedAt,
 		}
 	}
 
@@ -141,7 +145,7 @@ func (i *InvoiceModel) GetByProject(projectID int) ([]Invoice, error) {
 }
 
 // Update modifies an existing invoice in the database
-func (i *InvoiceModel) Update(id int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64) error {
+func (i *InvoiceModel) Update(id int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64, displayDetails bool) error {
 	ctx := context.Background()
 	
 	var datePaidPtr interface{}
@@ -150,11 +154,12 @@ func (i *InvoiceModel) Update(id int, invoiceDate time.Time, datePaid *time.Time
 	}
 	
 	params := db.UpdateInvoiceParams{
-		ID:           int64(id),
-		InvoiceDate:  invoiceDate,
-		DatePaid:     datePaidPtr,
-		PaymentTerms: paymentTerms,
-		AmountDue:    amountDue,
+		ID:             int64(id),
+		InvoiceDate:    invoiceDate,
+		DatePaid:       datePaidPtr,
+		PaymentTerms:   paymentTerms,
+		AmountDue:      amountDue,
+		DisplayDetails: displayDetails,
 	}
 	return i.queries.UpdateInvoice(ctx, params)
 }
@@ -201,15 +206,16 @@ func (i *InvoiceModel) GetForPDF(id int) (InvoiceData, error) {
 	}
 
 	invoice := Invoice{
-		ID:           int(row.ID),
-		ProjectID:    int(row.ProjectID),
-		InvoiceDate:  row.InvoiceDate,
-		DatePaid:     datePaid,
-		PaymentTerms: row.PaymentTerms,
-		AmountDue:    row.AmountDue,
-		Updated:      row.UpdatedAt,
-		Created:      row.CreatedAt,
-		DeletedAt:    deletedAt,
+		ID:             int(row.ID),
+		ProjectID:      int(row.ProjectID),
+		InvoiceDate:    row.InvoiceDate,
+		DatePaid:       datePaid,
+		PaymentTerms:   row.PaymentTerms,
+		AmountDue:      row.AmountDue,
+		DisplayDetails: row.DisplayDetails,
+		Updated:        row.UpdatedAt,
+		Created:        row.CreatedAt,
+		DeletedAt:      deletedAt,
 	}
 
 	// Get timesheets for the project
@@ -539,10 +545,10 @@ func (i *InvoiceModel) GeneratePDFWithSettings(id int, settings map[string]AppSe
 
 // InvoiceModelInterface defines the interface for invoice operations
 type InvoiceModelInterface interface {
-	Insert(projectID int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64) (int, error)
+	Insert(projectID int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64, displayDetails bool) (int, error)
 	Get(id int) (Invoice, error)
 	GetByProject(projectID int) ([]Invoice, error)
-	Update(id int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64) error
+	Update(id int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64, displayDetails bool) error
 	Delete(id int) error
 	GetForPDF(id int) (InvoiceData, error)
 	GeneratePDF(id int) ([]byte, error)
