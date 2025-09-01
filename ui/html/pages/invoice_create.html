@@ -17,38 +17,38 @@
 
 <div class="form-container">
     <form method='POST'>
-        <div>
+        <div class="form-group">
             <label>Invoice Date:</label>
             {{with .Form.FieldErrors.invoice_date}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='date' name='invoice_date' value="{{.Form.InvoiceDate}}">
+            <input type='date' name='invoice_date' value="{{.Form.InvoiceDate}}" {{with .Form.FieldErrors.invoice_date}}class="form-input error"{{else}}class="form-input"{{end}}>
         </div>
-        <div>
+        <div class="form-group">
             <label>Amount Due:</label>
             {{with .Form.FieldErrors.amount_due}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='number' name='amount_due' value="{{.Form.AmountDue}}" step="0.01" min="0" placeholder="e.g., 1250.00">
-            <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Enter amount in decimal format (e.g., 1250.00)</small>
+            <input type='number' name='amount_due' value="{{.Form.AmountDue}}" step="0.01" min="0" placeholder="e.g., 1250.00" {{with .Form.FieldErrors.amount_due}}class="form-input error"{{else}}class="form-input"{{end}}>
+            <small class="form-help">Enter amount in decimal format (e.g., 1250.00)</small>
         </div>
-        <div>
+        <div class="form-group">
             <label>Payment Terms:</label>
             {{with .Form.FieldErrors.payment_terms}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='text' name='payment_terms' value="{{.Form.PaymentTerms}}" maxlength="255" placeholder="e.g., Net 30">
-            <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Optional: Payment terms (max 255 characters)</small>
+            <input type='text' name='payment_terms' value="{{.Form.PaymentTerms}}" maxlength="255" placeholder="e.g., Net 30" {{with .Form.FieldErrors.payment_terms}}class="form-input error"{{else}}class="form-input"{{end}}>
+            <small class="form-help">Optional: Payment terms (max 255 characters)</small>
         </div>
-        <div>
+        <div class="form-group">
             <label>Date Paid:</label>
             {{with .Form.FieldErrors.date_paid}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='date' name='date_paid' value="{{.Form.DatePaid}}">
-            <small style="color: #6b7280; display: block; margin-top: 0.25rem;">Optional: Date when payment was received</small>
+            <input type='date' name='date_paid' value="{{.Form.DatePaid}}" {{with .Form.FieldErrors.date_paid}}class="form-input error"{{else}}class="form-input"{{end}}>
+            <small class="form-help">Optional: Date when payment was received</small>
         </div>
-        <div>
+        <div class="form-actions">
             <input type='submit' value='{{if .Form.AmountDue}}Update invoice{{else}}Create invoice{{end}}'>
             {{if .Form.AmountDue}}
             <a href="/project/view/{{.Project.ID}}" class="btn-cancel">Cancel</a>

@@ -235,6 +235,8 @@ func TestClientCreatePostHandler(t *testing.T) {
 		
 		form := url.Values{}
 		form.Add("name", "New Test Client")
+		form.Add("email", "newtest@example.com")
+		form.Add("hourly_rate", "75.00")
 		
 		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -326,6 +328,8 @@ func TestHandlersIntegration(t *testing.T) {
 		// 1. Create a client via POST
 		form := url.Values{}
 		form.Add("name", "Integration Test Client")
+		form.Add("email", "integration@example.com")
+		form.Add("hourly_rate", "85.00")
 		
 		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -436,6 +440,8 @@ func TestClientUpdatePostHandler(t *testing.T) {
 		
 		form := url.Values{}
 		form.Add("name", "Updated Name")
+		form.Add("email", "updated@example.com")
+		form.Add("hourly_rate", "65.00")
 		
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(id))
@@ -569,6 +575,8 @@ func TestUpdateHandlersIntegration(t *testing.T) {
 		newName := "Updated Client Name"
 		form := url.Values{}
 		form.Add("name", newName)
+		form.Add("email", "updatedclient@example.com")
+		form.Add("hourly_rate", "95.00")
 		
 		req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(id))

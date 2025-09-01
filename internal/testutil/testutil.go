@@ -58,6 +58,23 @@ func createSchema(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS client (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
+			email TEXT NOT NULL DEFAULT '',
+			phone TEXT,
+			address1 TEXT,
+			address2 TEXT,
+			address3 TEXT,
+			city TEXT,
+			state TEXT,
+			zip_code TEXT,
+			hourly_rate DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+			notes TEXT,
+			additional_info TEXT,
+			additional_info2 TEXT,
+			bill_to TEXT,
+			include_address_on_invoice BOOLEAN NOT NULL DEFAULT 1,
+			invoice_cc_email TEXT,
+			invoice_cc_description TEXT,
+			university_affiliation TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME NULL
@@ -128,7 +145,8 @@ func (td *TestDatabase) TruncateTable(t *testing.T, tableName string) {
 
 // InsertTestClient inserts a test client and returns its ID
 func (td *TestDatabase) InsertTestClient(t *testing.T, name string) int {
-	result, err := td.DB.Exec("INSERT INTO client (name) VALUES (?)", name)
+	result, err := td.DB.Exec("INSERT INTO client (name, email, hourly_rate) VALUES (?, ?, ?)", 
+		name, "test@example.com", 50.00)
 	require.NoError(t, err)
 	
 	id, err := result.LastInsertId()

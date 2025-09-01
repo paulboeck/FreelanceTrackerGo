@@ -10,11 +10,28 @@ import (
 )
 
 type Client struct {
-	ID        int64       `json:"id"`
-	Name      string      `json:"name"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
-	DeletedAt interface{} `json:"deleted_at"`
+	ID                      int64          `json:"id"`
+	Name                    string         `json:"name"`
+	CreatedAt               time.Time      `json:"created_at"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+	DeletedAt               interface{}    `json:"deleted_at"`
+	Email                   string         `json:"email"`
+	Phone                   sql.NullString `json:"phone"`
+	HourlyRate              float64        `json:"hourly_rate"`
+	Notes                   sql.NullString `json:"notes"`
+	AdditionalInfo          sql.NullString `json:"additional_info"`
+	AdditionalInfo2         sql.NullString `json:"additional_info2"`
+	BillTo                  sql.NullString `json:"bill_to"`
+	IncludeAddressOnInvoice bool           `json:"include_address_on_invoice"`
+	InvoiceCcEmail          sql.NullString `json:"invoice_cc_email"`
+	InvoiceCcDescription    sql.NullString `json:"invoice_cc_description"`
+	UniversityAffiliation   sql.NullString `json:"university_affiliation"`
+	Address1                sql.NullString `json:"address1"`
+	Address2                sql.NullString `json:"address2"`
+	Address3                sql.NullString `json:"address3"`
+	City                    sql.NullString `json:"city"`
+	State                   sql.NullString `json:"state"`
+	ZipCode                 sql.NullString `json:"zip_code"`
 }
 
 type Invoice struct {
@@ -36,6 +53,12 @@ type Project struct {
 	CreatedAt time.Time   `json:"created_at"`
 	UpdatedAt time.Time   `json:"updated_at"`
 	DeletedAt interface{} `json:"deleted_at"`
+}
+
+type Session struct {
+	Token  interface{} `json:"token"`
+	Data   []byte      `json:"data"`
+	Expiry interface{} `json:"expiry"`
 }
 
 type Setting struct {

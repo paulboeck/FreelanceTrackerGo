@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -22,18 +23,35 @@ func (q *Queries) DeleteClient(ctx context.Context, id int64) error {
 }
 
 const getAllClients = `-- name: GetAllClients :many
-SELECT id, name, updated_at, created_at, deleted_at 
+SELECT id, name, email, phone, address1, address2, address3, city, state, zip_code, hourly_rate, notes, additional_info, additional_info2, bill_to, include_address_on_invoice, invoice_cc_email, invoice_cc_description, university_affiliation, updated_at, created_at, deleted_at 
 FROM client 
 WHERE deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
 type GetAllClientsRow struct {
-	ID        int64       `json:"id"`
-	Name      string      `json:"name"`
-	UpdatedAt time.Time   `json:"updated_at"`
-	CreatedAt time.Time   `json:"created_at"`
-	DeletedAt interface{} `json:"deleted_at"`
+	ID                      int64          `json:"id"`
+	Name                    string         `json:"name"`
+	Email                   string         `json:"email"`
+	Phone                   sql.NullString `json:"phone"`
+	Address1                sql.NullString `json:"address1"`
+	Address2                sql.NullString `json:"address2"`
+	Address3                sql.NullString `json:"address3"`
+	City                    sql.NullString `json:"city"`
+	State                   sql.NullString `json:"state"`
+	ZipCode                 sql.NullString `json:"zip_code"`
+	HourlyRate              float64        `json:"hourly_rate"`
+	Notes                   sql.NullString `json:"notes"`
+	AdditionalInfo          sql.NullString `json:"additional_info"`
+	AdditionalInfo2         sql.NullString `json:"additional_info2"`
+	BillTo                  sql.NullString `json:"bill_to"`
+	IncludeAddressOnInvoice bool           `json:"include_address_on_invoice"`
+	InvoiceCcEmail          sql.NullString `json:"invoice_cc_email"`
+	InvoiceCcDescription    sql.NullString `json:"invoice_cc_description"`
+	UniversityAffiliation   sql.NullString `json:"university_affiliation"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+	CreatedAt               time.Time      `json:"created_at"`
+	DeletedAt               interface{}    `json:"deleted_at"`
 }
 
 func (q *Queries) GetAllClients(ctx context.Context) ([]GetAllClientsRow, error) {
@@ -48,6 +66,23 @@ func (q *Queries) GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.Address1,
+			&i.Address2,
+			&i.Address3,
+			&i.City,
+			&i.State,
+			&i.ZipCode,
+			&i.HourlyRate,
+			&i.Notes,
+			&i.AdditionalInfo,
+			&i.AdditionalInfo2,
+			&i.BillTo,
+			&i.IncludeAddressOnInvoice,
+			&i.InvoiceCcEmail,
+			&i.InvoiceCcDescription,
+			&i.UniversityAffiliation,
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.DeletedAt,
@@ -66,17 +101,34 @@ func (q *Queries) GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 }
 
 const getClient = `-- name: GetClient :one
-SELECT id, name, updated_at, created_at, deleted_at 
+SELECT id, name, email, phone, address1, address2, address3, city, state, zip_code, hourly_rate, notes, additional_info, additional_info2, bill_to, include_address_on_invoice, invoice_cc_email, invoice_cc_description, university_affiliation, updated_at, created_at, deleted_at 
 FROM client 
 WHERE id = ? AND deleted_at IS NULL
 `
 
 type GetClientRow struct {
-	ID        int64       `json:"id"`
-	Name      string      `json:"name"`
-	UpdatedAt time.Time   `json:"updated_at"`
-	CreatedAt time.Time   `json:"created_at"`
-	DeletedAt interface{} `json:"deleted_at"`
+	ID                      int64          `json:"id"`
+	Name                    string         `json:"name"`
+	Email                   string         `json:"email"`
+	Phone                   sql.NullString `json:"phone"`
+	Address1                sql.NullString `json:"address1"`
+	Address2                sql.NullString `json:"address2"`
+	Address3                sql.NullString `json:"address3"`
+	City                    sql.NullString `json:"city"`
+	State                   sql.NullString `json:"state"`
+	ZipCode                 sql.NullString `json:"zip_code"`
+	HourlyRate              float64        `json:"hourly_rate"`
+	Notes                   sql.NullString `json:"notes"`
+	AdditionalInfo          sql.NullString `json:"additional_info"`
+	AdditionalInfo2         sql.NullString `json:"additional_info2"`
+	BillTo                  sql.NullString `json:"bill_to"`
+	IncludeAddressOnInvoice bool           `json:"include_address_on_invoice"`
+	InvoiceCcEmail          sql.NullString `json:"invoice_cc_email"`
+	InvoiceCcDescription    sql.NullString `json:"invoice_cc_description"`
+	UniversityAffiliation   sql.NullString `json:"university_affiliation"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+	CreatedAt               time.Time      `json:"created_at"`
+	DeletedAt               interface{}    `json:"deleted_at"`
 }
 
 func (q *Queries) GetClient(ctx context.Context, id int64) (GetClientRow, error) {
@@ -85,6 +137,23 @@ func (q *Queries) GetClient(ctx context.Context, id int64) (GetClientRow, error)
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.Email,
+		&i.Phone,
+		&i.Address1,
+		&i.Address2,
+		&i.Address3,
+		&i.City,
+		&i.State,
+		&i.ZipCode,
+		&i.HourlyRate,
+		&i.Notes,
+		&i.AdditionalInfo,
+		&i.AdditionalInfo2,
+		&i.BillTo,
+		&i.IncludeAddressOnInvoice,
+		&i.InvoiceCcEmail,
+		&i.InvoiceCcDescription,
+		&i.UniversityAffiliation,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.DeletedAt,
@@ -93,12 +162,52 @@ func (q *Queries) GetClient(ctx context.Context, id int64) (GetClientRow, error)
 }
 
 const insertClient = `-- name: InsertClient :execlastid
-INSERT INTO client (name) 
-VALUES (?)
+INSERT INTO client (name, email, phone, address1, address2, address3, city, state, zip_code, hourly_rate, notes, additional_info, additional_info2, bill_to, include_address_on_invoice, invoice_cc_email, invoice_cc_description, university_affiliation) 
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
-func (q *Queries) InsertClient(ctx context.Context, name string) (int64, error) {
-	result, err := q.db.ExecContext(ctx, insertClient, name)
+type InsertClientParams struct {
+	Name                    string         `json:"name"`
+	Email                   string         `json:"email"`
+	Phone                   sql.NullString `json:"phone"`
+	Address1                sql.NullString `json:"address1"`
+	Address2                sql.NullString `json:"address2"`
+	Address3                sql.NullString `json:"address3"`
+	City                    sql.NullString `json:"city"`
+	State                   sql.NullString `json:"state"`
+	ZipCode                 sql.NullString `json:"zip_code"`
+	HourlyRate              float64        `json:"hourly_rate"`
+	Notes                   sql.NullString `json:"notes"`
+	AdditionalInfo          sql.NullString `json:"additional_info"`
+	AdditionalInfo2         sql.NullString `json:"additional_info2"`
+	BillTo                  sql.NullString `json:"bill_to"`
+	IncludeAddressOnInvoice bool           `json:"include_address_on_invoice"`
+	InvoiceCcEmail          sql.NullString `json:"invoice_cc_email"`
+	InvoiceCcDescription    sql.NullString `json:"invoice_cc_description"`
+	UniversityAffiliation   sql.NullString `json:"university_affiliation"`
+}
+
+func (q *Queries) InsertClient(ctx context.Context, arg InsertClientParams) (int64, error) {
+	result, err := q.db.ExecContext(ctx, insertClient,
+		arg.Name,
+		arg.Email,
+		arg.Phone,
+		arg.Address1,
+		arg.Address2,
+		arg.Address3,
+		arg.City,
+		arg.State,
+		arg.ZipCode,
+		arg.HourlyRate,
+		arg.Notes,
+		arg.AdditionalInfo,
+		arg.AdditionalInfo2,
+		arg.BillTo,
+		arg.IncludeAddressOnInvoice,
+		arg.InvoiceCcEmail,
+		arg.InvoiceCcDescription,
+		arg.UniversityAffiliation,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -107,16 +216,53 @@ func (q *Queries) InsertClient(ctx context.Context, name string) (int64, error) 
 
 const updateClient = `-- name: UpdateClient :exec
 UPDATE client 
-SET name = ?, updated_at = CURRENT_TIMESTAMP 
+SET name = ?, email = ?, phone = ?, address1 = ?, address2 = ?, address3 = ?, city = ?, state = ?, zip_code = ?, hourly_rate = ?, notes = ?, additional_info = ?, additional_info2 = ?, bill_to = ?, include_address_on_invoice = ?, invoice_cc_email = ?, invoice_cc_description = ?, university_affiliation = ?, updated_at = CURRENT_TIMESTAMP 
 WHERE id = ? AND deleted_at IS NULL
 `
 
 type UpdateClientParams struct {
-	Name string `json:"name"`
-	ID   int64  `json:"id"`
+	Name                    string         `json:"name"`
+	Email                   string         `json:"email"`
+	Phone                   sql.NullString `json:"phone"`
+	Address1                sql.NullString `json:"address1"`
+	Address2                sql.NullString `json:"address2"`
+	Address3                sql.NullString `json:"address3"`
+	City                    sql.NullString `json:"city"`
+	State                   sql.NullString `json:"state"`
+	ZipCode                 sql.NullString `json:"zip_code"`
+	HourlyRate              float64        `json:"hourly_rate"`
+	Notes                   sql.NullString `json:"notes"`
+	AdditionalInfo          sql.NullString `json:"additional_info"`
+	AdditionalInfo2         sql.NullString `json:"additional_info2"`
+	BillTo                  sql.NullString `json:"bill_to"`
+	IncludeAddressOnInvoice bool           `json:"include_address_on_invoice"`
+	InvoiceCcEmail          sql.NullString `json:"invoice_cc_email"`
+	InvoiceCcDescription    sql.NullString `json:"invoice_cc_description"`
+	UniversityAffiliation   sql.NullString `json:"university_affiliation"`
+	ID                      int64          `json:"id"`
 }
 
 func (q *Queries) UpdateClient(ctx context.Context, arg UpdateClientParams) error {
-	_, err := q.db.ExecContext(ctx, updateClient, arg.Name, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateClient,
+		arg.Name,
+		arg.Email,
+		arg.Phone,
+		arg.Address1,
+		arg.Address2,
+		arg.Address3,
+		arg.City,
+		arg.State,
+		arg.ZipCode,
+		arg.HourlyRate,
+		arg.Notes,
+		arg.AdditionalInfo,
+		arg.AdditionalInfo2,
+		arg.BillTo,
+		arg.IncludeAddressOnInvoice,
+		arg.InvoiceCcEmail,
+		arg.InvoiceCcDescription,
+		arg.UniversityAffiliation,
+		arg.ID,
+	)
 	return err
 }

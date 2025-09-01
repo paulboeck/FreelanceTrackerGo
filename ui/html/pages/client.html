@@ -6,9 +6,50 @@
             <strong>{{.Client.Name}}</strong>
             <span>#{{.Client.ID}}</span>
         </div>
-        <div>
-            Client Details
+        <div class="client-details-header">
+            <button id="toggle-details" class="btn-toggle-details">
+                <span id="toggle-icon">▶</span> Details
+            </button>
         </div>
+        <div class="client-details hidden" id="client-details">
+            <div class="client-info">
+                <p><strong>Email:</strong> {{.Client.Email}}</p>
+                {{if .Client.Phone}}<p><strong>Phone:</strong> {{.Client.Phone}}</p>{{end}}
+                
+                {{if or .Client.Address1 .Client.Address2 .Client.Address3 .Client.City .Client.State .Client.ZipCode}}
+                <div><strong>Address:</strong><br>
+                    <div class="address-content">
+                        {{if .Client.Address1}}{{.Client.Address1}}<br>{{end}}
+                        {{if .Client.Address2}}{{.Client.Address2}}<br>{{end}}
+                        {{if .Client.Address3}}{{.Client.Address3}}<br>{{end}}
+                        {{if or .Client.City .Client.State .Client.ZipCode}}
+                            {{.Client.City}}{{if and .Client.City .Client.State}}, {{end}}{{.Client.State}}{{if .Client.ZipCode}} {{.Client.ZipCode}}{{end}}
+                        {{end}}
+                    </div>
+                </div>
+                {{end}}
+                
+                {{if .Client.UniversityAffiliation}}<p><strong>University Affiliation:</strong> {{.Client.UniversityAffiliation}}</p>{{end}}
+            </div>
+            
+            <div class="client-billing">
+                <p><strong>Hourly Rate:</strong> ${{printf "%.2f" .Client.HourlyRate}}</p>
+                {{if .Client.BillTo}}<p><strong>Bill To:</strong> {{.Client.BillTo}}</p>{{end}}
+                <p><strong>Include Address on Invoice:</strong> {{if .Client.IncludeAddressOnInvoice}}Yes{{else}}No{{end}}</p>
+                {{if .Client.InvoiceCCEmail}}<p><strong>Invoice CC Email:</strong> {{.Client.InvoiceCCEmail}}</p>{{end}}
+                {{if .Client.InvoiceCCDescription}}<p><strong>Invoice CC Description:</strong> {{.Client.InvoiceCCDescription}}</p>{{end}}
+            </div>
+            
+            {{if or .Client.Notes .Client.AdditionalInfo .Client.AdditionalInfo2}}
+            <div class="client-notes">
+                <h3>Additional Information</h3>
+                {{if .Client.Notes}}<div><strong>Notes:</strong><br>{{.Client.Notes}}</div>{{end}}
+                {{if .Client.AdditionalInfo}}<div><strong>Additional Info:</strong><br>{{.Client.AdditionalInfo}}</div>{{end}}
+                {{if .Client.AdditionalInfo2}}<div><strong>Additional Info 2:</strong><br>{{.Client.AdditionalInfo2}}</div>{{end}}
+            </div>
+            {{end}}
+        </div>
+        
         <div class="client-actions">
             <a href="/client/update/{{.Client.ID}}" class="btn-client-action">Edit Client</a>
             <form method="POST" action="/client/delete/{{.Client.ID}}" class="delete-form">

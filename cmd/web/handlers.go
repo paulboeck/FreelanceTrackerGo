@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
@@ -16,8 +17,25 @@ const NAME_LENGTH = 255
 // use `form:"-"` so the go-playground form library will ignore that attribute
 // when parsing a request and populating a form struct
 type clientForm struct {
-	Name                string `form:"name"`
-	validator.Validator `form:"-"`
+	Name                    string `form:"name"`
+	Email                   string `form:"email"`
+	Phone                   string `form:"phone"`
+	Address1                string `form:"address1"`
+	Address2                string `form:"address2"`
+	Address3                string `form:"address3"`
+	City                    string `form:"city"`
+	State                   string `form:"state"`
+	ZipCode                 string `form:"zip_code"`
+	HourlyRate              string `form:"hourly_rate"`
+	Notes                   string `form:"notes"`
+	AdditionalInfo          string `form:"additional_info"`
+	AdditionalInfo2         string `form:"additional_info2"`
+	BillTo                  string `form:"bill_to"`
+	IncludeAddressOnInvoice bool   `form:"include_address_on_invoice"`
+	InvoiceCCEmail          string `form:"invoice_cc_email"`
+	InvoiceCCDescription    string `form:"invoice_cc_description"`
+	UniversityAffiliation   string `form:"university_affiliation"`
+	validator.Validator     `form:"-"`
 }
 
 type projectForm struct {
@@ -149,7 +167,9 @@ func (app *application) projectView(res http.ResponseWriter, req *http.Request) 
 // clientCreate handles a GET request which returns an empty client detail form
 func (app *application) clientCreate(res http.ResponseWriter, req *http.Request) {
 	data := app.newTemplateData(req)
-	data.Form = clientForm{}
+	data.Form = clientForm{
+		IncludeAddressOnInvoice: true, // Default to checked
+	}
 	app.render(res, req, http.StatusOK, "client_create.html", data)
 }
 
@@ -165,6 +185,40 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
+	
+	form.CheckField(validator.NotBlank(form.Email), "email", "Email is required")
+	form.CheckField(validator.Matches(strings.ToLower(form.Email), validator.EmailRegex), "email", "Email must be a valid email address")
+	form.CheckField(validator.MaxChars(form.Email, NAME_LENGTH), "email", fmt.Sprintf("Email must be shorter than %d characters", NAME_LENGTH))
+
+	// Parse hourly rate
+	hourlyRate, err := strconv.ParseFloat(form.HourlyRate, 64)
+	if form.HourlyRate == "" {
+		form.CheckField(false, "hourly_rate", "Hourly rate is required")
+	} else if err != nil {
+		form.CheckField(false, "hourly_rate", "Hourly rate must be a valid number")
+	} else {
+		form.CheckField(hourlyRate >= 0, "hourly_rate", "Hourly rate must be 0 or greater")
+	}
+
+	// Validate optional email fields
+	if form.InvoiceCCEmail != "" {
+		form.CheckField(validator.Matches(strings.ToLower(form.InvoiceCCEmail), validator.EmailRegex), "invoice_cc_email", "Invoice CC email must be a valid email address")
+	}
+
+	// Validate optional field lengths  
+	form.CheckField(validator.MaxChars(form.Phone, NAME_LENGTH), "phone", fmt.Sprintf("Phone must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.Address1, NAME_LENGTH), "address1", fmt.Sprintf("Address 1 must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.Address2, NAME_LENGTH), "address2", fmt.Sprintf("Address 2 must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.Address3, NAME_LENGTH), "address3", fmt.Sprintf("Address 3 must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.City, NAME_LENGTH), "city", fmt.Sprintf("City must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.State, 50), "state", "State must be shorter than 50 characters")
+	form.CheckField(validator.MaxChars(form.ZipCode, 20), "zip_code", "Zip code must be shorter than 20 characters")
+	form.CheckField(validator.MaxChars(form.Notes, 2000), "notes", "Notes must be shorter than 2000 characters")
+	form.CheckField(validator.MaxChars(form.AdditionalInfo, NAME_LENGTH), "additional_info", fmt.Sprintf("Additional info must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.AdditionalInfo2, NAME_LENGTH), "additional_info2", fmt.Sprintf("Additional info 2 must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.BillTo, NAME_LENGTH), "bill_to", fmt.Sprintf("Bill to must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.InvoiceCCDescription, 500), "invoice_cc_description", "Invoice CC description must be shorter than 500 characters")
+	form.CheckField(validator.MaxChars(form.UniversityAffiliation, NAME_LENGTH), "university_affiliation", fmt.Sprintf("University affiliation must be shorter than %d characters", NAME_LENGTH))
 
 	if !form.Valid() {
 		data := app.newTemplateData(req)
@@ -173,7 +227,72 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	id, err := app.clients.Insert(form.Name)
+	// Convert string fields to pointers for optional fields
+	var phone, address1, address2, address3, city, state, zipCode, notes, additionalInfo, additionalInfo2, billTo, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string
+	
+	if form.Phone != "" {
+		phone = &form.Phone
+	}
+	if form.Address1 != "" {
+		address1 = &form.Address1
+	}
+	if form.Address2 != "" {
+		address2 = &form.Address2
+	}
+	if form.Address3 != "" {
+		address3 = &form.Address3
+	}
+	if form.City != "" {
+		city = &form.City
+	}
+	if form.State != "" {
+		state = &form.State
+	}
+	if form.ZipCode != "" {
+		zipCode = &form.ZipCode
+	}
+	if form.Notes != "" {
+		notes = &form.Notes
+	}
+	if form.AdditionalInfo != "" {
+		additionalInfo = &form.AdditionalInfo
+	}
+	if form.AdditionalInfo2 != "" {
+		additionalInfo2 = &form.AdditionalInfo2
+	}
+	if form.BillTo != "" {
+		billTo = &form.BillTo
+	}
+	if form.InvoiceCCEmail != "" {
+		invoiceCCEmail = &form.InvoiceCCEmail
+	}
+	if form.InvoiceCCDescription != "" {
+		invoiceCCDescription = &form.InvoiceCCDescription
+	}
+	if form.UniversityAffiliation != "" {
+		universityAffiliation = &form.UniversityAffiliation
+	}
+
+	id, err := app.clients.Insert(
+		form.Name, 
+		form.Email, 
+		phone, 
+		address1, 
+		address2, 
+		address3, 
+		city, 
+		state, 
+		zipCode, 
+		hourlyRate, 
+		notes, 
+		additionalInfo, 
+		additionalInfo2, 
+		billTo, 
+		form.IncludeAddressOnInvoice, 
+		invoiceCCEmail, 
+		invoiceCCDescription, 
+		universityAffiliation,
+	)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
@@ -201,10 +320,35 @@ func (app *application) clientUpdate(res http.ResponseWriter, req *http.Request)
 
 	data := app.newTemplateData(req)
 	data.Form = clientForm{
-		Name: client.Name,
+		Name:                    client.Name,
+		Email:                   client.Email,
+		Phone:                   ptrToString(client.Phone),
+		Address1:                ptrToString(client.Address1),
+		Address2:                ptrToString(client.Address2),
+		Address3:                ptrToString(client.Address3),
+		City:                    ptrToString(client.City),
+		State:                   ptrToString(client.State),
+		ZipCode:                 ptrToString(client.ZipCode),
+		HourlyRate:              fmt.Sprintf("%.2f", client.HourlyRate),
+		Notes:                   ptrToString(client.Notes),
+		AdditionalInfo:          ptrToString(client.AdditionalInfo),
+		AdditionalInfo2:         ptrToString(client.AdditionalInfo2),
+		BillTo:                  ptrToString(client.BillTo),
+		IncludeAddressOnInvoice: client.IncludeAddressOnInvoice,
+		InvoiceCCEmail:          ptrToString(client.InvoiceCCEmail),
+		InvoiceCCDescription:    ptrToString(client.InvoiceCCDescription),
+		UniversityAffiliation:   ptrToString(client.UniversityAffiliation),
 	}
 	data.Client = &client
 	app.render(res, req, http.StatusOK, "client_create.html", data)
+}
+
+// Helper function to convert *string to string
+func ptrToString(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 // clientUpdatePost handles a POST request with client form data which is then
@@ -225,6 +369,40 @@ func (app *application) clientUpdatePost(res http.ResponseWriter, req *http.Requ
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
+	
+	form.CheckField(validator.NotBlank(form.Email), "email", "Email is required")
+	form.CheckField(validator.Matches(strings.ToLower(form.Email), validator.EmailRegex), "email", "Email must be a valid email address")
+	form.CheckField(validator.MaxChars(form.Email, NAME_LENGTH), "email", fmt.Sprintf("Email must be shorter than %d characters", NAME_LENGTH))
+
+	// Parse hourly rate
+	hourlyRate, err := strconv.ParseFloat(form.HourlyRate, 64)
+	if form.HourlyRate == "" {
+		form.CheckField(false, "hourly_rate", "Hourly rate is required")
+	} else if err != nil {
+		form.CheckField(false, "hourly_rate", "Hourly rate must be a valid number")
+	} else {
+		form.CheckField(hourlyRate >= 0, "hourly_rate", "Hourly rate must be 0 or greater")
+	}
+
+	// Validate optional email fields
+	if form.InvoiceCCEmail != "" {
+		form.CheckField(validator.Matches(strings.ToLower(form.InvoiceCCEmail), validator.EmailRegex), "invoice_cc_email", "Invoice CC email must be a valid email address")
+	}
+
+	// Validate optional field lengths  
+	form.CheckField(validator.MaxChars(form.Phone, NAME_LENGTH), "phone", fmt.Sprintf("Phone must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.Address1, NAME_LENGTH), "address1", fmt.Sprintf("Address 1 must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.Address2, NAME_LENGTH), "address2", fmt.Sprintf("Address 2 must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.Address3, NAME_LENGTH), "address3", fmt.Sprintf("Address 3 must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.City, NAME_LENGTH), "city", fmt.Sprintf("City must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.State, 50), "state", "State must be shorter than 50 characters")
+	form.CheckField(validator.MaxChars(form.ZipCode, 20), "zip_code", "Zip code must be shorter than 20 characters")
+	form.CheckField(validator.MaxChars(form.Notes, 2000), "notes", "Notes must be shorter than 2000 characters")
+	form.CheckField(validator.MaxChars(form.AdditionalInfo, NAME_LENGTH), "additional_info", fmt.Sprintf("Additional info must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.AdditionalInfo2, NAME_LENGTH), "additional_info2", fmt.Sprintf("Additional info 2 must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.BillTo, NAME_LENGTH), "bill_to", fmt.Sprintf("Bill to must be shorter than %d characters", NAME_LENGTH))
+	form.CheckField(validator.MaxChars(form.InvoiceCCDescription, 500), "invoice_cc_description", "Invoice CC description must be shorter than 500 characters")
+	form.CheckField(validator.MaxChars(form.UniversityAffiliation, NAME_LENGTH), "university_affiliation", fmt.Sprintf("University affiliation must be shorter than %d characters", NAME_LENGTH))
 
 	if !form.Valid() {
 		client, err := app.clients.Get(id)
@@ -254,7 +432,73 @@ func (app *application) clientUpdatePost(res http.ResponseWriter, req *http.Requ
 		return
 	}
 
-	err = app.clients.Update(id, form.Name)
+	// Convert string fields to pointers for optional fields
+	var phone, address1, address2, address3, city, state, zipCode, notes, additionalInfo, additionalInfo2, billTo, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string
+	
+	if form.Phone != "" {
+		phone = &form.Phone
+	}
+	if form.Address1 != "" {
+		address1 = &form.Address1
+	}
+	if form.Address2 != "" {
+		address2 = &form.Address2
+	}
+	if form.Address3 != "" {
+		address3 = &form.Address3
+	}
+	if form.City != "" {
+		city = &form.City
+	}
+	if form.State != "" {
+		state = &form.State
+	}
+	if form.ZipCode != "" {
+		zipCode = &form.ZipCode
+	}
+	if form.Notes != "" {
+		notes = &form.Notes
+	}
+	if form.AdditionalInfo != "" {
+		additionalInfo = &form.AdditionalInfo
+	}
+	if form.AdditionalInfo2 != "" {
+		additionalInfo2 = &form.AdditionalInfo2
+	}
+	if form.BillTo != "" {
+		billTo = &form.BillTo
+	}
+	if form.InvoiceCCEmail != "" {
+		invoiceCCEmail = &form.InvoiceCCEmail
+	}
+	if form.InvoiceCCDescription != "" {
+		invoiceCCDescription = &form.InvoiceCCDescription
+	}
+	if form.UniversityAffiliation != "" {
+		universityAffiliation = &form.UniversityAffiliation
+	}
+
+	err = app.clients.Update(
+		id, 
+		form.Name, 
+		form.Email, 
+		phone, 
+		address1, 
+		address2, 
+		address3, 
+		city, 
+		state, 
+		zipCode, 
+		hourlyRate, 
+		notes, 
+		additionalInfo, 
+		additionalInfo2, 
+		billTo, 
+		form.IncludeAddressOnInvoice, 
+		invoiceCCEmail, 
+		invoiceCCDescription, 
+		universityAffiliation,
+	)
 	if err != nil {
 		app.serverError(res, req, err)
 		return

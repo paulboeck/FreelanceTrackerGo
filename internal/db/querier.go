@@ -24,7 +24,7 @@ type Querier interface {
 	GetSetting(ctx context.Context, key string) (Setting, error)
 	GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, error)
 	GetTimesheetsByProject(ctx context.Context, projectID int64) ([]GetTimesheetsByProjectRow, error)
-	InsertClient(ctx context.Context, name string) (int64, error)
+	InsertClient(ctx context.Context, arg InsertClientParams) (int64, error)
 	InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error)
 	InsertProject(ctx context.Context, arg InsertProjectParams) (int64, error)
 	InsertTimesheet(ctx context.Context, arg InsertTimesheetParams) (int64, error)

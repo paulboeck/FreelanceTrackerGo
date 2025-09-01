@@ -186,6 +186,68 @@ form div:last-child {
     padding-top: 1.5rem;
 }
 
+/* Form structure classes */
+.form-section {
+    margin-bottom: 2rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-help {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.form-input {
+    padding: 0.75rem 1rem;
+    width: 100%;
+    color: #1e293b;
+    background: #ffffff;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-size: 16px;
+    font-family: 'Inter', sans-serif;
+}
+
+.form-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Override browser default validation styling */
+.form-input:invalid {
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
+}
+
+.form-input:valid {
+    border-color: #d1d5db !important;
+    box-shadow: none !important;
+}
+
+/* Error styling - must come after browser overrides to take precedence */
+.form-input.error,
+.form-input.error:invalid,
+.form-input.error:valid {
+    border-color: #C0392B !important;
+    border-width: 2px !important;
+    box-shadow: none !important;
+}
+
 form input[type="radio"] {
     margin-left: 1rem;
 }
@@ -222,7 +284,8 @@ form label {
     display: block;
 }
 
-.error + textarea, .error + input {
+/* Legacy adjacent selector approach - kept for backwards compatibility */
+form .error + textarea, form .error + input {
     border-color: #C0392B !important;
     border-width: 2px !important;
 }
@@ -284,6 +347,45 @@ button:hover {
 
 .client .metadata time:last-child {
     float: right;
+}
+
+.client-details {
+    padding: 1rem;
+}
+
+.address-content {
+    margin-left: 2rem;
+    margin-top: 0.25rem;
+}
+
+.client-details-header {
+    padding: 0.5rem 1rem;
+    border-top: 1px solid #e2e8f0;
+}
+
+.btn-toggle-details {
+    background: none;
+    border: none;
+    color: #3b82f6;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-toggle-details:hover {
+    background-color: #f1f5f9;
+}
+
+.btn-toggle-details:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 1px;
+}
+
+.client-details.hidden {
+    display: none;
 }
 
 .client-actions {

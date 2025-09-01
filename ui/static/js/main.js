@@ -131,9 +131,38 @@ function setupDeleteConfirmations() {
     }
 }
 
-// Set up confirmations when page loads
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', setupDeleteConfirmations);
-} else {
+// Toggle client details functionality
+function toggleClientDetails() {
+    var details = document.getElementById('client-details');
+    var icon = document.getElementById('toggle-icon');
+    
+    if (!details || !icon) return;
+    
+    if (details.classList.contains('hidden')) {
+        details.classList.remove('hidden');
+        icon.textContent = '▼';
+    } else {
+        details.classList.add('hidden');
+        icon.textContent = '▶';
+    }
+}
+
+// Set up toggle button when page loads
+function setupClientDetailsToggle() {
+    var toggleButton = document.getElementById('toggle-details');
+    if (toggleButton) {
+        toggleButton.addEventListener('click', toggleClientDetails);
+    }
+}
+
+// Set up all functionality when page loads
+function setupPageFunctions() {
     setupDeleteConfirmations();
+    setupClientDetailsToggle();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupPageFunctions);
+} else {
+    setupPageFunctions();
 }

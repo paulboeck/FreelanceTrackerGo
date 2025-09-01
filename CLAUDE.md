@@ -101,3 +101,4 @@ The main application struct in `cmd/web/main.go` contains:
 - Type-safe Go code generated in `internal/db/`
 - Configuration in `sqlc.yaml`
 - Run `sqlc generate` after query changes
+- always remember to disable browser interference from native HTML5 validation

@@ -20,7 +20,9 @@ func TestClientModel_Insert(t *testing.T) {
 		testDB.TruncateTable(t, "client")
 		
 		name := "Test Client"
-		id, err := model.Insert(name)
+		email := "test@example.com"
+		hourlyRate := 50.0
+		id, err := model.Insert(name, email, nil, nil, nil, nil, nil, nil, nil, hourlyRate, nil, nil, nil, nil, true, nil, nil, nil)
 		
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
@@ -35,7 +37,7 @@ func TestClientModel_Insert(t *testing.T) {
 	t.Run("insert empty name", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
 		
-		id, err := model.Insert("")
+		id, err := model.Insert("", "test@example.com", nil, nil, nil, nil, nil, nil, nil, 50.0, nil, nil, nil, nil, true, nil, nil, nil)
 		
 		// Should succeed at database level (validation happens at handler level)
 		require.NoError(t, err)
@@ -141,7 +143,9 @@ func TestClientModel_Integration(t *testing.T) {
 		
 		// 1. Insert a new client
 		clientName := "Integration Test Client"
-		id, err := model.Insert(clientName)
+		email := "integration@example.com"
+		hourlyRate := 75.0
+		id, err := model.Insert(clientName, email, nil, nil, nil, nil, nil, nil, nil, hourlyRate, nil, nil, nil, nil, true, nil, nil, nil)
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
 		
@@ -180,7 +184,7 @@ func TestClientModelInterface(t *testing.T) {
 			name := "Interface Test Client"
 			
 			// Insert
-			id, err := test.impl.Insert(name)
+			id, err := test.impl.Insert(name, "interface@example.com", nil, nil, nil, nil, nil, nil, nil, 60.0, nil, nil, nil, nil, true, nil, nil, nil)
 			require.NoError(t, err)
 			assert.Greater(t, id, 0)
 			
@@ -217,7 +221,9 @@ func TestClientModel_Update(t *testing.T) {
 		
 		// Update the client
 		newName := "Updated Client"
-		err := model.Update(id, newName)
+		newEmail := "updated@example.com"
+		newHourlyRate := 65.0
+		err := model.Update(id, newName, newEmail, nil, nil, nil, nil, nil, nil, nil, newHourlyRate, nil, nil, nil, nil, true, nil, nil, nil)
 		require.NoError(t, err)
 		
 		// Verify the client was updated
@@ -234,7 +240,7 @@ func TestClientModel_Update(t *testing.T) {
 	t.Run("update non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
 		
-		err := model.Update(999, "New Name")
+		err := model.Update(999, "New Name", "new@example.com", nil, nil, nil, nil, nil, nil, nil, 45.0, nil, nil, nil, nil, true, nil, nil, nil)
 		
 		// Should not return an error (MySQL UPDATE doesn't fail for non-existent rows)
 		require.NoError(t, err)
@@ -253,7 +259,7 @@ func TestClientModel_Update(t *testing.T) {
 		id := testDB.InsertTestClient(t, originalName)
 		
 		// Update with empty name (should succeed at database level)
-		err := model.Update(id, "")
+		err := model.Update(id, "", "empty@example.com", nil, nil, nil, nil, nil, nil, nil, 35.0, nil, nil, nil, nil, true, nil, nil, nil)
 		require.NoError(t, err)
 		
 		// Verify the client was updated
@@ -283,13 +289,13 @@ func TestClientModelInterface_Update(t *testing.T) {
 			originalName := "Interface Test Client"
 			
 			// Insert
-			id, err := test.impl.Insert(originalName)
+			id, err := test.impl.Insert(originalName, "interface2@example.com", nil, nil, nil, nil, nil, nil, nil, 70.0, nil, nil, nil, nil, true, nil, nil, nil)
 			require.NoError(t, err)
 			assert.Greater(t, id, 0)
 			
 			// Update
 			newName := "Updated Interface Test Client"
-			err = test.impl.Update(id, newName)
+			err = test.impl.Update(id, newName, "updated_interface@example.com", nil, nil, nil, nil, nil, nil, nil, 80.0, nil, nil, nil, nil, true, nil, nil, nil)
 			require.NoError(t, err)
 			
 			// Get and verify update

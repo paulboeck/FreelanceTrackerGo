@@ -11,11 +11,28 @@ import (
 
 // Client represents a client in the system
 type Client struct {
-	ID        int
-	Name      string
-	Updated   time.Time
-	Created   time.Time
-	DeletedAt *time.Time
+	ID                      int
+	Name                    string
+	Email                   string
+	Phone                   *string
+	Address1                *string
+	Address2                *string
+	Address3                *string
+	City                    *string
+	State                   *string
+	ZipCode                 *string
+	HourlyRate              float64
+	Notes                   *string
+	AdditionalInfo          *string
+	AdditionalInfo2         *string
+	BillTo                  *string
+	IncludeAddressOnInvoice bool
+	InvoiceCCEmail          *string
+	InvoiceCCDescription    *string
+	UniversityAffiliation   *string
+	Updated                 time.Time
+	Created                 time.Time
+	DeletedAt               *time.Time
 }
 
 // ClientModel wraps the generated SQLC Queries for client operations
@@ -31,13 +48,51 @@ func NewClientModel(database *sql.DB) *ClientModel {
 }
 
 // Insert adds a new client to the database and returns its ID
-func (c *ClientModel) Insert(name string) (int, error) {
+func (c *ClientModel) Insert(name, email string, phone, address1, address2, address3, city, state, zipCode *string, hourlyRate float64, notes, additionalInfo, additionalInfo2, billTo *string, includeAddressOnInvoice bool, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string) (int, error) {
 	ctx := context.Background()
-	id, err := c.queries.InsertClient(ctx, name)
+	
+	params := db.InsertClientParams{
+		Name:                    name,
+		Email:                   email,
+		Phone:                   convertStringPtr(phone),
+		Address1:                convertStringPtr(address1),
+		Address2:                convertStringPtr(address2),
+		Address3:                convertStringPtr(address3),
+		City:                    convertStringPtr(city),
+		State:                   convertStringPtr(state),
+		ZipCode:                 convertStringPtr(zipCode),
+		HourlyRate:              hourlyRate,
+		Notes:                   convertStringPtr(notes),
+		AdditionalInfo:          convertStringPtr(additionalInfo),
+		AdditionalInfo2:         convertStringPtr(additionalInfo2),
+		BillTo:                  convertStringPtr(billTo),
+		IncludeAddressOnInvoice: includeAddressOnInvoice,
+		InvoiceCcEmail:          convertStringPtr(invoiceCCEmail),
+		InvoiceCcDescription:    convertStringPtr(invoiceCCDescription),
+		UniversityAffiliation:   convertStringPtr(universityAffiliation),
+	}
+	
+	id, err := c.queries.InsertClient(ctx, params)
 	if err != nil {
 		return 0, err
 	}
 	return int(id), nil
+}
+
+// Helper function to convert *string to sql.NullString
+func convertStringPtr(s *string) sql.NullString {
+	if s == nil {
+		return sql.NullString{Valid: false}
+	}
+	return sql.NullString{String: *s, Valid: true}
+}
+
+// Helper function to convert sql.NullString to *string
+func convertNullString(ns sql.NullString) *string {
+	if !ns.Valid {
+		return nil
+	}
+	return &ns.String
 }
 
 // Get retrieves a client by ID
@@ -59,11 +114,28 @@ func (c *ClientModel) Get(id int) (Client, error) {
 	}
 
 	client := Client{
-		ID:        int(row.ID),
-		Name:      row.Name,
-		Updated:   row.UpdatedAt,
-		Created:   row.CreatedAt,
-		DeletedAt: deletedAt,
+		ID:                      int(row.ID),
+		Name:                    row.Name,
+		Email:                   row.Email,
+		Phone:                   convertNullString(row.Phone),
+		Address1:                convertNullString(row.Address1),
+		Address2:                convertNullString(row.Address2),
+		Address3:                convertNullString(row.Address3),
+		City:                    convertNullString(row.City),
+		State:                   convertNullString(row.State),
+		ZipCode:                 convertNullString(row.ZipCode),
+		HourlyRate:              row.HourlyRate,
+		Notes:                   convertNullString(row.Notes),
+		AdditionalInfo:          convertNullString(row.AdditionalInfo),
+		AdditionalInfo2:         convertNullString(row.AdditionalInfo2),
+		BillTo:                  convertNullString(row.BillTo),
+		IncludeAddressOnInvoice: row.IncludeAddressOnInvoice,
+		InvoiceCCEmail:          convertNullString(row.InvoiceCcEmail),
+		InvoiceCCDescription:    convertNullString(row.InvoiceCcDescription),
+		UniversityAffiliation:   convertNullString(row.UniversityAffiliation),
+		Updated:                 row.UpdatedAt,
+		Created:                 row.CreatedAt,
+		DeletedAt:               deletedAt,
 	}
 
 	return client, nil
@@ -87,11 +159,28 @@ func (c *ClientModel) GetAll() ([]Client, error) {
 		}
 
 		clients[i] = Client{
-			ID:        int(row.ID),
-			Name:      row.Name,
-			Updated:   row.UpdatedAt,
-			Created:   row.CreatedAt,
-			DeletedAt: deletedAt,
+			ID:                      int(row.ID),
+			Name:                    row.Name,
+			Email:                   row.Email,
+			Phone:                   convertNullString(row.Phone),
+			Address1:                convertNullString(row.Address1),
+			Address2:                convertNullString(row.Address2),
+			Address3:                convertNullString(row.Address3),
+			City:                    convertNullString(row.City),
+			State:                   convertNullString(row.State),
+			ZipCode:                 convertNullString(row.ZipCode),
+			HourlyRate:              row.HourlyRate,
+			Notes:                   convertNullString(row.Notes),
+			AdditionalInfo:          convertNullString(row.AdditionalInfo),
+			AdditionalInfo2:         convertNullString(row.AdditionalInfo2),
+			BillTo:                  convertNullString(row.BillTo),
+			IncludeAddressOnInvoice: row.IncludeAddressOnInvoice,
+			InvoiceCCEmail:          convertNullString(row.InvoiceCcEmail),
+			InvoiceCCDescription:    convertNullString(row.InvoiceCcDescription),
+			UniversityAffiliation:   convertNullString(row.UniversityAffiliation),
+			Updated:                 row.UpdatedAt,
+			Created:                 row.CreatedAt,
+			DeletedAt:               deletedAt,
 		}
 	}
 
@@ -99,11 +188,28 @@ func (c *ClientModel) GetAll() ([]Client, error) {
 }
 
 // Update modifies an existing client in the database
-func (c *ClientModel) Update(id int, name string) error {
+func (c *ClientModel) Update(id int, name, email string, phone, address1, address2, address3, city, state, zipCode *string, hourlyRate float64, notes, additionalInfo, additionalInfo2, billTo *string, includeAddressOnInvoice bool, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string) error {
 	ctx := context.Background()
 	params := db.UpdateClientParams{
-		ID:   int64(id),
-		Name: name,
+		ID:                      int64(id),
+		Name:                    name,
+		Email:                   email,
+		Phone:                   convertStringPtr(phone),
+		Address1:                convertStringPtr(address1),
+		Address2:                convertStringPtr(address2),
+		Address3:                convertStringPtr(address3),
+		City:                    convertStringPtr(city),
+		State:                   convertStringPtr(state),
+		ZipCode:                 convertStringPtr(zipCode),
+		HourlyRate:              hourlyRate,
+		Notes:                   convertStringPtr(notes),
+		AdditionalInfo:          convertStringPtr(additionalInfo),
+		AdditionalInfo2:         convertStringPtr(additionalInfo2),
+		BillTo:                  convertStringPtr(billTo),
+		IncludeAddressOnInvoice: includeAddressOnInvoice,
+		InvoiceCcEmail:          convertStringPtr(invoiceCCEmail),
+		InvoiceCcDescription:    convertStringPtr(invoiceCCDescription),
+		UniversityAffiliation:   convertStringPtr(universityAffiliation),
 	}
 	return c.queries.UpdateClient(ctx, params)
 }
@@ -116,10 +222,10 @@ func (c *ClientModel) Delete(id int) error {
 
 // ClientModelInterface defines the interface for client operations
 type ClientModelInterface interface {
-	Insert(name string) (int, error)
+	Insert(name, email string, phone, address1, address2, address3, city, state, zipCode *string, hourlyRate float64, notes, additionalInfo, additionalInfo2, billTo *string, includeAddressOnInvoice bool, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string) (int, error)
 	Get(id int) (Client, error)
 	GetAll() ([]Client, error)
-	Update(id int, name string) error
+	Update(id int, name, email string, phone, address1, address2, address3, city, state, zipCode *string, hourlyRate float64, notes, additionalInfo, additionalInfo2, billTo *string, includeAddressOnInvoice bool, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string) error
 	Delete(id int) error
 }
 
