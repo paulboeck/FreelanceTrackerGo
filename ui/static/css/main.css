@@ -33,13 +33,15 @@ main {
 h1 a {
     font-size: 2rem;
     font-weight: 700;
-    background-image: url("/static/img/logo.png");
-    background-repeat: no-repeat;
-    background-position: 0px 0px;
-    height: 36px;
-    padding-left: 50px;
-    position: relative;
     color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+h1 a .logo {
+    height: 36px;
+    width: auto;
 }
 
 h1 a:hover {
