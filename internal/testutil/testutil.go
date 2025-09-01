@@ -112,6 +112,7 @@ func createSchema(db *sql.DB) error {
 			project_id INTEGER NOT NULL,
 			work_date DATE NOT NULL,
 			hours_worked DECIMAL(5,2) NOT NULL,
+			hourly_rate REAL NOT NULL DEFAULT 0.00,
 			description VARCHAR(255),
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -185,9 +186,9 @@ func (td *TestDatabase) InsertTestProject(t *testing.T, name string, clientID in
 }
 
 // InsertTestTimesheet inserts a test timesheet and returns its ID
-func (td *TestDatabase) InsertTestTimesheet(t *testing.T, projectID int, workDate, hoursWorked, description string) int {
-	result, err := td.DB.Exec("INSERT INTO timesheet (project_id, work_date, hours_worked, description) VALUES (?, ?, ?, ?)", 
-		projectID, workDate, hoursWorked, description)
+func (td *TestDatabase) InsertTestTimesheet(t *testing.T, projectID int, workDate, hoursWorked, hourlyRate, description string) int {
+	result, err := td.DB.Exec("INSERT INTO timesheet (project_id, work_date, hours_worked, hourly_rate, description) VALUES (?, ?, ?, ?, ?)", 
+		projectID, workDate, hoursWorked, hourlyRate, description)
 	require.NoError(t, err)
 	
 	id, err := result.LastInsertId()

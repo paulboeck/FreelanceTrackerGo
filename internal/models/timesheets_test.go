@@ -28,9 +28,10 @@ func TestTimesheetModel_Insert(t *testing.T) {
 		
 		workDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 		hoursWorked := 8.5
+		hourlyRate := 125.00
 		description := "Test work description"
 		
-		id, err := model.Insert(projectID, workDate, hoursWorked, description)
+		id, err := model.Insert(projectID, workDate, hoursWorked, hourlyRate, description)
 		
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
@@ -39,13 +40,15 @@ func TestTimesheetModel_Insert(t *testing.T) {
 		var insertedProjectID int
 		var insertedWorkDate string
 		var insertedHours float64
+		var insertedHourlyRate float64
 		var insertedDescription string
-		err = testDB.DB.QueryRow("SELECT project_id, work_date, hours_worked, description FROM timesheet WHERE id = ?", id).Scan(
-			&insertedProjectID, &insertedWorkDate, &insertedHours, &insertedDescription)
+		err = testDB.DB.QueryRow("SELECT project_id, work_date, hours_worked, hourly_rate, description FROM timesheet WHERE id = ?", id).Scan(
+			&insertedProjectID, &insertedWorkDate, &insertedHours, &insertedHourlyRate, &insertedDescription)
 		require.NoError(t, err)
 		assert.Equal(t, projectID, insertedProjectID)
 		assert.Contains(t, insertedWorkDate, "2024-01-15")
 		assert.Equal(t, hoursWorked, insertedHours)
+		assert.Equal(t, hourlyRate, insertedHourlyRate)
 		assert.Equal(t, description, insertedDescription)
 	})
 
@@ -56,9 +59,10 @@ func TestTimesheetModel_Insert(t *testing.T) {
 		
 		workDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 		hoursWorked := 8.0
+		hourlyRate := 100.00
 		description := "Test description"
 		
-		id, err := model.Insert(999, workDate, hoursWorked, description) // Non-existent project
+		id, err := model.Insert(999, workDate, hoursWorked, hourlyRate, description) // Non-existent project
 		
 		// SQLite might not enforce foreign key constraints by default in tests
 		// Just verify it doesn't crash
@@ -78,13 +82,40 @@ func TestTimesheetModel_Insert(t *testing.T) {
 		
 		workDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 		hoursWorked := 0.0
+		hourlyRate := 150.00
 		description := "No work done"
 		
-		id, err := model.Insert(projectID, workDate, hoursWorked, description)
+		id, err := model.Insert(projectID, workDate, hoursWorked, hourlyRate, description)
 		
 		// Should succeed at database level (validation happens at handler level)
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
+	})
+
+	t.Run("insert with empty description", func(t *testing.T) {
+		testDB.TruncateTable(t, "timesheet")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Create test client and project
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
+		
+		workDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
+		hoursWorked := 8.0
+		hourlyRate := 100.00
+		description := "" // Empty description
+		
+		id, err := model.Insert(projectID, workDate, hoursWorked, hourlyRate, description)
+		
+		// Should succeed at database level (validation happens at handler level)
+		require.NoError(t, err)
+		assert.Greater(t, id, 0)
+		
+		// Verify the timesheet was inserted with empty description
+		timesheet, err := model.Get(id)
+		require.NoError(t, err)
+		assert.Equal(t, "", timesheet.Description)
 	})
 }
 
@@ -108,8 +139,9 @@ func TestTimesheetModel_Get(t *testing.T) {
 		// Insert timesheet
 		expectedWorkDate := "2024-01-15"
 		expectedHours := "8.50"
+		expectedHourlyRate := "125.00"
 		expectedDescription := "Test timesheet"
-		id := testDB.InsertTestTimesheet(t, projectID, expectedWorkDate, expectedHours, expectedDescription)
+		id := testDB.InsertTestTimesheet(t, projectID, expectedWorkDate, expectedHours, expectedHourlyRate, expectedDescription)
 		
 		// Get the timesheet using model
 		timesheet, err := model.Get(id)
@@ -119,6 +151,7 @@ func TestTimesheetModel_Get(t *testing.T) {
 		assert.Equal(t, projectID, timesheet.ProjectID)
 		assert.Equal(t, expectedWorkDate, timesheet.WorkDate.Format("2006-01-02"))
 		assert.Equal(t, 8.5, timesheet.HoursWorked)
+		assert.Equal(t, 125.00, timesheet.HourlyRate)
 		assert.Equal(t, expectedDescription, timesheet.Description)
 		assert.False(t, timesheet.Created.IsZero())
 		assert.False(t, timesheet.Updated.IsZero())
@@ -155,11 +188,11 @@ func TestTimesheetModel_GetByProject(t *testing.T) {
 		project2ID := testDB.InsertTestProject(t, "Project 2", clientID)
 		
 		// Create timesheets for project 1
-		timesheet1ID := testDB.InsertTestTimesheet(t, project1ID, "2024-01-15", "8.00", "Work A")
-		timesheet2ID := testDB.InsertTestTimesheet(t, project1ID, "2024-01-16", "4.50", "Work B")
+		timesheet1ID := testDB.InsertTestTimesheet(t, project1ID, "2024-01-15", "8.00", "125.00", "Work A")
+		timesheet2ID := testDB.InsertTestTimesheet(t, project1ID, "2024-01-16", "4.50", "135.00", "Work B")
 		
 		// Create timesheet for project 2 (should not be returned)
-		_ = testDB.InsertTestTimesheet(t, project2ID, "2024-01-17", "2.00", "Work C")
+		_ = testDB.InsertTestTimesheet(t, project2ID, "2024-01-17", "2.00", "150.00", "Work C")
 		
 		timesheets, err := model.GetByProject(project1ID)
 		
@@ -228,14 +261,16 @@ func TestTimesheetModel_Update(t *testing.T) {
 		// Insert timesheet
 		originalWorkDate := "2024-01-15"
 		originalHours := "8.00"
+		originalHourlyRate := "100.00"
 		originalDescription := "Original work"
-		id := testDB.InsertTestTimesheet(t, projectID, originalWorkDate, originalHours, originalDescription)
+		id := testDB.InsertTestTimesheet(t, projectID, originalWorkDate, originalHours, originalHourlyRate, originalDescription)
 		
 		// Update the timesheet
 		newWorkDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 		newHours := 6.5
+		newHourlyRate := 120.00
 		newDescription := "Updated work"
-		err := model.Update(id, newWorkDate, newHours, newDescription)
+		err := model.Update(id, newWorkDate, newHours, newHourlyRate, newDescription)
 		require.NoError(t, err)
 		
 		// Verify the timesheet was updated
@@ -244,6 +279,7 @@ func TestTimesheetModel_Update(t *testing.T) {
 		assert.Equal(t, id, timesheet.ID)
 		assert.Equal(t, "2024-01-20", timesheet.WorkDate.Format("2006-01-02"))
 		assert.Equal(t, newHours, timesheet.HoursWorked)
+		assert.Equal(t, newHourlyRate, timesheet.HourlyRate)
 		assert.Equal(t, newDescription, timesheet.Description)
 		assert.False(t, timesheet.Updated.IsZero())
 		
@@ -256,8 +292,9 @@ func TestTimesheetModel_Update(t *testing.T) {
 		
 		newWorkDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 		newHours := 6.5
+		newHourlyRate := 110.00
 		newDescription := "Updated work"
-		err := model.Update(999, newWorkDate, newHours, newDescription)
+		err := model.Update(999, newWorkDate, newHours, newHourlyRate, newDescription)
 		
 		// Should not return an error (SQLite UPDATE doesn't fail for non-existent rows)
 		require.NoError(t, err)
@@ -275,14 +312,16 @@ func TestTimesheetModel_Update(t *testing.T) {
 		// Insert timesheet
 		originalWorkDate := "2024-01-15"
 		originalHours := "8.00"
+		originalHourlyRate := "75.00"
 		originalDescription := "Original work"
-		id := testDB.InsertTestTimesheet(t, projectID, originalWorkDate, originalHours, originalDescription)
+		id := testDB.InsertTestTimesheet(t, projectID, originalWorkDate, originalHours, originalHourlyRate, originalDescription)
 		
 		// Update with zero hours (should succeed at database level)
 		newWorkDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 		newHours := 0.0
+		newHourlyRate := 80.00
 		newDescription := "No work done"
-		err := model.Update(id, newWorkDate, newHours, newDescription)
+		err := model.Update(id, newWorkDate, newHours, newHourlyRate, newDescription)
 		require.NoError(t, err)
 		
 		// Verify the timesheet was updated
@@ -313,8 +352,9 @@ func TestTimesheetModel_Delete(t *testing.T) {
 		// Insert timesheet
 		workDate := "2024-01-15"
 		hours := "8.00"
+		hourlyRate := "120.00"
 		description := "Timesheet to delete"
-		id := testDB.InsertTestTimesheet(t, projectID, workDate, hours, description)
+		id := testDB.InsertTestTimesheet(t, projectID, workDate, hours, hourlyRate, description)
 		
 		// Verify timesheet exists
 		timesheet, err := model.Get(id)
@@ -364,8 +404,9 @@ func TestTimesheetModel_Delete(t *testing.T) {
 		// Insert and delete timesheet
 		workDate := "2024-01-15"
 		hours := "8.00"
+		hourlyRate := "90.00"
 		description := "Already deleted timesheet"
-		id := testDB.InsertTestTimesheet(t, projectID, workDate, hours, description)
+		id := testDB.InsertTestTimesheet(t, projectID, workDate, hours, hourlyRate, description)
 		err := model.Delete(id)
 		require.NoError(t, err)
 		
@@ -400,8 +441,9 @@ func TestTimesheetModel_Integration(t *testing.T) {
 		// 2. Insert a new timesheet
 		workDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 		hoursWorked := 8.5
+		hourlyRate := 140.00
 		description := "Integration test work"
-		id, err := model.Insert(projectID, workDate, hoursWorked, description)
+		id, err := model.Insert(projectID, workDate, hoursWorked, hourlyRate, description)
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
 		
@@ -412,6 +454,7 @@ func TestTimesheetModel_Integration(t *testing.T) {
 		assert.Equal(t, projectID, timesheet.ProjectID)
 		assert.Equal(t, "2024-01-15", timesheet.WorkDate.Format("2006-01-02"))
 		assert.Equal(t, hoursWorked, timesheet.HoursWorked)
+		assert.Equal(t, hourlyRate, timesheet.HourlyRate)
 		assert.Equal(t, description, timesheet.Description)
 		
 		// 4. Verify it appears in GetByProject
@@ -419,13 +462,15 @@ func TestTimesheetModel_Integration(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, timesheets, 1)
 		assert.Equal(t, timesheet.ID, timesheets[0].ID)
+		assert.Equal(t, timesheet.HourlyRate, timesheets[0].HourlyRate)
 		assert.Equal(t, timesheet.Description, timesheets[0].Description)
 		
 		// 5. Update the timesheet
 		newWorkDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 		newHours := 6.0
+		newHourlyRate := 160.00
 		newDescription := "Updated integration test work"
-		err = model.Update(id, newWorkDate, newHours, newDescription)
+		err = model.Update(id, newWorkDate, newHours, newHourlyRate, newDescription)
 		require.NoError(t, err)
 		
 		// 6. Verify update
@@ -433,6 +478,7 @@ func TestTimesheetModel_Integration(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, "2024-01-20", updatedTimesheet.WorkDate.Format("2006-01-02"))
 		assert.Equal(t, newHours, updatedTimesheet.HoursWorked)
+		assert.Equal(t, newHourlyRate, updatedTimesheet.HourlyRate)
 		assert.Equal(t, newDescription, updatedTimesheet.Description)
 		assert.True(t, updatedTimesheet.Updated.After(timesheet.Updated) || updatedTimesheet.Updated.Equal(timesheet.Updated))
 		
@@ -476,10 +522,11 @@ func TestTimesheetModelInterface(t *testing.T) {
 			// Test that the implementation works correctly
 			workDate := time.Date(2024, 1, 15, 0, 0, 0, 0, time.UTC)
 			hoursWorked := 8.5
+			hourlyRate := 130.00
 			description := "Interface Test Work"
 			
 			// Insert
-			id, err := test.impl.Insert(projectID, workDate, hoursWorked, description)
+			id, err := test.impl.Insert(projectID, workDate, hoursWorked, hourlyRate, description)
 			require.NoError(t, err)
 			assert.Greater(t, id, 0)
 			
@@ -489,6 +536,7 @@ func TestTimesheetModelInterface(t *testing.T) {
 			assert.Equal(t, id, timesheet.ID)
 			assert.Equal(t, projectID, timesheet.ProjectID)
 			assert.Equal(t, hoursWorked, timesheet.HoursWorked)
+			assert.Equal(t, hourlyRate, timesheet.HourlyRate)
 			assert.Equal(t, description, timesheet.Description)
 			
 			// GetByProject
@@ -496,18 +544,21 @@ func TestTimesheetModelInterface(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, timesheets, 1)
 			assert.Equal(t, id, timesheets[0].ID)
+			assert.Equal(t, hourlyRate, timesheets[0].HourlyRate)
 			assert.Equal(t, description, timesheets[0].Description)
 			
 			// Update
 			newWorkDate := time.Date(2024, 1, 20, 0, 0, 0, 0, time.UTC)
 			newHours := 6.0
+			newHourlyRate := 155.00
 			newDescription := "Updated Interface Test Work"
-			err = test.impl.Update(id, newWorkDate, newHours, newDescription)
+			err = test.impl.Update(id, newWorkDate, newHours, newHourlyRate, newDescription)
 			require.NoError(t, err)
 			
 			updatedTimesheet, err := test.impl.Get(id)
 			require.NoError(t, err)
 			assert.Equal(t, newHours, updatedTimesheet.HoursWorked)
+			assert.Equal(t, newHourlyRate, updatedTimesheet.HourlyRate)
 			assert.Equal(t, newDescription, updatedTimesheet.Description)
 			
 			// Delete

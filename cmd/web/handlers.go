@@ -63,6 +63,7 @@ type projectForm struct {
 type timesheetForm struct {
 	WorkDate            string `form:"work_date"`
 	HoursWorked         string `form:"hours_worked"`
+	HourlyRate          string `form:"hourly_rate"`
 	Description         string `form:"description"`
 	IsUpdate            bool   `form:"-"`
 	validator.Validator `form:"-"`
@@ -962,6 +963,8 @@ func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.R
 
 	form.CheckField(validator.NotBlank(form.WorkDate), "work_date", "Work date is required")
 	form.CheckField(validator.NotBlank(form.HoursWorked), "hours_worked", "Hours worked is required")
+	form.CheckField(validator.NotBlank(form.HourlyRate), "hourly_rate", "Hourly rate is required")
+	form.CheckField(validator.NotBlank(form.Description), "description", "Description is required")
 	form.CheckField(validator.MaxChars(form.Description, NAME_LENGTH), "description", fmt.Sprintf("Description must be shorter than %d characters", NAME_LENGTH))
 
 	// Parse and validate work date
@@ -982,6 +985,15 @@ func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.R
 		}
 	}
 
+	// Parse and validate hourly rate
+	var hourlyRate float64
+	if form.Valid() {
+		hourlyRate, err = strconv.ParseFloat(form.HourlyRate, 64)
+		if err != nil || hourlyRate < 0 {
+			form.AddFieldError("hourly_rate", "Hourly rate must be a positive number")
+		}
+	}
+
 	if !form.Valid() {
 		data := app.newTemplateData(req)
 		data.Form = form
@@ -991,7 +1003,7 @@ func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	_, err = app.timesheets.Insert(projectID, workDate, hoursWorked, form.Description)
+	_, err = app.timesheets.Insert(projectID, workDate, hoursWorked, hourlyRate, form.Description)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
@@ -1043,6 +1055,7 @@ func (app *application) timesheetUpdate(res http.ResponseWriter, req *http.Reque
 	data.Form = timesheetForm{
 		WorkDate:    timesheet.WorkDate.Format("2006-01-02"),
 		HoursWorked: fmt.Sprintf("%.2f", timesheet.HoursWorked),
+		HourlyRate:  fmt.Sprintf("%.2f", timesheet.HourlyRate),
 		Description: timesheet.Description,
 		IsUpdate:    true,
 	}
@@ -1101,6 +1114,8 @@ func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.R
 
 	form.CheckField(validator.NotBlank(form.WorkDate), "work_date", "Work date is required")
 	form.CheckField(validator.NotBlank(form.HoursWorked), "hours_worked", "Hours worked is required")
+	form.CheckField(validator.NotBlank(form.HourlyRate), "hourly_rate", "Hourly rate is required")
+	form.CheckField(validator.NotBlank(form.Description), "description", "Description is required")
 	form.CheckField(validator.MaxChars(form.Description, NAME_LENGTH), "description", fmt.Sprintf("Description must be shorter than %d characters", NAME_LENGTH))
 
 	// Parse and validate work date
@@ -1121,6 +1136,15 @@ func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.R
 		}
 	}
 
+	// Parse and validate hourly rate
+	var hourlyRate float64
+	if form.Valid() {
+		hourlyRate, err = strconv.ParseFloat(form.HourlyRate, 64)
+		if err != nil || hourlyRate < 0 {
+			form.AddFieldError("hourly_rate", "Hourly rate must be a positive number")
+		}
+	}
+
 	if !form.Valid() {
 		form.IsUpdate = true
 		data := app.newTemplateData(req)
@@ -1131,7 +1155,7 @@ func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.R
 		return
 	}
 
-	err = app.timesheets.Update(id, workDate, hoursWorked, form.Description)
+	err = app.timesheets.Update(id, workDate, hoursWorked, hourlyRate, form.Description)
 	if err != nil {
 		app.serverError(res, req, err)
 		return

@@ -79,7 +79,7 @@
                         <div class="project-content">
                             <div class="project-info">
                                 <strong class="project-name">{{.WorkDate.Format "2006-01-02"}}</strong>
-                                <span class="project-id">{{printf "%.2f" .HoursWorked}} hours</span>
+                                <span class="project-id">{{printf "%.2f" .HoursWorked}} hours @ ${{printf "%.2f" .HourlyRate}}/hr</span>
                             </div>
                             <div class="action-buttons">
                                 <a href="/timesheet/update/{{.ID}}" class="btn-icon btn-edit" title="Edit timesheet">

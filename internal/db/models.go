@@ -96,4 +96,5 @@ type Timesheet struct {
 	UpdatedAt   time.Time      `json:"updated_at"`
 	DeletedAt   interface{}    `json:"deleted_at"`
 	Description sql.NullString `json:"description"`
+	HourlyRate  float64        `json:"hourly_rate"`
 }

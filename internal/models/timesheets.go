@@ -15,6 +15,7 @@ type Timesheet struct {
 	ProjectID   int
 	WorkDate    time.Time
 	HoursWorked float64
+	HourlyRate  float64
 	Description string
 	Updated     time.Time
 	Created     time.Time
@@ -34,12 +35,13 @@ func NewTimesheetModel(database *sql.DB) *TimesheetModel {
 }
 
 // Insert adds a new timesheet to the database and returns its ID
-func (t *TimesheetModel) Insert(projectID int, workDate time.Time, hoursWorked float64, description string) (int, error) {
+func (t *TimesheetModel) Insert(projectID int, workDate time.Time, hoursWorked float64, hourlyRate float64, description string) (int, error) {
 	ctx := context.Background()
 	params := db.InsertTimesheetParams{
 		ProjectID:   int64(projectID),
 		WorkDate:    workDate,
 		HoursWorked: hoursWorked,
+		HourlyRate:  hourlyRate,
 		Description: sql.NullString{String: description, Valid: description != ""},
 	}
 	id, err := t.queries.InsertTimesheet(ctx, params)
@@ -72,6 +74,7 @@ func (t *TimesheetModel) Get(id int) (Timesheet, error) {
 		ProjectID:   int(row.ProjectID),
 		WorkDate:    row.WorkDate,
 		HoursWorked: row.HoursWorked,
+		HourlyRate:  row.HourlyRate,
 		Description: row.Description.String,
 		Updated:     row.UpdatedAt,
 		Created:     row.CreatedAt,
@@ -103,6 +106,7 @@ func (t *TimesheetModel) GetByProject(projectID int) ([]Timesheet, error) {
 			ProjectID:   int(row.ProjectID),
 			WorkDate:    row.WorkDate,
 			HoursWorked: row.HoursWorked,
+			HourlyRate:  row.HourlyRate,
 			Description: row.Description.String,
 			Updated:     row.UpdatedAt,
 			Created:     row.CreatedAt,
@@ -114,12 +118,13 @@ func (t *TimesheetModel) GetByProject(projectID int) ([]Timesheet, error) {
 }
 
 // Update modifies an existing timesheet in the database
-func (t *TimesheetModel) Update(id int, workDate time.Time, hoursWorked float64, description string) error {
+func (t *TimesheetModel) Update(id int, workDate time.Time, hoursWorked float64, hourlyRate float64, description string) error {
 	ctx := context.Background()
 	params := db.UpdateTimesheetParams{
 		ID:          int64(id),
 		WorkDate:    workDate,
 		HoursWorked: hoursWorked,
+		HourlyRate:  hourlyRate,
 		Description: sql.NullString{String: description, Valid: description != ""},
 	}
 	return t.queries.UpdateTimesheet(ctx, params)
@@ -133,10 +138,10 @@ func (t *TimesheetModel) Delete(id int) error {
 
 // TimesheetModelInterface defines the interface for timesheet operations
 type TimesheetModelInterface interface {
-	Insert(projectID int, workDate time.Time, hoursWorked float64, description string) (int, error)
+	Insert(projectID int, workDate time.Time, hoursWorked float64, hourlyRate float64, description string) (int, error)
 	Get(id int) (Timesheet, error)
 	GetByProject(projectID int) ([]Timesheet, error)
-	Update(id int, workDate time.Time, hoursWorked float64, description string) error
+	Update(id int, workDate time.Time, hoursWorked float64, hourlyRate float64, description string) error
 	Delete(id int) error
 }
 
