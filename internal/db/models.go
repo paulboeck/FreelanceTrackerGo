@@ -47,12 +47,29 @@ type Invoice struct {
 }
 
 type Project struct {
-	ID        int64       `json:"id"`
-	Name      string      `json:"name"`
-	ClientID  int64       `json:"client_id"`
-	CreatedAt time.Time   `json:"created_at"`
-	UpdatedAt time.Time   `json:"updated_at"`
-	DeletedAt interface{} `json:"deleted_at"`
+	ID                     int64           `json:"id"`
+	Name                   string          `json:"name"`
+	ClientID               int64           `json:"client_id"`
+	CreatedAt              time.Time       `json:"created_at"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+	DeletedAt              interface{}     `json:"deleted_at"`
+	Status                 string          `json:"status"`
+	HourlyRate             float64         `json:"hourly_rate"`
+	Deadline               sql.NullString  `json:"deadline"`
+	ScheduledStart         sql.NullString  `json:"scheduled_start"`
+	InvoiceCcEmail         sql.NullString  `json:"invoice_cc_email"`
+	InvoiceCcDescription   sql.NullString  `json:"invoice_cc_description"`
+	ScheduleComments       sql.NullString  `json:"schedule_comments"`
+	AdditionalInfo         sql.NullString  `json:"additional_info"`
+	AdditionalInfo2        sql.NullString  `json:"additional_info2"`
+	DiscountPercent        sql.NullFloat64 `json:"discount_percent"`
+	DiscountReason         sql.NullString  `json:"discount_reason"`
+	AdjustmentAmount       sql.NullFloat64 `json:"adjustment_amount"`
+	AdjustmentReason       sql.NullString  `json:"adjustment_reason"`
+	CurrencyDisplay        string          `json:"currency_display"`
+	CurrencyConversionRate float64         `json:"currency_conversion_rate"`
+	FlatFeeInvoice         int64           `json:"flat_fee_invoice"`
+	Notes                  sql.NullString  `json:"notes"`
 }
 
 type Session struct {

@@ -21,6 +21,148 @@
             {{end}}
             <input type='text' name='name' value="{{.Form.Name}}" placeholder="Enter project name" {{with .Form.FieldErrors.name}}class="form-input error"{{else}}class="form-input"{{end}}>
         </div>
+        
+        <div class="form-group">
+            <label>Status:</label>
+            {{with .Form.FieldErrors.status}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <select name='status' {{with .Form.FieldErrors.status}}class="form-input error"{{else}}class="form-input"{{end}}>
+                <option value="Estimating" {{if eq .Form.Status "Estimating"}}selected{{end}}>Estimating</option>
+                <option value="Scheduled" {{if eq .Form.Status "Scheduled"}}selected{{end}}>Scheduled</option>
+                <option value="In Progress" {{if eq .Form.Status "In Progress"}}selected{{end}}>In Progress</option>
+                <option value="Work Complete" {{if eq .Form.Status "Work Complete"}}selected{{end}}>Work Complete</option>
+                <option value="Invoice Sent" {{if eq .Form.Status "Invoice Sent"}}selected{{end}}>Invoice Sent</option>
+            </select>
+        </div>
+        
+        <div class="form-group">
+            <label>Hourly Rate:</label>
+            {{with .Form.FieldErrors.hourly_rate}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='number' name='hourly_rate' value="{{.Form.HourlyRate}}" step="0.01" min="0" placeholder="0.00" {{with .Form.FieldErrors.hourly_rate}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Deadline:</label>
+            {{with .Form.FieldErrors.deadline}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='date' name='deadline' value="{{.Form.Deadline}}" {{with .Form.FieldErrors.deadline}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Scheduled Start:</label>
+            {{with .Form.FieldErrors.scheduled_start}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='date' name='scheduled_start' value="{{.Form.ScheduledStart}}" {{with .Form.FieldErrors.scheduled_start}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Invoice CC Email:</label>
+            {{with .Form.FieldErrors.invoice_cc_email}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='email' name='invoice_cc_email' value="{{.Form.InvoiceCCEmail}}" {{with .Form.FieldErrors.invoice_cc_email}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Invoice CC Description:</label>
+            {{with .Form.FieldErrors.invoice_cc_description}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='text' name='invoice_cc_description' value="{{.Form.InvoiceCCDescription}}" {{with .Form.FieldErrors.invoice_cc_description}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Schedule Comments:</label>
+            {{with .Form.FieldErrors.schedule_comments}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <textarea name='schedule_comments' rows="3" {{with .Form.FieldErrors.schedule_comments}}class="form-input error"{{else}}class="form-input"{{end}}>{{.Form.ScheduleComments}}</textarea>
+        </div>
+        
+        <div class="form-group">
+            <label>Additional Info:</label>
+            {{with .Form.FieldErrors.additional_info}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='text' name='additional_info' value="{{.Form.AdditionalInfo}}" {{with .Form.FieldErrors.additional_info}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Additional Info 2:</label>
+            {{with .Form.FieldErrors.additional_info2}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='text' name='additional_info2' value="{{.Form.AdditionalInfo2}}" {{with .Form.FieldErrors.additional_info2}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Discount Percent:</label>
+            {{with .Form.FieldErrors.discount_percent}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='number' name='discount_percent' value="{{.Form.DiscountPercent}}" step="0.0001" min="0" max="1" placeholder="0.0000" {{with .Form.FieldErrors.discount_percent}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Discount Reason:</label>
+            {{with .Form.FieldErrors.discount_reason}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='text' name='discount_reason' value="{{.Form.DiscountReason}}" {{with .Form.FieldErrors.discount_reason}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Adjustment Amount:</label>
+            {{with .Form.FieldErrors.adjustment_amount}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='number' name='adjustment_amount' value="{{.Form.AdjustmentAmount}}" step="0.01" placeholder="0.00" {{with .Form.FieldErrors.adjustment_amount}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Adjustment Reason:</label>
+            {{with .Form.FieldErrors.adjustment_reason}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='text' name='adjustment_reason' value="{{.Form.AdjustmentReason}}" {{with .Form.FieldErrors.adjustment_reason}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Currency Display:</label>
+            {{with .Form.FieldErrors.currency_display}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='text' name='currency_display' value="{{.Form.CurrencyDisplay}}" placeholder="USD" {{with .Form.FieldErrors.currency_display}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Currency Conversion Rate:</label>
+            {{with .Form.FieldErrors.currency_conversion_rate}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='number' name='currency_conversion_rate' value="{{.Form.CurrencyConversionRate}}" step="0.00001" min="0" placeholder="1.00000" {{with .Form.FieldErrors.currency_conversion_rate}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>
+                <input type='checkbox' name='flat_fee_invoice' value="true" {{if .Form.FlatFeeInvoice}}checked{{end}}>
+                Flat Fee Invoice
+            </label>
+        </div>
+        
+        <div class="form-group">
+            <label>Notes:</label>
+            {{with .Form.FieldErrors.notes}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <textarea name='notes' rows="4" {{with .Form.FieldErrors.notes}}class="form-input error"{{else}}class="form-input"{{end}}>{{.Form.Notes}}</textarea>
+        </div>
+        
         <div class="form-actions">
             <input type='submit' value='{{if .Form.Name}}Update project{{else}}Create project{{end}}'>
             {{if .Form.Name}}

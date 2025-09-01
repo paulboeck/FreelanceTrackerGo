@@ -11,12 +11,29 @@ import (
 
 // Project represents a project in the system
 type Project struct {
-	ID        int
-	Name      string
-	ClientID  int
-	Updated   time.Time
-	Created   time.Time
-	DeletedAt *time.Time
+	ID                     int
+	Name                   string
+	ClientID               int
+	Status                 string
+	HourlyRate             float64
+	Deadline               *time.Time
+	ScheduledStart         *time.Time
+	InvoiceCCEmail         string
+	InvoiceCCDescription   string
+	ScheduleComments       string
+	AdditionalInfo         string
+	AdditionalInfo2        string
+	DiscountPercent        *float64
+	DiscountReason         string
+	AdjustmentAmount       *float64
+	AdjustmentReason       string
+	CurrencyDisplay        string
+	CurrencyConversionRate float64
+	FlatFeeInvoice         bool
+	Notes                  string
+	Updated                time.Time
+	Created                time.Time
+	DeletedAt              *time.Time
 }
 
 // ProjectModel wraps the generated SQLC Queries for project operations
@@ -32,12 +49,60 @@ func NewProjectModel(database *sql.DB) *ProjectModel {
 }
 
 // Insert adds a new project to the database and returns its ID
-func (p *ProjectModel) Insert(name string, clientID int) (int, error) {
+func (p *ProjectModel) Insert(project Project) (int, error) {
 	ctx := context.Background()
-	params := db.InsertProjectParams{
-		Name:     name,
-		ClientID: int64(clientID),
+	
+	// Helper function to convert *time.Time to sql.NullString for dates
+	timeToNullString := func(t *time.Time) sql.NullString {
+		if t == nil {
+			return sql.NullString{Valid: false}
+		}
+		return sql.NullString{String: t.Format("2006-01-02"), Valid: true}
 	}
+	
+	// Helper function to convert string to sql.NullString
+	stringToNullString := func(s string) sql.NullString {
+		if s == "" {
+			return sql.NullString{Valid: false}
+		}
+		return sql.NullString{String: s, Valid: true}
+	}
+	
+	// Helper function to convert *float64 to sql.NullFloat64
+	floatToNullFloat64 := func(f *float64) sql.NullFloat64 {
+		if f == nil {
+			return sql.NullFloat64{Valid: false}
+		}
+		return sql.NullFloat64{Float64: *f, Valid: true}
+	}
+	
+	params := db.InsertProjectParams{
+		Name:                   project.Name,
+		ClientID:               int64(project.ClientID),
+		Status:                 project.Status,
+		HourlyRate:             project.HourlyRate,
+		Deadline:               timeToNullString(project.Deadline),
+		ScheduledStart:         timeToNullString(project.ScheduledStart),
+		InvoiceCcEmail:         stringToNullString(project.InvoiceCCEmail),
+		InvoiceCcDescription:   stringToNullString(project.InvoiceCCDescription),
+		ScheduleComments:       stringToNullString(project.ScheduleComments),
+		AdditionalInfo:         stringToNullString(project.AdditionalInfo),
+		AdditionalInfo2:        stringToNullString(project.AdditionalInfo2),
+		DiscountPercent:        floatToNullFloat64(project.DiscountPercent),
+		DiscountReason:         stringToNullString(project.DiscountReason),
+		AdjustmentAmount:       floatToNullFloat64(project.AdjustmentAmount),
+		AdjustmentReason:       stringToNullString(project.AdjustmentReason),
+		CurrencyDisplay:        project.CurrencyDisplay,
+		CurrencyConversionRate: project.CurrencyConversionRate,
+		FlatFeeInvoice:         0, // Convert bool to int64 (0 = false, 1 = true)
+		Notes:                  stringToNullString(project.Notes),
+	}
+	
+	// Convert bool to int64 for SQLite
+	if project.FlatFeeInvoice {
+		params.FlatFeeInvoice = 1
+	}
+	
 	id, err := p.queries.InsertProject(ctx, params)
 	if err != nil {
 		return 0, err
@@ -56,6 +121,25 @@ func (p *ProjectModel) Get(id int) (Project, error) {
 		return Project{}, err
 	}
 
+	// Helper function to convert sql.NullString to *time.Time for dates
+	nullStringToTime := func(ns sql.NullString) *time.Time {
+		if !ns.Valid || ns.String == "" {
+			return nil
+		}
+		if t, err := time.Parse("2006-01-02", ns.String); err == nil {
+			return &t
+		}
+		return nil
+	}
+
+	// Helper function to convert sql.NullFloat64 to *float64
+	nullFloat64ToFloat := func(nf sql.NullFloat64) *float64 {
+		if !nf.Valid {
+			return nil
+		}
+		return &nf.Float64
+	}
+
 	var deletedAt *time.Time
 	if row.DeletedAt != nil {
 		if dt, ok := row.DeletedAt.(time.Time); ok {
@@ -64,12 +148,29 @@ func (p *ProjectModel) Get(id int) (Project, error) {
 	}
 
 	project := Project{
-		ID:        int(row.ID),
-		Name:      row.Name,
-		ClientID:  int(row.ClientID),
-		Updated:   row.UpdatedAt,
-		Created:   row.CreatedAt,
-		DeletedAt: deletedAt,
+		ID:                     int(row.ID),
+		Name:                   row.Name,
+		ClientID:               int(row.ClientID),
+		Status:                 row.Status,
+		HourlyRate:             row.HourlyRate,
+		Deadline:               nullStringToTime(row.Deadline),
+		ScheduledStart:         nullStringToTime(row.ScheduledStart),
+		InvoiceCCEmail:         row.InvoiceCcEmail.String,
+		InvoiceCCDescription:   row.InvoiceCcDescription.String,
+		ScheduleComments:       row.ScheduleComments.String,
+		AdditionalInfo:         row.AdditionalInfo.String,
+		AdditionalInfo2:        row.AdditionalInfo2.String,
+		DiscountPercent:        nullFloat64ToFloat(row.DiscountPercent),
+		DiscountReason:         row.DiscountReason.String,
+		AdjustmentAmount:       nullFloat64ToFloat(row.AdjustmentAmount),
+		AdjustmentReason:       row.AdjustmentReason.String,
+		CurrencyDisplay:        row.CurrencyDisplay,
+		CurrencyConversionRate: row.CurrencyConversionRate,
+		FlatFeeInvoice:         row.FlatFeeInvoice != 0,
+		Notes:                  row.Notes.String,
+		Updated:                row.UpdatedAt,
+		Created:                row.CreatedAt,
+		DeletedAt:              deletedAt,
 	}
 
 	return project, nil
@@ -83,6 +184,24 @@ func (p *ProjectModel) GetByClient(clientID int) ([]Project, error) {
 		return nil, err
 	}
 
+	// Helper functions (reused from Get method)
+	nullStringToTime := func(ns sql.NullString) *time.Time {
+		if !ns.Valid || ns.String == "" {
+			return nil
+		}
+		if t, err := time.Parse("2006-01-02", ns.String); err == nil {
+			return &t
+		}
+		return nil
+	}
+
+	nullFloat64ToFloat := func(nf sql.NullFloat64) *float64 {
+		if !nf.Valid {
+			return nil
+		}
+		return &nf.Float64
+	}
+
 	projects := make([]Project, len(rows))
 	for i, row := range rows {
 		var deletedAt *time.Time
@@ -93,12 +212,29 @@ func (p *ProjectModel) GetByClient(clientID int) ([]Project, error) {
 		}
 
 		projects[i] = Project{
-			ID:        int(row.ID),
-			Name:      row.Name,
-			ClientID:  int(row.ClientID),
-			Updated:   row.UpdatedAt,
-			Created:   row.CreatedAt,
-			DeletedAt: deletedAt,
+			ID:                     int(row.ID),
+			Name:                   row.Name,
+			ClientID:               int(row.ClientID),
+			Status:                 row.Status,
+			HourlyRate:             row.HourlyRate,
+			Deadline:               nullStringToTime(row.Deadline),
+			ScheduledStart:         nullStringToTime(row.ScheduledStart),
+			InvoiceCCEmail:         row.InvoiceCcEmail.String,
+			InvoiceCCDescription:   row.InvoiceCcDescription.String,
+			ScheduleComments:       row.ScheduleComments.String,
+			AdditionalInfo:         row.AdditionalInfo.String,
+			AdditionalInfo2:        row.AdditionalInfo2.String,
+			DiscountPercent:        nullFloat64ToFloat(row.DiscountPercent),
+			DiscountReason:         row.DiscountReason.String,
+			AdjustmentAmount:       nullFloat64ToFloat(row.AdjustmentAmount),
+			AdjustmentReason:       row.AdjustmentReason.String,
+			CurrencyDisplay:        row.CurrencyDisplay,
+			CurrencyConversionRate: row.CurrencyConversionRate,
+			FlatFeeInvoice:         row.FlatFeeInvoice != 0,
+			Notes:                  row.Notes.String,
+			Updated:                row.UpdatedAt,
+			Created:                row.CreatedAt,
+			DeletedAt:              deletedAt,
 		}
 	}
 
@@ -106,12 +242,58 @@ func (p *ProjectModel) GetByClient(clientID int) ([]Project, error) {
 }
 
 // Update modifies an existing project in the database
-func (p *ProjectModel) Update(id int, name string) error {
+func (p *ProjectModel) Update(project Project) error {
 	ctx := context.Background()
-	params := db.UpdateProjectParams{
-		ID:   int64(id),
-		Name: name,
+	
+	// Helper functions (reused from Insert method)
+	timeToNullString := func(t *time.Time) sql.NullString {
+		if t == nil {
+			return sql.NullString{Valid: false}
+		}
+		return sql.NullString{String: t.Format("2006-01-02"), Valid: true}
 	}
+	
+	stringToNullString := func(s string) sql.NullString {
+		if s == "" {
+			return sql.NullString{Valid: false}
+		}
+		return sql.NullString{String: s, Valid: true}
+	}
+	
+	floatToNullFloat64 := func(f *float64) sql.NullFloat64 {
+		if f == nil {
+			return sql.NullFloat64{Valid: false}
+		}
+		return sql.NullFloat64{Float64: *f, Valid: true}
+	}
+	
+	params := db.UpdateProjectParams{
+		Name:                   project.Name,
+		Status:                 project.Status,
+		HourlyRate:             project.HourlyRate,
+		Deadline:               timeToNullString(project.Deadline),
+		ScheduledStart:         timeToNullString(project.ScheduledStart),
+		InvoiceCcEmail:         stringToNullString(project.InvoiceCCEmail),
+		InvoiceCcDescription:   stringToNullString(project.InvoiceCCDescription),
+		ScheduleComments:       stringToNullString(project.ScheduleComments),
+		AdditionalInfo:         stringToNullString(project.AdditionalInfo),
+		AdditionalInfo2:        stringToNullString(project.AdditionalInfo2),
+		DiscountPercent:        floatToNullFloat64(project.DiscountPercent),
+		DiscountReason:         stringToNullString(project.DiscountReason),
+		AdjustmentAmount:       floatToNullFloat64(project.AdjustmentAmount),
+		AdjustmentReason:       stringToNullString(project.AdjustmentReason),
+		CurrencyDisplay:        project.CurrencyDisplay,
+		CurrencyConversionRate: project.CurrencyConversionRate,
+		FlatFeeInvoice:         0,
+		Notes:                  stringToNullString(project.Notes),
+		ID:                     int64(project.ID),
+	}
+	
+	// Convert bool to int64 for SQLite
+	if project.FlatFeeInvoice {
+		params.FlatFeeInvoice = 1
+	}
+	
 	return p.queries.UpdateProject(ctx, params)
 }
 
@@ -123,10 +305,10 @@ func (p *ProjectModel) Delete(id int) error {
 
 // ProjectModelInterface defines the interface for project operations
 type ProjectModelInterface interface {
-	Insert(name string, clientID int) (int, error)
+	Insert(project Project) (int, error)
 	Get(id int) (Project, error)
 	GetByClient(clientID int) ([]Project, error)
-	Update(id int, name string) error
+	Update(project Project) error
 	Delete(id int) error
 }
 

@@ -12,8 +12,45 @@
             <strong>{{.Project.Name}}</strong>
             <span>#{{.Project.ID}}</span>
         </div>
-        <div>
-            Project Details
+        <div class="client-details-header">
+            <button id="toggle-details" class="btn-toggle-details">
+                <span id="toggle-icon">▶</span> Details
+            </button>
+        </div>
+        <div class="client-details hidden" id="client-details">
+            <div class="client-info">
+                <p><strong>Status:</strong> {{.Project.Status}}</p>
+                <p><strong>Hourly Rate:</strong> ${{printf "%.2f" .Project.HourlyRate}}</p>
+                
+                {{if .Project.Deadline}}<p><strong>Deadline:</strong> {{.Project.Deadline.Format "2006-01-02"}}</p>{{end}}
+                {{if .Project.ScheduledStart}}<p><strong>Scheduled Start:</strong> {{.Project.ScheduledStart.Format "2006-01-02"}}</p>{{end}}
+                
+                {{if .Project.InvoiceCCEmail}}<p><strong>Invoice CC Email:</strong> {{.Project.InvoiceCCEmail}}</p>{{end}}
+                {{if .Project.InvoiceCCDescription}}<p><strong>Invoice CC Description:</strong> {{.Project.InvoiceCCDescription}}</p>{{end}}
+                
+                {{if .Project.ScheduleComments}}<p><strong>Schedule Comments:</strong><br>{{.Project.ScheduleComments}}</p>{{end}}
+            </div>
+            
+            <div class="client-billing">
+                <p><strong>Currency:</strong> {{.Project.CurrencyDisplay}}</p>
+                <p><strong>Currency Conversion Rate:</strong> {{printf "%.5f" .Project.CurrencyConversionRate}}</p>
+                <p><strong>Flat Fee Invoice:</strong> {{if .Project.FlatFeeInvoice}}Yes{{else}}No{{end}}</p>
+                
+                {{if .Project.DiscountPercent}}<p><strong>Discount:</strong> {{printf "%.4f" .Project.DiscountPercent}}</p>{{end}}
+                {{if .Project.DiscountReason}}<p><strong>Discount Reason:</strong> {{.Project.DiscountReason}}</p>{{end}}
+                
+                {{if .Project.AdjustmentAmount}}<p><strong>Adjustment:</strong> ${{printf "%.2f" .Project.AdjustmentAmount}}</p>{{end}}
+                {{if .Project.AdjustmentReason}}<p><strong>Adjustment Reason:</strong> {{.Project.AdjustmentReason}}</p>{{end}}
+            </div>
+            
+            {{if or .Project.Notes .Project.AdditionalInfo .Project.AdditionalInfo2}}
+            <div class="client-notes">
+                <h3>Additional Information</h3>
+                {{if .Project.AdditionalInfo}}<div><strong>Additional Info:</strong><br>{{.Project.AdditionalInfo}}</div>{{end}}
+                {{if .Project.AdditionalInfo2}}<div><strong>Additional Info 2:</strong><br>{{.Project.AdditionalInfo2}}</div>{{end}}
+                {{if .Project.Notes}}<div><strong>Notes:</strong><br>{{.Project.Notes}}</div>{{end}}
+            </div>
+            {{end}}
         </div>
         <div class="client-actions">
             <a href="/project/update/{{.Project.ID}}" class="btn-client-action">Edit Project</a>

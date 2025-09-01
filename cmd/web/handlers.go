@@ -39,8 +39,25 @@ type clientForm struct {
 }
 
 type projectForm struct {
-	Name                string `form:"name"`
-	validator.Validator `form:"-"`
+	Name                   string `form:"name"`
+	Status                 string `form:"status"`
+	HourlyRate             string `form:"hourly_rate"`
+	Deadline               string `form:"deadline"`
+	ScheduledStart         string `form:"scheduled_start"`
+	InvoiceCCEmail         string `form:"invoice_cc_email"`
+	InvoiceCCDescription   string `form:"invoice_cc_description"`
+	ScheduleComments       string `form:"schedule_comments"`
+	AdditionalInfo         string `form:"additional_info"`
+	AdditionalInfo2        string `form:"additional_info2"`
+	DiscountPercent        string `form:"discount_percent"`
+	DiscountReason         string `form:"discount_reason"`
+	AdjustmentAmount       string `form:"adjustment_amount"`
+	AdjustmentReason       string `form:"adjustment_reason"`
+	CurrencyDisplay        string `form:"currency_display"`
+	CurrencyConversionRate string `form:"currency_conversion_rate"`
+	FlatFeeInvoice         bool   `form:"flat_fee_invoice"`
+	Notes                  string `form:"notes"`
+	validator.Validator    `form:"-"`
 }
 
 type timesheetForm struct {
@@ -351,6 +368,123 @@ func ptrToString(s *string) string {
 	return *s
 }
 
+// formToProject converts a projectForm to a models.Project struct
+func formToProject(form projectForm, clientID, projectID int) (models.Project, error) {
+	// Parse dates
+	var deadline *time.Time
+	if form.Deadline != "" {
+		if d, err := time.Parse("2006-01-02", form.Deadline); err == nil {
+			deadline = &d
+		}
+	}
+	
+	var scheduledStart *time.Time
+	if form.ScheduledStart != "" {
+		if d, err := time.Parse("2006-01-02", form.ScheduledStart); err == nil {
+			scheduledStart = &d
+		}
+	}
+	
+	// Parse hourly rate
+	hourlyRate, err := strconv.ParseFloat(form.HourlyRate, 64)
+	if err != nil {
+		return models.Project{}, fmt.Errorf("invalid hourly rate: %w", err)
+	}
+	
+	// Parse discount percent
+	var discountPercent *float64
+	if form.DiscountPercent != "" {
+		if dp, err := strconv.ParseFloat(form.DiscountPercent, 64); err == nil {
+			discountPercent = &dp
+		}
+	}
+	
+	// Parse adjustment amount
+	var adjustmentAmount *float64
+	if form.AdjustmentAmount != "" {
+		if aa, err := strconv.ParseFloat(form.AdjustmentAmount, 64); err == nil {
+			adjustmentAmount = &aa
+		}
+	}
+	
+	// Parse currency conversion rate
+	currencyConversionRate := 1.0
+	if form.CurrencyConversionRate != "" {
+		if ccr, err := strconv.ParseFloat(form.CurrencyConversionRate, 64); err == nil {
+			currencyConversionRate = ccr
+		}
+	}
+	
+	// Set defaults
+	currencyDisplay := form.CurrencyDisplay
+	if currencyDisplay == "" {
+		currencyDisplay = "USD"
+	}
+	
+	return models.Project{
+		ID:                     projectID,
+		Name:                   form.Name,
+		ClientID:               clientID,
+		Status:                 form.Status,
+		HourlyRate:             hourlyRate,
+		Deadline:               deadline,
+		ScheduledStart:         scheduledStart,
+		InvoiceCCEmail:         form.InvoiceCCEmail,
+		InvoiceCCDescription:   form.InvoiceCCDescription,
+		ScheduleComments:       form.ScheduleComments,
+		AdditionalInfo:         form.AdditionalInfo,
+		AdditionalInfo2:        form.AdditionalInfo2,
+		DiscountPercent:        discountPercent,
+		DiscountReason:         form.DiscountReason,
+		AdjustmentAmount:       adjustmentAmount,
+		AdjustmentReason:       form.AdjustmentReason,
+		CurrencyDisplay:        currencyDisplay,
+		CurrencyConversionRate: currencyConversionRate,
+		FlatFeeInvoice:         form.FlatFeeInvoice,
+		Notes:                  form.Notes,
+	}, nil
+}
+
+// projectToForm converts a models.Project to a projectForm struct
+func projectToForm(project models.Project) projectForm {
+	// Helper to format dates
+	formatDate := func(t *time.Time) string {
+		if t == nil {
+			return ""
+		}
+		return t.Format("2006-01-02")
+	}
+	
+	// Helper to format float pointers
+	formatFloatPtr := func(f *float64) string {
+		if f == nil {
+			return ""
+		}
+		return fmt.Sprintf("%.4f", *f)
+	}
+	
+	return projectForm{
+		Name:                   project.Name,
+		Status:                 project.Status,
+		HourlyRate:             fmt.Sprintf("%.2f", project.HourlyRate),
+		Deadline:               formatDate(project.Deadline),
+		ScheduledStart:         formatDate(project.ScheduledStart),
+		InvoiceCCEmail:         project.InvoiceCCEmail,
+		InvoiceCCDescription:   project.InvoiceCCDescription,
+		ScheduleComments:       project.ScheduleComments,
+		AdditionalInfo:         project.AdditionalInfo,
+		AdditionalInfo2:        project.AdditionalInfo2,
+		DiscountPercent:        formatFloatPtr(project.DiscountPercent),
+		DiscountReason:         project.DiscountReason,
+		AdjustmentAmount:       formatFloatPtr(project.AdjustmentAmount),
+		AdjustmentReason:       project.AdjustmentReason,
+		CurrencyDisplay:        project.CurrencyDisplay,
+		CurrencyConversionRate: fmt.Sprintf("%.5f", project.CurrencyConversionRate),
+		FlatFeeInvoice:         project.FlatFeeInvoice,
+		Notes:                  project.Notes,
+	}
+}
+
 // clientUpdatePost handles a POST request with client form data which is then
 // validated and used to update an existing client in the database
 func (app *application) clientUpdatePost(res http.ResponseWriter, req *http.Request) {
@@ -555,7 +689,11 @@ func (app *application) projectCreate(res http.ResponseWriter, req *http.Request
 	}
 
 	data := app.newTemplateData(req)
-	data.Form = projectForm{}
+	data.Form = projectForm{
+		Status:                 "Estimating", // Default status
+		CurrencyDisplay:        "USD",        // Default currency
+		CurrencyConversionRate: "1.00000",    // Default conversion rate
+	}
 	data.Client = &client
 	app.render(res, req, http.StatusOK, "project_create.html", data)
 }
@@ -589,6 +727,9 @@ func (app *application) projectCreatePost(res http.ResponseWriter, req *http.Req
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
+	
+	form.CheckField(validator.NotBlank(form.Status), "status", "Status is required")
+	form.CheckField(validator.NotBlank(form.HourlyRate), "hourly_rate", "Hourly rate is required")
 
 	if !form.Valid() {
 		data := app.newTemplateData(req)
@@ -598,7 +739,14 @@ func (app *application) projectCreatePost(res http.ResponseWriter, req *http.Req
 		return
 	}
 
-	_, err = app.projects.Insert(form.Name, clientID)
+	// Convert form data to Project struct
+	project, err := formToProject(form, clientID, 0)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	_, err = app.projects.Insert(project)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
@@ -636,9 +784,7 @@ func (app *application) projectUpdate(res http.ResponseWriter, req *http.Request
 	}
 
 	data := app.newTemplateData(req)
-	data.Form = projectForm{
-		Name: project.Name,
-	}
+	data.Form = projectToForm(project)
 	data.Client = &client
 	app.render(res, req, http.StatusOK, "project_create.html", data)
 }
@@ -672,6 +818,9 @@ func (app *application) projectUpdatePost(res http.ResponseWriter, req *http.Req
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
+	
+	form.CheckField(validator.NotBlank(form.Status), "status", "Status is required")
+	form.CheckField(validator.NotBlank(form.HourlyRate), "hourly_rate", "Hourly rate is required")
 
 	if !form.Valid() {
 		client, err := app.clients.Get(project.ClientID)
@@ -690,7 +839,14 @@ func (app *application) projectUpdatePost(res http.ResponseWriter, req *http.Req
 		return
 	}
 
-	err = app.projects.Update(id, form.Name)
+	// Convert form data to Project struct
+	updatedProject, err := formToProject(form, project.ClientID, id)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	err = app.projects.Update(updatedProject)
 	if err != nil {
 		app.serverError(res, req, err)
 		return

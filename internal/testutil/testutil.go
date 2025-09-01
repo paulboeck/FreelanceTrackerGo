@@ -84,6 +84,23 @@ func createSchema(db *sql.DB) error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
 			client_id INTEGER NOT NULL,
+			status TEXT NOT NULL DEFAULT 'Estimating',
+			hourly_rate REAL NOT NULL DEFAULT 0.00,
+			deadline TEXT,
+			scheduled_start TEXT,
+			invoice_cc_email TEXT,
+			invoice_cc_description TEXT,
+			schedule_comments TEXT,
+			additional_info TEXT,
+			additional_info2 TEXT,
+			discount_percent REAL,
+			discount_reason TEXT,
+			adjustment_amount REAL,
+			adjustment_reason TEXT,
+			currency_display TEXT NOT NULL DEFAULT 'USD',
+			currency_conversion_rate REAL NOT NULL DEFAULT 1.00000,
+			flat_fee_invoice INTEGER NOT NULL DEFAULT 0,
+			notes TEXT,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME NULL,
@@ -157,7 +174,8 @@ func (td *TestDatabase) InsertTestClient(t *testing.T, name string) int {
 
 // InsertTestProject inserts a test project and returns its ID
 func (td *TestDatabase) InsertTestProject(t *testing.T, name string, clientID int) int {
-	result, err := td.DB.Exec("INSERT INTO project (name, client_id) VALUES (?, ?)", name, clientID)
+	result, err := td.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)`, name, clientID, "Estimating", 50.0, "USD", 1.0, 0)
 	require.NoError(t, err)
 	
 	id, err := result.LastInsertId()

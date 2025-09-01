@@ -23,8 +23,16 @@ func TestProjectModel_Insert(t *testing.T) {
 		// Create a test client first
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		
-		name := "Test Project"
-		id, err := model.Insert(name, clientID)
+		project := Project{
+			Name:                   "Test Project",
+			ClientID:               clientID,
+			Status:                 "Estimating",
+			HourlyRate:             50.0,
+			CurrencyDisplay:        "USD",
+			CurrencyConversionRate: 1.0,
+			FlatFeeInvoice:         false,
+		}
+		id, err := model.Insert(project)
 		
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
@@ -32,18 +40,30 @@ func TestProjectModel_Insert(t *testing.T) {
 		// Verify the project was actually inserted using direct query
 		var insertedName string
 		var insertedClientID int
-		err = testDB.DB.QueryRow("SELECT name, client_id FROM project WHERE id = ?", id).Scan(&insertedName, &insertedClientID)
+		var insertedStatus string
+		var insertedHourlyRate float64
+		err = testDB.DB.QueryRow("SELECT name, client_id, status, hourly_rate FROM project WHERE id = ?", id).Scan(&insertedName, &insertedClientID, &insertedStatus, &insertedHourlyRate)
 		require.NoError(t, err)
-		assert.Equal(t, name, insertedName)
+		assert.Equal(t, project.Name, insertedName)
 		assert.Equal(t, clientID, insertedClientID)
+		assert.Equal(t, "Estimating", insertedStatus)
+		assert.Equal(t, 50.0, insertedHourlyRate)
 	})
 
 	t.Run("insert with non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
 		
-		name := "Test Project"
-		id, err := model.Insert(name, 999) // Non-existent client
+		project := Project{
+			Name:                   "Test Project",
+			ClientID:               999, // Non-existent client
+			Status:                 "Estimating",
+			HourlyRate:             50.0,
+			CurrencyDisplay:        "USD",
+			CurrencyConversionRate: 1.0,
+			FlatFeeInvoice:         false,
+		}
+		id, err := model.Insert(project)
 		
 		// SQLite might not enforce foreign key constraints by default in tests
 		// Just verify it doesn't crash
@@ -59,7 +79,16 @@ func TestProjectModel_Insert(t *testing.T) {
 		// Create a test client first
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		
-		id, err := model.Insert("", clientID)
+		project := Project{
+			Name:                   "", // Empty name
+			ClientID:               clientID,
+			Status:                 "Estimating",
+			HourlyRate:             50.0,
+			CurrencyDisplay:        "USD",
+			CurrencyConversionRate: 1.0,
+			FlatFeeInvoice:         false,
+		}
+		id, err := model.Insert(project)
 		
 		// Should succeed at database level (validation happens at handler level)
 		require.NoError(t, err)
@@ -91,6 +120,15 @@ func TestProjectModel_Get(t *testing.T) {
 		assert.Equal(t, id, project.ID)
 		assert.Equal(t, expectedName, project.Name)
 		assert.Equal(t, clientID, project.ClientID)
+		assert.Equal(t, "Estimating", project.Status)
+		assert.Equal(t, 50.0, project.HourlyRate)
+		assert.Equal(t, "USD", project.CurrencyDisplay)
+		assert.Equal(t, 1.0, project.CurrencyConversionRate)
+		assert.False(t, project.FlatFeeInvoice)
+		assert.Nil(t, project.Deadline)
+		assert.Nil(t, project.ScheduledStart)
+		assert.Equal(t, "", project.InvoiceCCEmail)
+		assert.Equal(t, "", project.Notes)
 		assert.False(t, project.Created.IsZero())
 		assert.False(t, project.Updated.IsZero())
 		assert.Nil(t, project.DeletedAt)
@@ -193,27 +231,47 @@ func TestProjectModel_Update(t *testing.T) {
 		originalName := "Original Project"
 		id := testDB.InsertTestProject(t, originalName, clientID)
 		
+		// Get the original project first
+		originalProject, err := model.Get(id)
+		require.NoError(t, err)
+		
 		// Update the project
-		newName := "Updated Project"
-		err := model.Update(id, newName)
+		updatedProject := originalProject
+		updatedProject.Name = "Updated Project"
+		updatedProject.Status = "In Progress"
+		updatedProject.HourlyRate = 75.0
+		
+		err = model.Update(updatedProject)
 		require.NoError(t, err)
 		
 		// Verify the project was updated
 		project, err := model.Get(id)
 		require.NoError(t, err)
 		assert.Equal(t, id, project.ID)
-		assert.Equal(t, newName, project.Name)
+		assert.Equal(t, "Updated Project", project.Name)
+		assert.Equal(t, "In Progress", project.Status)
+		assert.Equal(t, 75.0, project.HourlyRate)
 		assert.Equal(t, clientID, project.ClientID)
 		assert.False(t, project.Updated.IsZero())
 		
 		// Verify the updated_at timestamp changed
-		assert.True(t, project.Updated.After(project.Created) || project.Updated.Equal(project.Created))
+		assert.True(t, project.Updated.After(originalProject.Created) || project.Updated.Equal(originalProject.Created))
 	})
 
 	t.Run("update non-existent project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		
-		err := model.Update(999, "New Name")
+		nonExistentProject := Project{
+			ID:                     999, // Non-existent
+			Name:                   "New Name",
+			ClientID:               1,
+			Status:                 "Estimating",
+			HourlyRate:             50.0,
+			CurrencyDisplay:        "USD",
+			CurrencyConversionRate: 1.0,
+			FlatFeeInvoice:         false,
+		}
+		err := model.Update(nonExistentProject)
 		
 		// Should not return an error (SQLite UPDATE doesn't fail for non-existent rows)
 		require.NoError(t, err)
@@ -228,8 +286,15 @@ func TestProjectModel_Update(t *testing.T) {
 		originalName := "Original Project"
 		id := testDB.InsertTestProject(t, originalName, clientID)
 		
+		// Get the original project and update with empty name
+		originalProject, err := model.Get(id)
+		require.NoError(t, err)
+		
+		updatedProject := originalProject
+		updatedProject.Name = "" // Empty name
+		
 		// Update with empty name (should succeed at database level)
-		err := model.Update(id, "")
+		err = model.Update(updatedProject)
 		require.NoError(t, err)
 		
 		// Verify the project was updated
@@ -331,35 +396,48 @@ func TestProjectModel_Integration(t *testing.T) {
 		clientID := testDB.InsertTestClient(t, clientName)
 		
 		// 2. Insert a new project
-		projectName := "Integration Test Project"
-		id, err := model.Insert(projectName, clientID)
+		project := Project{
+			Name:                   "Integration Test Project",
+			ClientID:               clientID,
+			Status:                 "Estimating",
+			HourlyRate:             60.0,
+			CurrencyDisplay:        "USD",
+			CurrencyConversionRate: 1.0,
+			FlatFeeInvoice:         false,
+		}
+		id, err := model.Insert(project)
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
 		
 		// 3. Get the project
-		project, err := model.Get(id)
+		retrievedProject, err := model.Get(id)
 		require.NoError(t, err)
-		assert.Equal(t, id, project.ID)
-		assert.Equal(t, projectName, project.Name)
-		assert.Equal(t, clientID, project.ClientID)
+		assert.Equal(t, id, retrievedProject.ID)
+		assert.Equal(t, "Integration Test Project", retrievedProject.Name)
+		assert.Equal(t, clientID, retrievedProject.ClientID)
+		assert.Equal(t, "Estimating", retrievedProject.Status)
+		assert.Equal(t, 60.0, retrievedProject.HourlyRate)
 		
 		// 4. Verify it appears in GetByClient
 		projects, err := model.GetByClient(clientID)
 		require.NoError(t, err)
 		require.Len(t, projects, 1)
-		assert.Equal(t, project.ID, projects[0].ID)
-		assert.Equal(t, project.Name, projects[0].Name)
+		assert.Equal(t, retrievedProject.ID, projects[0].ID)
+		assert.Equal(t, retrievedProject.Name, projects[0].Name)
 		
 		// 5. Update the project
-		newName := "Updated Integration Test Project"
-		err = model.Update(id, newName)
+		updatedProject := retrievedProject
+		updatedProject.Name = "Updated Integration Test Project"
+		updatedProject.Status = "In Progress"
+		err = model.Update(updatedProject)
 		require.NoError(t, err)
 		
 		// 6. Verify update
-		updatedProject, err := model.Get(id)
+		finalProject, err := model.Get(id)
 		require.NoError(t, err)
-		assert.Equal(t, newName, updatedProject.Name)
-		assert.True(t, updatedProject.Updated.After(project.Updated) || updatedProject.Updated.Equal(project.Updated))
+		assert.Equal(t, "Updated Integration Test Project", finalProject.Name)
+		assert.Equal(t, "In Progress", finalProject.Status)
+		assert.True(t, finalProject.Updated.After(retrievedProject.Updated) || finalProject.Updated.Equal(retrievedProject.Updated))
 		
 		// 7. Delete the project
 		err = model.Delete(id)
@@ -397,35 +475,47 @@ func TestProjectModelInterface(t *testing.T) {
 			clientID := testDB.InsertTestClient(t, "Interface Test Client")
 			
 			// Test that the implementation works correctly
-			name := "Interface Test Project"
+			project := Project{
+				Name:                   "Interface Test Project",
+				ClientID:               clientID,
+				Status:                 "Estimating",
+				HourlyRate:             45.0,
+				CurrencyDisplay:        "USD",
+				CurrencyConversionRate: 1.0,
+				FlatFeeInvoice:         false,
+			}
 			
 			// Insert
-			id, err := test.impl.Insert(name, clientID)
+			id, err := test.impl.Insert(project)
 			require.NoError(t, err)
 			assert.Greater(t, id, 0)
 			
 			// Get
-			project, err := test.impl.Get(id)
+			retrievedProject, err := test.impl.Get(id)
 			require.NoError(t, err)
-			assert.Equal(t, id, project.ID)
-			assert.Equal(t, name, project.Name)
-			assert.Equal(t, clientID, project.ClientID)
+			assert.Equal(t, id, retrievedProject.ID)
+			assert.Equal(t, "Interface Test Project", retrievedProject.Name)
+			assert.Equal(t, clientID, retrievedProject.ClientID)
+			assert.Equal(t, "Estimating", retrievedProject.Status)
 			
 			// GetByClient
 			projects, err := test.impl.GetByClient(clientID)
 			require.NoError(t, err)
 			require.Len(t, projects, 1)
 			assert.Equal(t, id, projects[0].ID)
-			assert.Equal(t, name, projects[0].Name)
+			assert.Equal(t, "Interface Test Project", projects[0].Name)
 			
 			// Update
-			newName := "Updated Interface Test Project"
-			err = test.impl.Update(id, newName)
+			updatedProject := retrievedProject
+			updatedProject.Name = "Updated Interface Test Project"
+			updatedProject.HourlyRate = 55.0
+			err = test.impl.Update(updatedProject)
 			require.NoError(t, err)
 			
-			updatedProject, err := test.impl.Get(id)
+			finalProject, err := test.impl.Get(id)
 			require.NoError(t, err)
-			assert.Equal(t, newName, updatedProject.Name)
+			assert.Equal(t, "Updated Interface Test Project", finalProject.Name)
+			assert.Equal(t, 55.0, finalProject.HourlyRate)
 			
 			// Delete
 			err = test.impl.Delete(id)

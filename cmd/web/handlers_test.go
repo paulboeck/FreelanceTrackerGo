@@ -712,6 +712,8 @@ func TestProjectCreatePostHandler(t *testing.T) {
 		
 		form := url.Values{}
 		form.Add("name", "New Test Project")
+		form.Add("status", "Estimating")
+		form.Add("hourly_rate", "50.00")
 		
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/%d/project/create", clientID), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(clientID))
@@ -831,6 +833,8 @@ func TestProjectUpdatePostHandler(t *testing.T) {
 		
 		form := url.Values{}
 		form.Add("name", "Updated Project")
+		form.Add("status", "In Progress")
+		form.Add("hourly_rate", "60.00")
 		
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/project/update/%d", projectID), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(projectID))

@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -22,18 +23,40 @@ func (q *Queries) DeleteProject(ctx context.Context, id int64) error {
 }
 
 const getProject = `-- name: GetProject :one
-SELECT id, name, client_id, updated_at, created_at, deleted_at 
+SELECT id, name, client_id, status, hourly_rate, deadline, scheduled_start,
+       invoice_cc_email, invoice_cc_description, schedule_comments,
+       additional_info, additional_info2, discount_percent, discount_reason,
+       adjustment_amount, adjustment_reason, currency_display, 
+       currency_conversion_rate, flat_fee_invoice, notes,
+       updated_at, created_at, deleted_at 
 FROM project 
 WHERE id = ? AND deleted_at IS NULL
 `
 
 type GetProjectRow struct {
-	ID        int64       `json:"id"`
-	Name      string      `json:"name"`
-	ClientID  int64       `json:"client_id"`
-	UpdatedAt time.Time   `json:"updated_at"`
-	CreatedAt time.Time   `json:"created_at"`
-	DeletedAt interface{} `json:"deleted_at"`
+	ID                     int64           `json:"id"`
+	Name                   string          `json:"name"`
+	ClientID               int64           `json:"client_id"`
+	Status                 string          `json:"status"`
+	HourlyRate             float64         `json:"hourly_rate"`
+	Deadline               sql.NullString  `json:"deadline"`
+	ScheduledStart         sql.NullString  `json:"scheduled_start"`
+	InvoiceCcEmail         sql.NullString  `json:"invoice_cc_email"`
+	InvoiceCcDescription   sql.NullString  `json:"invoice_cc_description"`
+	ScheduleComments       sql.NullString  `json:"schedule_comments"`
+	AdditionalInfo         sql.NullString  `json:"additional_info"`
+	AdditionalInfo2        sql.NullString  `json:"additional_info2"`
+	DiscountPercent        sql.NullFloat64 `json:"discount_percent"`
+	DiscountReason         sql.NullString  `json:"discount_reason"`
+	AdjustmentAmount       sql.NullFloat64 `json:"adjustment_amount"`
+	AdjustmentReason       sql.NullString  `json:"adjustment_reason"`
+	CurrencyDisplay        string          `json:"currency_display"`
+	CurrencyConversionRate float64         `json:"currency_conversion_rate"`
+	FlatFeeInvoice         int64           `json:"flat_fee_invoice"`
+	Notes                  sql.NullString  `json:"notes"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+	CreatedAt              time.Time       `json:"created_at"`
+	DeletedAt              interface{}     `json:"deleted_at"`
 }
 
 func (q *Queries) GetProject(ctx context.Context, id int64) (GetProjectRow, error) {
@@ -43,6 +66,23 @@ func (q *Queries) GetProject(ctx context.Context, id int64) (GetProjectRow, erro
 		&i.ID,
 		&i.Name,
 		&i.ClientID,
+		&i.Status,
+		&i.HourlyRate,
+		&i.Deadline,
+		&i.ScheduledStart,
+		&i.InvoiceCcEmail,
+		&i.InvoiceCcDescription,
+		&i.ScheduleComments,
+		&i.AdditionalInfo,
+		&i.AdditionalInfo2,
+		&i.DiscountPercent,
+		&i.DiscountReason,
+		&i.AdjustmentAmount,
+		&i.AdjustmentReason,
+		&i.CurrencyDisplay,
+		&i.CurrencyConversionRate,
+		&i.FlatFeeInvoice,
+		&i.Notes,
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.DeletedAt,
@@ -51,19 +91,41 @@ func (q *Queries) GetProject(ctx context.Context, id int64) (GetProjectRow, erro
 }
 
 const getProjectsByClient = `-- name: GetProjectsByClient :many
-SELECT id, name, client_id, updated_at, created_at, deleted_at 
+SELECT id, name, client_id, status, hourly_rate, deadline, scheduled_start,
+       invoice_cc_email, invoice_cc_description, schedule_comments,
+       additional_info, additional_info2, discount_percent, discount_reason,
+       adjustment_amount, adjustment_reason, currency_display, 
+       currency_conversion_rate, flat_fee_invoice, notes,
+       updated_at, created_at, deleted_at 
 FROM project 
 WHERE client_id = ? AND deleted_at IS NULL
 ORDER BY created_at DESC
 `
 
 type GetProjectsByClientRow struct {
-	ID        int64       `json:"id"`
-	Name      string      `json:"name"`
-	ClientID  int64       `json:"client_id"`
-	UpdatedAt time.Time   `json:"updated_at"`
-	CreatedAt time.Time   `json:"created_at"`
-	DeletedAt interface{} `json:"deleted_at"`
+	ID                     int64           `json:"id"`
+	Name                   string          `json:"name"`
+	ClientID               int64           `json:"client_id"`
+	Status                 string          `json:"status"`
+	HourlyRate             float64         `json:"hourly_rate"`
+	Deadline               sql.NullString  `json:"deadline"`
+	ScheduledStart         sql.NullString  `json:"scheduled_start"`
+	InvoiceCcEmail         sql.NullString  `json:"invoice_cc_email"`
+	InvoiceCcDescription   sql.NullString  `json:"invoice_cc_description"`
+	ScheduleComments       sql.NullString  `json:"schedule_comments"`
+	AdditionalInfo         sql.NullString  `json:"additional_info"`
+	AdditionalInfo2        sql.NullString  `json:"additional_info2"`
+	DiscountPercent        sql.NullFloat64 `json:"discount_percent"`
+	DiscountReason         sql.NullString  `json:"discount_reason"`
+	AdjustmentAmount       sql.NullFloat64 `json:"adjustment_amount"`
+	AdjustmentReason       sql.NullString  `json:"adjustment_reason"`
+	CurrencyDisplay        string          `json:"currency_display"`
+	CurrencyConversionRate float64         `json:"currency_conversion_rate"`
+	FlatFeeInvoice         int64           `json:"flat_fee_invoice"`
+	Notes                  sql.NullString  `json:"notes"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+	CreatedAt              time.Time       `json:"created_at"`
+	DeletedAt              interface{}     `json:"deleted_at"`
 }
 
 func (q *Queries) GetProjectsByClient(ctx context.Context, clientID int64) ([]GetProjectsByClientRow, error) {
@@ -79,6 +141,23 @@ func (q *Queries) GetProjectsByClient(ctx context.Context, clientID int64) ([]Ge
 			&i.ID,
 			&i.Name,
 			&i.ClientID,
+			&i.Status,
+			&i.HourlyRate,
+			&i.Deadline,
+			&i.ScheduledStart,
+			&i.InvoiceCcEmail,
+			&i.InvoiceCcDescription,
+			&i.ScheduleComments,
+			&i.AdditionalInfo,
+			&i.AdditionalInfo2,
+			&i.DiscountPercent,
+			&i.DiscountReason,
+			&i.AdjustmentAmount,
+			&i.AdjustmentReason,
+			&i.CurrencyDisplay,
+			&i.CurrencyConversionRate,
+			&i.FlatFeeInvoice,
+			&i.Notes,
 			&i.UpdatedAt,
 			&i.CreatedAt,
 			&i.DeletedAt,
@@ -97,17 +176,60 @@ func (q *Queries) GetProjectsByClient(ctx context.Context, clientID int64) ([]Ge
 }
 
 const insertProject = `-- name: InsertProject :execlastid
-INSERT INTO project (name, client_id) 
-VALUES (?, ?)
+INSERT INTO project (
+    name, client_id, status, hourly_rate, deadline, scheduled_start,
+    invoice_cc_email, invoice_cc_description, schedule_comments,
+    additional_info, additional_info2, discount_percent, discount_reason,
+    adjustment_amount, adjustment_reason, currency_display, 
+    currency_conversion_rate, flat_fee_invoice, notes
+) 
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `
 
 type InsertProjectParams struct {
-	Name     string `json:"name"`
-	ClientID int64  `json:"client_id"`
+	Name                   string          `json:"name"`
+	ClientID               int64           `json:"client_id"`
+	Status                 string          `json:"status"`
+	HourlyRate             float64         `json:"hourly_rate"`
+	Deadline               sql.NullString  `json:"deadline"`
+	ScheduledStart         sql.NullString  `json:"scheduled_start"`
+	InvoiceCcEmail         sql.NullString  `json:"invoice_cc_email"`
+	InvoiceCcDescription   sql.NullString  `json:"invoice_cc_description"`
+	ScheduleComments       sql.NullString  `json:"schedule_comments"`
+	AdditionalInfo         sql.NullString  `json:"additional_info"`
+	AdditionalInfo2        sql.NullString  `json:"additional_info2"`
+	DiscountPercent        sql.NullFloat64 `json:"discount_percent"`
+	DiscountReason         sql.NullString  `json:"discount_reason"`
+	AdjustmentAmount       sql.NullFloat64 `json:"adjustment_amount"`
+	AdjustmentReason       sql.NullString  `json:"adjustment_reason"`
+	CurrencyDisplay        string          `json:"currency_display"`
+	CurrencyConversionRate float64         `json:"currency_conversion_rate"`
+	FlatFeeInvoice         int64           `json:"flat_fee_invoice"`
+	Notes                  sql.NullString  `json:"notes"`
 }
 
 func (q *Queries) InsertProject(ctx context.Context, arg InsertProjectParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, insertProject, arg.Name, arg.ClientID)
+	result, err := q.db.ExecContext(ctx, insertProject,
+		arg.Name,
+		arg.ClientID,
+		arg.Status,
+		arg.HourlyRate,
+		arg.Deadline,
+		arg.ScheduledStart,
+		arg.InvoiceCcEmail,
+		arg.InvoiceCcDescription,
+		arg.ScheduleComments,
+		arg.AdditionalInfo,
+		arg.AdditionalInfo2,
+		arg.DiscountPercent,
+		arg.DiscountReason,
+		arg.AdjustmentAmount,
+		arg.AdjustmentReason,
+		arg.CurrencyDisplay,
+		arg.CurrencyConversionRate,
+		arg.FlatFeeInvoice,
+		arg.Notes,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -116,16 +238,58 @@ func (q *Queries) InsertProject(ctx context.Context, arg InsertProjectParams) (i
 
 const updateProject = `-- name: UpdateProject :exec
 UPDATE project 
-SET name = ?, updated_at = CURRENT_TIMESTAMP 
+SET name = ?, status = ?, hourly_rate = ?, deadline = ?, scheduled_start = ?,
+    invoice_cc_email = ?, invoice_cc_description = ?, schedule_comments = ?,
+    additional_info = ?, additional_info2 = ?, discount_percent = ?, discount_reason = ?,
+    adjustment_amount = ?, adjustment_reason = ?, currency_display = ?, 
+    currency_conversion_rate = ?, flat_fee_invoice = ?, notes = ?,
+    updated_at = CURRENT_TIMESTAMP 
 WHERE id = ? AND deleted_at IS NULL
 `
 
 type UpdateProjectParams struct {
-	Name string `json:"name"`
-	ID   int64  `json:"id"`
+	Name                   string          `json:"name"`
+	Status                 string          `json:"status"`
+	HourlyRate             float64         `json:"hourly_rate"`
+	Deadline               sql.NullString  `json:"deadline"`
+	ScheduledStart         sql.NullString  `json:"scheduled_start"`
+	InvoiceCcEmail         sql.NullString  `json:"invoice_cc_email"`
+	InvoiceCcDescription   sql.NullString  `json:"invoice_cc_description"`
+	ScheduleComments       sql.NullString  `json:"schedule_comments"`
+	AdditionalInfo         sql.NullString  `json:"additional_info"`
+	AdditionalInfo2        sql.NullString  `json:"additional_info2"`
+	DiscountPercent        sql.NullFloat64 `json:"discount_percent"`
+	DiscountReason         sql.NullString  `json:"discount_reason"`
+	AdjustmentAmount       sql.NullFloat64 `json:"adjustment_amount"`
+	AdjustmentReason       sql.NullString  `json:"adjustment_reason"`
+	CurrencyDisplay        string          `json:"currency_display"`
+	CurrencyConversionRate float64         `json:"currency_conversion_rate"`
+	FlatFeeInvoice         int64           `json:"flat_fee_invoice"`
+	Notes                  sql.NullString  `json:"notes"`
+	ID                     int64           `json:"id"`
 }
 
 func (q *Queries) UpdateProject(ctx context.Context, arg UpdateProjectParams) error {
-	_, err := q.db.ExecContext(ctx, updateProject, arg.Name, arg.ID)
+	_, err := q.db.ExecContext(ctx, updateProject,
+		arg.Name,
+		arg.Status,
+		arg.HourlyRate,
+		arg.Deadline,
+		arg.ScheduledStart,
+		arg.InvoiceCcEmail,
+		arg.InvoiceCcDescription,
+		arg.ScheduleComments,
+		arg.AdditionalInfo,
+		arg.AdditionalInfo2,
+		arg.DiscountPercent,
+		arg.DiscountReason,
+		arg.AdjustmentAmount,
+		arg.AdjustmentReason,
+		arg.CurrencyDisplay,
+		arg.CurrencyConversionRate,
+		arg.FlatFeeInvoice,
+		arg.Notes,
+		arg.ID,
+	)
 	return err
 }
