@@ -264,6 +264,115 @@ func (q *Queries) GetProjectsByClient(ctx context.Context, clientID int64) ([]Ge
 	return items, nil
 }
 
+const getProjectsCount = `-- name: GetProjectsCount :one
+SELECT COUNT(*) 
+FROM project p
+JOIN client c ON p.client_id = c.id
+WHERE p.deleted_at IS NULL AND c.deleted_at IS NULL
+`
+
+func (q *Queries) GetProjectsCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getProjectsCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getProjectsWithClientPagination = `-- name: GetProjectsWithClientPagination :many
+SELECT p.id, p.name, p.client_id, p.status, p.hourly_rate, p.deadline, p.scheduled_start,
+       p.invoice_cc_email, p.invoice_cc_description, p.schedule_comments,
+       p.additional_info, p.additional_info2, p.discount_percent, p.discount_reason,
+       p.adjustment_amount, p.adjustment_reason, p.currency_display, 
+       p.currency_conversion_rate, p.flat_fee_invoice, p.notes,
+       p.updated_at, p.created_at, p.deleted_at,
+       c.name as client_name
+FROM project p
+JOIN client c ON p.client_id = c.id
+WHERE p.deleted_at IS NULL AND c.deleted_at IS NULL
+ORDER BY p.updated_at DESC
+LIMIT ? OFFSET ?
+`
+
+type GetProjectsWithClientPaginationParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+type GetProjectsWithClientPaginationRow struct {
+	ID                     int64           `json:"id"`
+	Name                   string          `json:"name"`
+	ClientID               int64           `json:"client_id"`
+	Status                 string          `json:"status"`
+	HourlyRate             float64         `json:"hourly_rate"`
+	Deadline               sql.NullString  `json:"deadline"`
+	ScheduledStart         sql.NullString  `json:"scheduled_start"`
+	InvoiceCcEmail         sql.NullString  `json:"invoice_cc_email"`
+	InvoiceCcDescription   sql.NullString  `json:"invoice_cc_description"`
+	ScheduleComments       sql.NullString  `json:"schedule_comments"`
+	AdditionalInfo         sql.NullString  `json:"additional_info"`
+	AdditionalInfo2        sql.NullString  `json:"additional_info2"`
+	DiscountPercent        sql.NullFloat64 `json:"discount_percent"`
+	DiscountReason         sql.NullString  `json:"discount_reason"`
+	AdjustmentAmount       sql.NullFloat64 `json:"adjustment_amount"`
+	AdjustmentReason       sql.NullString  `json:"adjustment_reason"`
+	CurrencyDisplay        string          `json:"currency_display"`
+	CurrencyConversionRate float64         `json:"currency_conversion_rate"`
+	FlatFeeInvoice         int64           `json:"flat_fee_invoice"`
+	Notes                  sql.NullString  `json:"notes"`
+	UpdatedAt              time.Time       `json:"updated_at"`
+	CreatedAt              time.Time       `json:"created_at"`
+	DeletedAt              interface{}     `json:"deleted_at"`
+	ClientName             string          `json:"client_name"`
+}
+
+func (q *Queries) GetProjectsWithClientPagination(ctx context.Context, arg GetProjectsWithClientPaginationParams) ([]GetProjectsWithClientPaginationRow, error) {
+	rows, err := q.db.QueryContext(ctx, getProjectsWithClientPagination, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetProjectsWithClientPaginationRow{}
+	for rows.Next() {
+		var i GetProjectsWithClientPaginationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.ClientID,
+			&i.Status,
+			&i.HourlyRate,
+			&i.Deadline,
+			&i.ScheduledStart,
+			&i.InvoiceCcEmail,
+			&i.InvoiceCcDescription,
+			&i.ScheduleComments,
+			&i.AdditionalInfo,
+			&i.AdditionalInfo2,
+			&i.DiscountPercent,
+			&i.DiscountReason,
+			&i.AdjustmentAmount,
+			&i.AdjustmentReason,
+			&i.CurrencyDisplay,
+			&i.CurrencyConversionRate,
+			&i.FlatFeeInvoice,
+			&i.Notes,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.DeletedAt,
+			&i.ClientName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertProject = `-- name: InsertProject :execlastid
 INSERT INTO project (
     name, client_id, status, hourly_rate, deadline, scheduled_start,

@@ -161,6 +161,103 @@ func (q *Queries) GetClient(ctx context.Context, id int64) (GetClientRow, error)
 	return i, err
 }
 
+const getClientsCount = `-- name: GetClientsCount :one
+SELECT COUNT(*) 
+FROM client 
+WHERE deleted_at IS NULL
+`
+
+func (q *Queries) GetClientsCount(ctx context.Context) (int64, error) {
+	row := q.db.QueryRowContext(ctx, getClientsCount)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const getClientsWithPagination = `-- name: GetClientsWithPagination :many
+SELECT id, name, email, phone, address1, address2, address3, city, state, zip_code, hourly_rate, notes, additional_info, additional_info2, bill_to, include_address_on_invoice, invoice_cc_email, invoice_cc_description, university_affiliation, updated_at, created_at, deleted_at 
+FROM client 
+WHERE deleted_at IS NULL
+ORDER BY updated_at DESC
+LIMIT ? OFFSET ?
+`
+
+type GetClientsWithPaginationParams struct {
+	Limit  int64 `json:"limit"`
+	Offset int64 `json:"offset"`
+}
+
+type GetClientsWithPaginationRow struct {
+	ID                      int64          `json:"id"`
+	Name                    string         `json:"name"`
+	Email                   string         `json:"email"`
+	Phone                   sql.NullString `json:"phone"`
+	Address1                sql.NullString `json:"address1"`
+	Address2                sql.NullString `json:"address2"`
+	Address3                sql.NullString `json:"address3"`
+	City                    sql.NullString `json:"city"`
+	State                   sql.NullString `json:"state"`
+	ZipCode                 sql.NullString `json:"zip_code"`
+	HourlyRate              float64        `json:"hourly_rate"`
+	Notes                   sql.NullString `json:"notes"`
+	AdditionalInfo          sql.NullString `json:"additional_info"`
+	AdditionalInfo2         sql.NullString `json:"additional_info2"`
+	BillTo                  sql.NullString `json:"bill_to"`
+	IncludeAddressOnInvoice bool           `json:"include_address_on_invoice"`
+	InvoiceCcEmail          sql.NullString `json:"invoice_cc_email"`
+	InvoiceCcDescription    sql.NullString `json:"invoice_cc_description"`
+	UniversityAffiliation   sql.NullString `json:"university_affiliation"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+	CreatedAt               time.Time      `json:"created_at"`
+	DeletedAt               interface{}    `json:"deleted_at"`
+}
+
+func (q *Queries) GetClientsWithPagination(ctx context.Context, arg GetClientsWithPaginationParams) ([]GetClientsWithPaginationRow, error) {
+	rows, err := q.db.QueryContext(ctx, getClientsWithPagination, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetClientsWithPaginationRow{}
+	for rows.Next() {
+		var i GetClientsWithPaginationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.Address1,
+			&i.Address2,
+			&i.Address3,
+			&i.City,
+			&i.State,
+			&i.ZipCode,
+			&i.HourlyRate,
+			&i.Notes,
+			&i.AdditionalInfo,
+			&i.AdditionalInfo2,
+			&i.BillTo,
+			&i.IncludeAddressOnInvoice,
+			&i.InvoiceCcEmail,
+			&i.InvoiceCcDescription,
+			&i.UniversityAffiliation,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertClient = `-- name: InsertClient :execlastid
 INSERT INTO client (name, email, phone, address1, address2, address3, city, state, zip_code, hourly_rate, notes, additional_info, additional_info2, bill_to, include_address_on_invoice, invoice_cc_email, invoice_cc_description, university_affiliation) 
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)

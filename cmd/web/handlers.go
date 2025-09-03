@@ -85,14 +85,54 @@ type settingsForm struct {
 
 // home handles http requests to the root URl of the project
 func (app *application) home(res http.ResponseWriter, req *http.Request) {
-	clients, err := app.clients.GetAll()
+	// Get page size setting with fallback
+	pageSize := 10 // Default fallback
+	if pageSizeSetting, err := app.settings.GetString("list_page_size"); err == nil {
+		if ps, err := strconv.Atoi(pageSizeSetting); err == nil && ps > 0 {
+			pageSize = ps
+		}
+	}
+	
+	// Get current page from query parameter
+	currentPage := 1
+	if pageParam := req.URL.Query().Get("page"); pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			currentPage = p
+		}
+	}
+	
+	// Calculate offset
+	offset := int64((currentPage - 1) * pageSize)
+	
+	// Get paginated clients and total count
+	clients, err := app.clients.GetWithPagination(int64(pageSize), offset)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
 	}
+	
+	totalCount, err := app.clients.GetCount()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+	
+	// Calculate pagination info
+	totalPages := int((totalCount + int64(pageSize) - 1) / int64(pageSize))
+	
+	pagination := &paginationData{
+		CurrentPage: currentPage,
+		TotalPages:  totalPages,
+		HasPrev:     currentPage > 1,
+		HasNext:     currentPage < totalPages,
+		PrevPage:    currentPage - 1,
+		NextPage:    currentPage + 1,
+		PageSize:    pageSize,
+	}
 
 	data := app.newTemplateData(req)
 	data.Clients = clients
+	data.Pagination = pagination
 
 	app.render(res, req, http.StatusOK, "home.html", data)
 }
@@ -1655,14 +1695,53 @@ func (app *application) settingsEditPost(res http.ResponseWriter, req *http.Requ
 
 // projectsList handles a GET request which displays all projects
 func (app *application) projectsList(res http.ResponseWriter, req *http.Request) {
-	// Get all projects with client information
-	projects, err := app.projects.GetAll()
+	// Get page size setting with fallback
+	pageSize := 10 // Default fallback
+	if pageSizeSetting, err := app.settings.GetString("list_page_size"); err == nil {
+		if ps, err := strconv.Atoi(pageSizeSetting); err == nil && ps > 0 {
+			pageSize = ps
+		}
+	}
+	
+	// Get current page from query parameter
+	currentPage := 1
+	if pageParam := req.URL.Query().Get("page"); pageParam != "" {
+		if p, err := strconv.Atoi(pageParam); err == nil && p > 0 {
+			currentPage = p
+		}
+	}
+	
+	// Calculate offset
+	offset := int64((currentPage - 1) * pageSize)
+	
+	// Get paginated projects and total count
+	projects, err := app.projects.GetWithPagination(int64(pageSize), offset)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
 	}
+	
+	totalCount, err := app.projects.GetCount()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+	
+	// Calculate pagination info
+	totalPages := int((totalCount + int64(pageSize) - 1) / int64(pageSize))
+	
+	pagination := &paginationData{
+		CurrentPage: currentPage,
+		TotalPages:  totalPages,
+		HasPrev:     currentPage > 1,
+		HasNext:     currentPage < totalPages,
+		PrevPage:    currentPage - 1,
+		NextPage:    currentPage + 1,
+		PageSize:    pageSize,
+	}
 
 	data := app.newTemplateData(req)
 	data.ProjectsWithClient = projects
+	data.Pagination = pagination
 	app.render(res, req, http.StatusOK, "projects.html", data)
 }

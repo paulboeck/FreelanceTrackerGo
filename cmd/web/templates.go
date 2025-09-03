@@ -7,6 +7,16 @@ import (
 	"time"
 )
 
+type paginationData struct {
+	CurrentPage int
+	TotalPages  int
+	HasPrev     bool
+	HasNext     bool
+	PrevPage    int
+	NextPage    int
+	PageSize    int
+}
+
 type templateData struct {
 	CurrentYear     int
 	Client          *models.Client
@@ -18,6 +28,7 @@ type templateData struct {
 	Invoices        []models.Invoice
 	Settings        []models.AppSetting
 	Form            any
+	Pagination      *paginationData
 }
 
 func humanDate(t time.Time) string {

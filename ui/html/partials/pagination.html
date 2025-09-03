@@ -1,0 +1,22 @@
+{{define "pagination"}}
+{{if and .Pagination (gt .Pagination.TotalPages 1)}}
+<div class="pagination">
+    <div class="pagination-info">
+        Page {{.Pagination.CurrentPage}} of {{.Pagination.TotalPages}}
+    </div>
+    <div class="pagination-controls">
+        {{if .Pagination.HasPrev}}
+            <a href="?page={{.Pagination.PrevPage}}" class="pagination-btn pagination-btn-prev">← Previous</a>
+        {{else}}
+            <span class="pagination-btn pagination-btn-disabled">← Previous</span>
+        {{end}}
+        
+        {{if .Pagination.HasNext}}
+            <a href="?page={{.Pagination.NextPage}}" class="pagination-btn pagination-btn-next">Next →</a>
+        {{else}}
+            <span class="pagination-btn pagination-btn-disabled">Next →</span>
+        {{end}}
+    </div>
+</div>
+{{end}}
+{{end}}

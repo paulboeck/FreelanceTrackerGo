@@ -56,3 +56,23 @@ FROM project p
 JOIN client c ON p.client_id = c.id
 WHERE p.deleted_at IS NULL AND c.deleted_at IS NULL
 ORDER BY p.updated_at DESC;
+
+-- name: GetProjectsWithClientPagination :many
+SELECT p.id, p.name, p.client_id, p.status, p.hourly_rate, p.deadline, p.scheduled_start,
+       p.invoice_cc_email, p.invoice_cc_description, p.schedule_comments,
+       p.additional_info, p.additional_info2, p.discount_percent, p.discount_reason,
+       p.adjustment_amount, p.adjustment_reason, p.currency_display, 
+       p.currency_conversion_rate, p.flat_fee_invoice, p.notes,
+       p.updated_at, p.created_at, p.deleted_at,
+       c.name as client_name
+FROM project p
+JOIN client c ON p.client_id = c.id
+WHERE p.deleted_at IS NULL AND c.deleted_at IS NULL
+ORDER BY p.updated_at DESC
+LIMIT ? OFFSET ?;
+
+-- name: GetProjectsCount :one
+SELECT COUNT(*) 
+FROM project p
+JOIN client c ON p.client_id = c.id
+WHERE p.deleted_at IS NULL AND c.deleted_at IS NULL;

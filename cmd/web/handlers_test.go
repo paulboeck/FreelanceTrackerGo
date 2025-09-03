@@ -32,7 +32,29 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 				{{range .Clients}}
 					<div>{{.Name}}</div>
 				{{end}}
+				{{template "pagination" .}}
 			</body></html>
+			{{end}}
+			{{define "pagination"}}
+			{{if and .Pagination (gt .Pagination.TotalPages 1)}}
+			<div class="pagination">
+				<div class="pagination-info">
+					Page {{.Pagination.CurrentPage}} of {{.Pagination.TotalPages}}
+				</div>
+				<div class="pagination-controls">
+					{{if .Pagination.HasPrev}}
+						<a href="?page={{.Pagination.PrevPage}}" class="pagination-btn pagination-btn-prev">← Previous</a>
+					{{else}}
+						<span class="pagination-btn pagination-btn-disabled">← Previous</span>
+					{{end}}
+					{{if .Pagination.HasNext}}
+						<a href="?page={{.Pagination.NextPage}}" class="pagination-btn pagination-btn-next">Next →</a>
+					{{else}}
+						<span class="pagination-btn pagination-btn-disabled">Next →</span>
+					{{end}}
+				</div>
+			</div>
+			{{end}}
 			{{end}}
 		`)),
 		"client.html": template.Must(template.New("base").Parse(`
@@ -69,10 +91,32 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 							</tr>
 						{{end}}
 					</table>
+					{{template "pagination" .}}
 				{{else}}
 					<p>No projects found.</p>
 				{{end}}
 			</body></html>
+			{{end}}
+			{{define "pagination"}}
+			{{if and .Pagination (gt .Pagination.TotalPages 1)}}
+			<div class="pagination">
+				<div class="pagination-info">
+					Page {{.Pagination.CurrentPage}} of {{.Pagination.TotalPages}}
+				</div>
+				<div class="pagination-controls">
+					{{if .Pagination.HasPrev}}
+						<a href="?page={{.Pagination.PrevPage}}" class="pagination-btn pagination-btn-prev">← Previous</a>
+					{{else}}
+						<span class="pagination-btn pagination-btn-disabled">← Previous</span>
+					{{end}}
+					{{if .Pagination.HasNext}}
+						<a href="?page={{.Pagination.NextPage}}" class="pagination-btn pagination-btn-next">Next →</a>
+					{{else}}
+						<span class="pagination-btn pagination-btn-disabled">Next →</span>
+					{{end}}
+				</div>
+			</div>
+			{{end}}
 			{{end}}
 		`)),
 		"project.html": template.Must(template.New("base").Parse(`
@@ -178,6 +222,151 @@ func TestHomeHandler(t *testing.T) {
 		body := rr.Body.String()
 		assert.Contains(t, body, "Client A")
 		assert.Contains(t, body, "Client B")
+	})
+}
+
+func TestHomeHandlerPagination(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+	
+	t.Run("pagination with default page size", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert 15 clients (more than default page size of 10)
+		for i := 1; i <= 15; i++ {
+			testDB.InsertTestClient(t, fmt.Sprintf("Client %d", i))
+		}
+		
+		// Test first page
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rr := httptest.NewRecorder()
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		
+		// Should show "Next" button but not "Previous"
+		assert.Contains(t, body, "Next →")
+		assert.Contains(t, body, "pagination-btn-disabled\">← Previous")
+		assert.Contains(t, body, "Page 1 of 2")
+	})
+	
+	t.Run("pagination second page", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert 15 clients
+		for i := 1; i <= 15; i++ {
+			testDB.InsertTestClient(t, fmt.Sprintf("Client %d", i))
+		}
+		
+		// Test second page
+		req := httptest.NewRequest(http.MethodGet, "/?page=2", nil)
+		rr := httptest.NewRecorder()
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		
+		// Should show "Previous" button but not "Next"
+		assert.Contains(t, body, "← Previous")
+		assert.Contains(t, body, "pagination-btn-disabled\">Next →")
+		assert.Contains(t, body, "Page 2 of 2")
+	})
+	
+	t.Run("pagination with invalid page number", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		testDB.InsertTestClient(t, "Test Client")
+		
+		// Test with invalid page number - should default to page 1
+		req := httptest.NewRequest(http.MethodGet, "/?page=invalid", nil)
+		rr := httptest.NewRecorder()
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		// Should not show pagination controls for single page
+		body := rr.Body.String()
+		assert.NotContains(t, body, "Page 1 of")
+	})
+	
+	t.Run("no pagination when items fit on one page", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert only 5 clients (less than page size)
+		for i := 1; i <= 5; i++ {
+			testDB.InsertTestClient(t, fmt.Sprintf("Client %d", i))
+		}
+		
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rr := httptest.NewRecorder()
+		app.home(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		
+		// Should not show pagination controls
+		assert.NotContains(t, body, "pagination")
+		assert.NotContains(t, body, "Page 1 of")
+	})
+}
+
+func TestProjectsListPagination(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+	
+	t.Run("pagination with default page size", func(t *testing.T) {
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		
+		// Insert 15 projects (more than default page size of 10)
+		for i := 1; i <= 15; i++ {
+			_, err := testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
+				VALUES (?, ?, ?, ?, ?, ?, ?)`, fmt.Sprintf("Project %d", i), clientID, "In Progress", 100.0, "USD", 1.0, 0)
+			require.NoError(t, err)
+		}
+		
+		// Test first page
+		req := httptest.NewRequest(http.MethodGet, "/projects", nil)
+		rr := httptest.NewRecorder()
+		app.projectsList(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		
+		// Should show "Next" button but not "Previous"
+		assert.Contains(t, body, "Next →")
+		assert.Contains(t, body, "pagination-btn-disabled\">← Previous")
+		assert.Contains(t, body, "Page 1 of 2")
+	})
+	
+	t.Run("pagination second page", func(t *testing.T) {
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		
+		// Insert 15 projects
+		for i := 1; i <= 15; i++ {
+			_, err := testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
+				VALUES (?, ?, ?, ?, ?, ?, ?)`, fmt.Sprintf("Project %d", i), clientID, "In Progress", 100.0, "USD", 1.0, 0)
+			require.NoError(t, err)
+		}
+		
+		// Test second page
+		req := httptest.NewRequest(http.MethodGet, "/projects?page=2", nil)
+		rr := httptest.NewRecorder()
+		app.projectsList(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		
+		// Should show "Previous" button but not "Next"
+		assert.Contains(t, body, "← Previous")
+		assert.Contains(t, body, "pagination-btn-disabled\">Next →")
+		assert.Contains(t, body, "Page 2 of 2")
 	})
 }
 

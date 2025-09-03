@@ -331,6 +331,91 @@ func (p *ProjectModel) Delete(id int) error {
 	return p.queries.DeleteProject(ctx, int64(id))
 }
 
+// GetWithPagination retrieves projects with client information using pagination
+func (p *ProjectModel) GetWithPagination(limit, offset int64) ([]ProjectWithClient, error) {
+	ctx := context.Background()
+	rows, err := p.queries.GetProjectsWithClientPagination(ctx, db.GetProjectsWithClientPaginationParams{
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	projects := make([]ProjectWithClient, len(rows))
+	for i, row := range rows {
+		project, err := p.convertPaginationRowToProjectWithClient(row)
+		if err != nil {
+			return nil, err
+		}
+		projects[i] = project
+	}
+
+	return projects, nil
+}
+
+// convertPaginationRowToProjectWithClient converts a pagination database row to a ProjectWithClient struct
+func (p *ProjectModel) convertPaginationRowToProjectWithClient(row db.GetProjectsWithClientPaginationRow) (ProjectWithClient, error) {
+	// Helper function to convert sql.NullString to string
+	nullStringToString := func(ns sql.NullString) string {
+		if ns.Valid {
+			return ns.String
+		}
+		return ""
+	}
+	
+	// Helper function to convert sql.NullFloat64 to *float64
+	nullFloat64ToFloat := func(nf sql.NullFloat64) *float64 {
+		if nf.Valid {
+			return &nf.Float64
+		}
+		return nil
+	}
+	
+	// Helper function to convert sql.NullString date to *time.Time
+	nullStringToTime := func(ns sql.NullString) *time.Time {
+		if !ns.Valid || ns.String == "" {
+			return nil
+		}
+		if t, err := time.Parse("2006-01-02", ns.String); err == nil {
+			return &t
+		}
+		return nil
+	}
+	
+	return ProjectWithClient{
+		ID:                     int(row.ID),
+		Name:                   row.Name,
+		ClientID:               int(row.ClientID),
+		ClientName:             row.ClientName,
+		Status:                 row.Status,
+		HourlyRate:             row.HourlyRate,
+		Deadline:               nullStringToTime(row.Deadline),
+		ScheduledStart:         nullStringToTime(row.ScheduledStart),
+		InvoiceCCEmail:         nullStringToString(row.InvoiceCcEmail),
+		InvoiceCCDescription:   nullStringToString(row.InvoiceCcDescription),
+		ScheduleComments:       nullStringToString(row.ScheduleComments),
+		AdditionalInfo:         nullStringToString(row.AdditionalInfo),
+		AdditionalInfo2:        nullStringToString(row.AdditionalInfo2),
+		DiscountPercent:        nullFloat64ToFloat(row.DiscountPercent),
+		DiscountReason:         nullStringToString(row.DiscountReason),
+		AdjustmentAmount:       nullFloat64ToFloat(row.AdjustmentAmount),
+		AdjustmentReason:       nullStringToString(row.AdjustmentReason),
+		CurrencyDisplay:        row.CurrencyDisplay,
+		CurrencyConversionRate: row.CurrencyConversionRate,
+		FlatFeeInvoice:         row.FlatFeeInvoice == 1,
+		Notes:                  nullStringToString(row.Notes),
+		Updated:                row.UpdatedAt,
+		Created:                row.CreatedAt,
+	}, nil
+}
+
+// GetCount returns the total count of non-deleted projects
+func (p *ProjectModel) GetCount() (int64, error) {
+	ctx := context.Background()
+	return p.queries.GetProjectsCount(ctx)
+}
+
 // GetAll retrieves all projects with their client information
 func (p *ProjectModel) GetAll() ([]ProjectWithClient, error) {
 	ctx := context.Background()
@@ -413,6 +498,8 @@ type ProjectModelInterface interface {
 	Get(id int) (Project, error)
 	GetByClient(clientID int) ([]Project, error)
 	GetAll() ([]ProjectWithClient, error)
+	GetWithPagination(limit, offset int64) ([]ProjectWithClient, error)
+	GetCount() (int64, error)
 	Update(project Project) error
 	Delete(id int) error
 }
