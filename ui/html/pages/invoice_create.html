@@ -3,15 +3,14 @@
 {{end}}
 
 {{define "main"}}
-<a href="/project/view/{{.Project.ID}}" class="back-link">
-    Back to {{.Project.Name}}
-</a>
+<div class="context-info">
+    <p class="text-muted">
+        Project: <a href="/project/view/{{.Project.ID}}" class="context-link"><strong>{{.Project.Name}}</strong></a> | 
+        Client: <a href="/client/view/{{.Client.ID}}" class="context-link"><strong>{{.Client.Name}}</strong></a>
+    </p>
+</div>
 
 <h2>{{if .Form.AmountDue}}Update Invoice{{else}}Create a New Invoice{{end}}</h2>
-<p class="text-muted">
-    Project: <strong>{{.Project.Name}}</strong> | 
-    Client: <strong>{{.Client.Name}}</strong>
-</p>
 
 <div class="form-container">
     <form method='POST'>

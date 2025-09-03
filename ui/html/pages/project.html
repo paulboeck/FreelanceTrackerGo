@@ -1,9 +1,9 @@
 {{define "title"}}Project - {{.Project.Name}}{{end}}
 
 {{define "main"}}
-    <a href="/client/view/{{.Client.ID}}" class="back-link">
-        Back to {{.Client.Name}}
-    </a>
+    <div class="context-info">
+        <p class="text-muted">Client: <a href="/client/view/{{.Client.ID}}" class="context-link"><strong>{{.Client.Name}}</strong></a></p>
+    </div>
 
     <div class="client">
         <div class="metadata-header">

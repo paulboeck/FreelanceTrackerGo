@@ -956,6 +956,21 @@ footer {
     transform: translateY(-1px);
 }
 
+/* Context info styles */
+.context-info {
+    margin-bottom: 20px;
+}
+
+.context-link {
+    color: var(--color-primary);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.context-link:hover {
+    text-decoration: underline;
+}
+
 /* Pagination Styles */
 .pagination {
     display: flex;
