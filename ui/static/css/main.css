@@ -133,15 +133,20 @@ nav a:hover {
 }
 
 nav a.live {
-    background-color: #3b82f6;
-    color: #ffffff;
+    background-color: transparent;
+    color: #1e293b;
     cursor: default;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
 }
 
 nav a.live:hover {
-    background-color: #3b82f6;
-    color: #ffffff;
-    text-decoration: none;
+    background-color: transparent;
+    color: #1e293b;
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
 }
 
 :root {

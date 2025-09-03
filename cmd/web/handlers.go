@@ -1652,3 +1652,17 @@ func (app *application) settingsEditPost(res http.ResponseWriter, req *http.Requ
 	// Redirect to settings view
 	http.Redirect(res, req, "/settings", http.StatusSeeOther)
 }
+
+// projectsList handles a GET request which displays all projects
+func (app *application) projectsList(res http.ResponseWriter, req *http.Request) {
+	// Get all projects with client information
+	projects, err := app.projects.GetAll()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.ProjectsWithClient = projects
+	app.render(res, req, http.StatusOK, "projects.html", data)
+}

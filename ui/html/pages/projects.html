@@ -1,0 +1,41 @@
+{{define "title"}}Projects{{end}}
+{{define "main"}}
+    <h2>All Projects</h2>
+    {{if .ProjectsWithClient}}
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Project Name</th>
+                <th>Client</th>
+                <th>Status</th>
+                <th>Hourly Rate</th>
+                <th>Created</th>
+                <th>Actions</th>
+            </tr>
+            {{range .ProjectsWithClient}}
+                <tr>
+                    <td>{{.ID}}</td>
+                    <td><a href="/project/view/{{.ID}}">{{.Name}}</a></td>
+                    <td><a href="/client/view/{{.ClientID}}">{{.ClientName}}</a></td>
+                    <td>{{.Status}}</td>
+                    <td>${{printf "%.2f" .HourlyRate}}</td>
+                    <td>{{humanDate .Created}}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <a href="/project/update/{{.ID}}" class="btn-icon btn-edit" title="Edit project">
+                                ✏️
+                            </a>
+                            <form method="POST" action="/project/delete/{{.ID}}">
+                                <button type="submit" class="btn-icon btn-delete" title="Delete project">
+                                    🗑️
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+            {{end}}
+        </table>
+    {{else}}
+        <p>No projects found. <a href="/">Go to Clients</a> to create your first project!</p>
+    {{end}}
+{{end}}

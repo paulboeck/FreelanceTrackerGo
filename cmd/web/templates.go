@@ -8,15 +8,16 @@ import (
 )
 
 type templateData struct {
-	CurrentYear int
-	Client      *models.Client
-	Clients     []models.Client
-	Project     *models.Project
-	Projects    []models.Project
-	Timesheets  []models.Timesheet
-	Invoices    []models.Invoice
-	Settings    []models.AppSetting
-	Form        any
+	CurrentYear     int
+	Client          *models.Client
+	Clients         []models.Client
+	Project         *models.Project
+	Projects        []models.Project
+	ProjectsWithClient []models.ProjectWithClient
+	Timesheets      []models.Timesheet
+	Invoices        []models.Invoice
+	Settings        []models.AppSetting
+	Form            any
 }
 
 func humanDate(t time.Time) string {

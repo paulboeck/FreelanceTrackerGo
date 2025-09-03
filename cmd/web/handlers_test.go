@@ -54,6 +54,27 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 			</body></html>
 			{{end}}
 		`)),
+		"projects.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<h2>All Projects</h2>
+				{{if .ProjectsWithClient}}
+					<table>
+						{{range .ProjectsWithClient}}
+							<tr>
+								<td>{{.ID}}</td>
+								<td>{{.Name}}</td>
+								<td>{{.ClientName}}</td>
+								<td>{{.Status}}</td>
+							</tr>
+						{{end}}
+					</table>
+				{{else}}
+					<p>No projects found.</p>
+				{{end}}
+			</body></html>
+			{{end}}
+		`)),
 		"project.html": template.Must(template.New("base").Parse(`
 			{{define "base"}}
 			<html><body>
@@ -992,6 +1013,57 @@ func TestTimesheetCreatePost(t *testing.T) {
 		app.timesheetCreatePost(rr, req)
 		
 		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+}
+
+func TestProjectsList(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("show projects list with projects", func(t *testing.T) {
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client and projects
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		
+		// Insert a few projects
+		_, err := testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
+			VALUES (?, ?, ?, ?, ?, ?, ?)`, "Project 1", clientID, "In Progress", 100.0, "USD", 1.0, 0)
+		require.NoError(t, err)
+		
+		_, err = testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
+			VALUES (?, ?, ?, ?, ?, ?, ?)`, "Project 2", clientID, "Estimating", 125.0, "USD", 1.0, 0)
+		require.NoError(t, err)
+		
+		req := httptest.NewRequest(http.MethodGet, "/projects", nil)
+		rr := httptest.NewRecorder()
+		
+		app.projectsList(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "<h2>All Projects</h2>")
+		assert.Contains(t, body, "Project 1")
+		assert.Contains(t, body, "Project 2")
+		assert.Contains(t, body, "Test Client")
+		assert.Contains(t, body, "In Progress")
+		assert.Contains(t, body, "Estimating")
+	})
+
+	t.Run("show projects list when empty", func(t *testing.T) {
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		req := httptest.NewRequest(http.MethodGet, "/projects", nil)
+		rr := httptest.NewRecorder()
+		
+		app.projectsList(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "<h2>All Projects</h2>")
+		assert.Contains(t, body, "No projects found.")
 	})
 }
 

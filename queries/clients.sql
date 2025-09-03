@@ -11,7 +11,7 @@ WHERE id = ? AND deleted_at IS NULL;
 SELECT id, name, email, phone, address1, address2, address3, city, state, zip_code, hourly_rate, notes, additional_info, additional_info2, bill_to, include_address_on_invoice, invoice_cc_email, invoice_cc_description, university_affiliation, updated_at, created_at, deleted_at 
 FROM client 
 WHERE deleted_at IS NULL
-ORDER BY created_at DESC;
+ORDER BY updated_at DESC;
 
 -- name: UpdateClient :exec
 UPDATE client 
