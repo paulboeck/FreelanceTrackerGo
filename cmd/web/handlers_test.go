@@ -69,6 +69,11 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 				<form method="POST">
 					<input type="text" name="name" value="{{.Form.Name}}">
 					{{if .Form.FieldErrors.name}}<span>{{.Form.FieldErrors.name}}</span>{{end}}
+					<input type="number" name="hourly_rate" value="{{.Form.HourlyRate}}">
+					<input type="text" name="additional_info" value="{{.Form.AdditionalInfo}}">
+					<input type="text" name="additional_info2" value="{{.Form.AdditionalInfo2}}">
+					<input type="email" name="invoice_cc_email" value="{{.Form.InvoiceCCEmail}}">
+					<input type="text" name="invoice_cc_description" value="{{.Form.InvoiceCCDescription}}">
 					<button type="submit">Create</button>
 				</form>
 			</body></html>
@@ -82,6 +87,7 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 					{{if .Form.FieldErrors.work_date}}<span>{{.Form.FieldErrors.work_date}}</span>{{end}}
 					<input type="number" name="hours_worked" value="{{.Form.HoursWorked}}">
 					{{if .Form.FieldErrors.hours_worked}}<span>{{.Form.FieldErrors.hours_worked}}</span>{{end}}
+					<input type="number" name="hourly_rate" value="{{.Form.HourlyRate}}">
 					<input type="text" name="description" value="{{.Form.Description}}">
 					<button type="submit">Create</button>
 				</form>
@@ -776,6 +782,214 @@ func TestProjectCreatePostHandler(t *testing.T) {
 		rr := httptest.NewRecorder()
 		
 		app.projectCreatePost(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+}
+
+func TestProjectCreateDefaulting(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("project form defaults from client fields", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client with specific values
+		clientID := testDB.InsertTestClientWithDefaults(t, "Test Client", 125.50, 
+			"Additional Info Value", "Additional Info 2 Value",
+			"cc@example.com", "CC Description Value")
+		
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/%d/project/create", clientID), nil)
+		req.SetPathValue("id", strconv.Itoa(clientID))
+		rr := httptest.NewRecorder()
+		
+		app.projectCreate(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		
+		// Check that form defaults are populated from client
+		assert.Contains(t, body, `value="125.50"`) // Hourly rate
+		assert.Contains(t, body, `value="Additional Info Value"`) // Additional Info
+		assert.Contains(t, body, `value="Additional Info 2 Value"`) // Additional Info 2  
+		assert.Contains(t, body, `value="cc@example.com"`) // Invoice CC Email
+		assert.Contains(t, body, `value="CC Description Value"`) // Invoice CC Description
+	})
+
+	t.Run("project form handles empty client fields", func(t *testing.T) {
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client with empty optional fields
+		clientID := testDB.InsertTestClientWithDefaults(t, "Test Client", 75.00, "", "", "", "")
+		
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/%d/project/create", clientID), nil)
+		req.SetPathValue("id", strconv.Itoa(clientID))
+		rr := httptest.NewRecorder()
+		
+		app.projectCreate(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		
+		// Check that hourly rate still defaults but other fields are empty
+		assert.Contains(t, body, `value="75.00"`) // Hourly rate should still be set
+		// Empty fields should have empty values
+		assert.Contains(t, body, `value=""`) // Should have empty value attributes
+	})
+}
+
+func TestTimesheetCreate(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("show timesheet create form", func(t *testing.T) {
+		testDB.TruncateTable(t, "timesheet")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client and project
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
+		
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/project/%d/timesheet/create", projectID), nil)
+		req.SetPathValue("id", strconv.Itoa(projectID))
+		rr := httptest.NewRecorder()
+		
+		app.timesheetCreate(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "<form method=\"POST\">")
+		assert.Contains(t, body, "name=\"work_date\"")
+		assert.Contains(t, body, "name=\"hourly_rate\"")
+	})
+
+	t.Run("timesheet form defaults hourly rate from project", func(t *testing.T) {
+		testDB.TruncateTable(t, "timesheet")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		
+		// Insert project with specific hourly rate
+		result, err := testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
+			VALUES (?, ?, ?, ?, ?, ?, ?)`, "Test Project", clientID, "In Progress", 95.75, "USD", 1.0, 0)
+		require.NoError(t, err)
+		
+		projectIDRaw, err := result.LastInsertId()
+		require.NoError(t, err)
+		projectID := int(projectIDRaw)
+		
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/project/%d/timesheet/create", projectID), nil)
+		req.SetPathValue("id", strconv.Itoa(projectID))
+		rr := httptest.NewRecorder()
+		
+		app.timesheetCreate(rr, req)
+		
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		
+		// Check that hourly rate defaults from project
+		assert.Contains(t, body, `value="95.75"`) // Hourly rate from project
+	})
+
+	t.Run("timesheet create for non-existent project", func(t *testing.T) {
+		testDB.TruncateTable(t, "project")
+		
+		req := httptest.NewRequest(http.MethodGet, "/project/999/timesheet/create", nil)
+		req.SetPathValue("id", "999")
+		rr := httptest.NewRecorder()
+		
+		app.timesheetCreate(rr, req)
+		
+		assert.Equal(t, http.StatusNotFound, rr.Code)
+	})
+}
+
+func TestTimesheetCreatePost(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("successful timesheet creation", func(t *testing.T) {
+		testDB.TruncateTable(t, "timesheet")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client and project
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
+		
+		form := url.Values{}
+		form.Add("work_date", "2024-01-15")
+		form.Add("hours_worked", "8.0")
+		form.Add("hourly_rate", "85.00")
+		form.Add("description", "Test timesheet entry")
+		
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/project/%d/timesheet/create", projectID), strings.NewReader(form.Encode()))
+		req.SetPathValue("id", strconv.Itoa(projectID))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.timesheetCreatePost(rr, req)
+		
+		// Should redirect to the project view
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		assert.Contains(t, location, fmt.Sprintf("/project/view/%d", projectID))
+		
+		// Verify the timesheet was actually created in the database
+		timesheets, err := app.timesheets.GetByProject(projectID)
+		require.NoError(t, err)
+		require.Len(t, timesheets, 1)
+		assert.Equal(t, 8.0, timesheets[0].HoursWorked)
+		assert.Equal(t, 85.0, timesheets[0].HourlyRate)
+		assert.Equal(t, "Test timesheet entry", timesheets[0].Description)
+	})
+
+	t.Run("validation error - empty required fields", func(t *testing.T) {
+		testDB.TruncateTable(t, "timesheet")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+		
+		// Insert test client and project
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
+		
+		form := url.Values{}
+		form.Add("work_date", "")
+		form.Add("hours_worked", "")
+		form.Add("hourly_rate", "")
+		
+		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/project/%d/timesheet/create", projectID), strings.NewReader(form.Encode()))
+		req.SetPathValue("id", strconv.Itoa(projectID))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.timesheetCreatePost(rr, req)
+		
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		
+		// Verify no timesheet was created
+		timesheets, err := app.timesheets.GetByProject(projectID)
+		require.NoError(t, err)
+		assert.Len(t, timesheets, 0)
+	})
+
+	t.Run("timesheet create for non-existent project", func(t *testing.T) {
+		testDB.TruncateTable(t, "project")
+		
+		form := url.Values{}
+		form.Add("work_date", "2024-01-15")
+		form.Add("hours_worked", "8.0")
+		form.Add("hourly_rate", "85.00")
+		
+		req := httptest.NewRequest(http.MethodPost, "/project/999/timesheet/create", strings.NewReader(form.Encode()))
+		req.SetPathValue("id", "999")
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+		
+		app.timesheetCreatePost(rr, req)
 		
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})

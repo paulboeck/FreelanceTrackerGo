@@ -693,6 +693,11 @@ func (app *application) projectCreate(res http.ResponseWriter, req *http.Request
 	data := app.newTemplateData(req)
 	data.Form = projectForm{
 		Status:                 "Estimating", // Default status
+		HourlyRate:             fmt.Sprintf("%.2f", client.HourlyRate), // Default from client
+		InvoiceCCEmail:         ptrToString(client.InvoiceCCEmail),    // Default from client
+		InvoiceCCDescription:   ptrToString(client.InvoiceCCDescription), // Default from client
+		AdditionalInfo:         ptrToString(client.AdditionalInfo),   // Default from client
+		AdditionalInfo2:        ptrToString(client.AdditionalInfo2),  // Default from client
 		CurrencyDisplay:        "USD",        // Default currency
 		CurrencyConversionRate: "1.00000",    // Default conversion rate
 	}
@@ -917,7 +922,8 @@ func (app *application) timesheetCreate(res http.ResponseWriter, req *http.Reque
 
 	data := app.newTemplateData(req)
 	data.Form = timesheetForm{
-		WorkDate: time.Now().Format("2006-01-02"),
+		WorkDate:   time.Now().Format("2006-01-02"),
+		HourlyRate: fmt.Sprintf("%.2f", project.HourlyRate), // Default from project
 	}
 	data.Project = &project
 	data.Client = &client

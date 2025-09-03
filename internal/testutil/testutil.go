@@ -174,6 +174,19 @@ func (td *TestDatabase) InsertTestClient(t *testing.T, name string) int {
 	return int(id)
 }
 
+// InsertTestClientWithDefaults inserts a test client with default values for all fields and returns its ID
+func (td *TestDatabase) InsertTestClientWithDefaults(t *testing.T, name string, hourlyRate float64, additionalInfo, additionalInfo2, invoiceCCEmail, invoiceCCDescription string) int {
+	result, err := td.DB.Exec(`INSERT INTO client (name, email, hourly_rate, additional_info, additional_info2, invoice_cc_email, invoice_cc_description) 
+		VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+		name, "test@example.com", hourlyRate, additionalInfo, additionalInfo2, invoiceCCEmail, invoiceCCDescription)
+	require.NoError(t, err)
+	
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+	
+	return int(id)
+}
+
 // InsertTestProject inserts a test project and returns its ID
 func (td *TestDatabase) InsertTestProject(t *testing.T, name string, clientID int) int {
 	result, err := td.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
