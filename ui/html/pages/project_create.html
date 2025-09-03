@@ -3,14 +3,12 @@
 {{end}}
 
 {{define "main"}}
-<div style="margin-bottom: 1rem;">
-    <a href="/client/view/{{.Client.ID}}" style="color: #3b82f6; text-decoration: none;">
-        ← Back to {{.Client.Name}}
-    </a>
-</div>
+<a href="/client/view/{{.Client.ID}}" class="back-link">
+    Back to {{.Client.Name}}
+</a>
 
 <h2>{{if .Form.Name}}Update Project{{else}}Create a New Project{{end}}</h2>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">Client: <strong>{{.Client.Name}}</strong></p>
+<p class="text-muted">Client: <strong>{{.Client.Name}}</strong></p>
 
 <div class="form-container">
     <form method='POST'>

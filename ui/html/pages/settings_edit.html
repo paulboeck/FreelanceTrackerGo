@@ -1,16 +1,14 @@
 {{define "title"}}Edit Settings{{end}}
 
 {{define "main"}}
-    <div style="margin-bottom: 1rem;">
-        <a href="/settings" style="color: #3b82f6; text-decoration: none;">
-            ← Back to Settings
-        </a>
-    </div>
+    <a href="/settings" class="back-link">
+        Back to Settings
+    </a>
 
     <form action="/settings/edit" method="POST" novalidate>
         <div class="form-section">
             <h2>Edit Setting Values</h2>
-            <p style="color: #6b7280; margin-bottom: 1.5rem;">
+            <p class="text-muted">
                 You can only modify the values of existing settings. Settings are managed by the application.
             </p>
             

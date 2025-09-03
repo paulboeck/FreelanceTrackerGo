@@ -757,6 +757,84 @@ tr:hover {
     text-decoration: underline;
 }
 
+/* Back Link Styles */
+.back-link {
+    display: inline-flex !important;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1.25rem;
+    background-color: #3b82f6 !important;
+    border: 2px solid #3b82f6;
+    border-radius: var(--border-radius);
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 2px 4px 0 rgba(59, 130, 246, 0.2);
+    cursor: pointer;
+    height: var(--form-button-height);
+    box-sizing: border-box;
+}
+
+.back-link:hover {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px 0 rgba(59, 130, 246, 0.3);
+}
+
+.back-link::before {
+    content: '←';
+    font-size: 1.1rem;
+    font-weight: bold;
+    transition: transform 0.2s ease;
+}
+
+.back-link:hover::before {
+    transform: translateX(-3px);
+}
+
+/* Utility Classes for Former Inline Styles */
+.text-muted {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+}
+
+.description-divider {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid #f3f4f6;
+}
+
+.description-text {
+    color: #374151;
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+.status-paid {
+    color: #059669;
+    font-weight: 500;
+}
+
+.status-unpaid {
+    color: #dc2626;
+    font-weight: 500;
+}
+
+.status-neutral {
+    color: #6b7280;
+}
+
+.setting-value {
+    color: #374151;
+    font-weight: 500;
+}
+
 footer {
     border-top: 1px solid #e2e8f0;
     padding: 1.5rem 0;

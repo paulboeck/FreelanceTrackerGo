@@ -1,11 +1,9 @@
 {{define "title"}}Project - {{.Project.Name}}{{end}}
 
 {{define "main"}}
-    <div style="margin-bottom: 1rem;">
-        <a href="/client/view/{{.Client.ID}}" style="color: #3b82f6; text-decoration: none;">
-            ← Back to {{.Client.Name}}
-        </a>
-    </div>
+    <a href="/client/view/{{.Client.ID}}" class="back-link">
+        Back to {{.Client.Name}}
+    </a>
 
     <div class="client">
         <div class="metadata-header">
@@ -93,8 +91,8 @@
                             </div>
                         </div>
                         {{if .Description}}
-                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6;">
-                            <p style="color: #374151; font-size: 0.875rem; margin: 0;">{{.Description}}</p>
+                        <div class="description-divider">
+                            <p class="description-text">{{.Description}}</p>
                         </div>
                         {{end}}
                         <div class="project-meta">
@@ -143,15 +141,15 @@
                                 </form>
                             </div>
                         </div>
-                        <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #f3f4f6;">
-                            <p style="color: #374151; font-size: 0.875rem; margin: 0;">
+                        <div class="description-divider">
+                            <p class="description-text">
                                 Payment Terms: {{.PaymentTerms}}
                                 {{if .DatePaid}}
-                                    | <span style="color: #059669; font-weight: 500;">Paid: {{.DatePaid.Format "2006-01-02"}}</span>
+                                    | <span class="status-paid">Paid: {{.DatePaid.Format "2006-01-02"}}</span>
                                 {{else}}
-                                    | <span style="color: #dc2626; font-weight: 500;">Unpaid</span>
+                                    | <span class="status-unpaid">Unpaid</span>
                                 {{end}}
-                                | Display Details: {{if .DisplayDetails}}<span style="color: #059669;">Yes</span>{{else}}<span style="color: #6b7280;">No</span>{{end}}
+                                | Display Details: {{if .DisplayDetails}}<span class="status-paid">Yes</span>{{else}}<span class="status-neutral">No</span>{{end}}
                             </p>
                         </div>
                         <div class="project-meta">

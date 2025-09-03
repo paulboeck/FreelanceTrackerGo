@@ -3,14 +3,12 @@
 {{end}}
 
 {{define "main"}}
-<div style="margin-bottom: 1rem;">
-    <a href="/project/view/{{.Project.ID}}" style="color: #3b82f6; text-decoration: none;">
-        ← Back to {{.Project.Name}}
-    </a>
-</div>
+<a href="/project/view/{{.Project.ID}}" class="back-link">
+    Back to {{.Project.Name}}
+</a>
 
 <h2>{{if .Form.AmountDue}}Update Invoice{{else}}Create a New Invoice{{end}}</h2>
-<p style="color: #6b7280; margin-bottom: 1.5rem;">
+<p class="text-muted">
     Project: <strong>{{.Project.Name}}</strong> | 
     Client: <strong>{{.Client.Name}}</strong>
 </p>
