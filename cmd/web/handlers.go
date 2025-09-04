@@ -1566,8 +1566,8 @@ func (app *application) invoicePrint(res http.ResponseWriter, req *http.Request)
 		return
 	}
 
-	// Generate PDF with settings
-	pdfBytes, err := app.invoices.GeneratePDFWithSettings(id, allSettings)
+	// Generate professional PDF with comprehensive data and settings
+	pdfBytes, err := app.invoices.GenerateComprehensivePDF(id, allSettings)
 	if err != nil {
 		if errors.Is(err, models.ErrNoRecord) {
 			http.NotFound(res, req)

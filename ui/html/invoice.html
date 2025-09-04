@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{.Settings.InvoiceTitle}}</title>
+    <style>
+        @page {
+            margin: 20mm;
+            size: A4;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            line-height: 1.4;
+            color: #000;
+        }
+        
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+            min-height: 40px;
+        }
+        
+        .logo {
+            max-width: 15mm;
+            height: auto;
+        }
+        
+        .invoice-title {
+            font-size: 20px;
+            font-weight: normal;
+            text-align: right;
+        }
+        
+        .header-decoration {
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .horizontal-line {
+            border-top: 0.1mm solid #000;
+            margin-bottom: 8px;
+        }
+        
+        .invoice-metadata {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .invoice-date {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .invoice-number {
+            text-align: right;
+        }
+        
+        .label {
+            font-weight: bold;
+        }
+        
+        .project-info {
+            margin-bottom: 20px;
+        }
+        
+        .billing-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .billing-section {
+            width: 48%;
+        }
+        
+        .billing-header {
+            background-color: #f0f0f0;
+            padding: 4px 8px;
+            font-weight: bold;
+            border: 0.1mm solid #000;
+            margin-bottom: 0;
+        }
+        
+        .billing-content {
+            border: 0.1mm solid #000;
+            border-top: none;
+            padding: 4px 8px;
+            min-height: 80px;
+        }
+        
+        .billing-content div {
+            margin-bottom: 2px;
+        }
+        
+        .services-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        
+        .services-table th,
+        .services-table td {
+            border: 0.1mm solid #000;
+            padding: 4px 8px;
+            text-align: left;
+        }
+        
+        .services-table th {
+            background-color: #dcdcdc;
+            font-weight: bold;
+            font-size: 10px;
+            text-align: center;
+        }
+        
+        .services-table .description {
+            text-align: left;
+        }
+        
+        .services-table .hours,
+        .services-table .rate,
+        .services-table .amount {
+            text-align: center;
+        }
+        
+        .financial-summary {
+            float: right;
+            width: 200px;
+            margin-bottom: 15px;
+        }
+        
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+        
+        .total-row {
+            border-top: 0.1mm solid #000;
+            padding-top: 4px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        
+        .payment-terms {
+            clear: both;
+            margin-top: 40px;
+        }
+        
+        .payment-terms h3 {
+            font-weight: bold;
+            font-size: 12px;
+            margin-bottom: 8px;
+        }
+        
+        .payment-terms p {
+            font-size: 10px;
+            line-height: 1.4;
+            margin-bottom: 5px;
+        }
+        
+        .thank-you {
+            text-align: center;
+            font-style: italic;
+            font-size: 11px;
+            margin-top: 20px;
+        }
+        
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-header">
+        <div class="logo-section">
+            {{if .Settings.CompanyLogoDataURL}}
+                <img src="{{safeURL .Settings.CompanyLogoDataURL}}" alt="Company Logo" class="logo">
+            {{else if .Settings.HeaderDecoration}}
+                <div class="header-decoration">{{.Settings.HeaderDecoration}}</div>
+            {{end}}
+        </div>
+        <div class="invoice-title">{{.Settings.InvoiceTitle}}</div>
+    </div>
+    
+    <div class="horizontal-line"></div>
+    
+    <div class="invoice-metadata">
+        <div class="invoice-date">
+            <span class="label">Invoice Date:</span>
+            <span>{{.Invoice.InvoiceDate.Format "January 2, 2006"}}</span>
+        </div>
+        <div class="invoice-number">
+            <span class="label">Invoice #:</span>
+            <span>{{printf "%04d" .Invoice.ID}}</span>
+        </div>
+    </div>
+    
+    {{if .Invoice.PaymentTerms}}
+    <div class="project-info">
+        <div>
+            <span class="label">Project:</span> {{.Project.Name}}
+            {{if .Invoice.DatePaid}}
+                <span style="float: right;">
+                    <span class="label">Paid:</span> {{.Invoice.DatePaid.Format "January 2, 2006"}}
+                </span>
+            {{end}}
+        </div>
+    </div>
+    {{end}}
+    
+    <div class="billing-info">
+        <div class="billing-section">
+            <div class="billing-header">Bill To:</div>
+            <div class="billing-content">
+                {{if .Client.BillTo}}
+                    {{range $line := (split .Client.BillTo "\n")}}
+                        <div>{{$line}}</div>
+                    {{end}}
+                {{else}}
+                    <div>{{.Client.Name}}</div>
+                    {{if .Client.UniversityAffiliation}}<div>{{.Client.UniversityAffiliation}}</div>{{end}}
+                    {{if and .Client.IncludeAddressOnInvoice .Client.Address1}}<div>{{.Client.Address1}}</div>{{end}}
+                    {{if and .Client.IncludeAddressOnInvoice .Client.Address2}}<div>{{.Client.Address2}}</div>{{end}}
+                    {{if and .Client.IncludeAddressOnInvoice .Client.Address3}}<div>{{.Client.Address3}}</div>{{end}}
+                    {{if .Client.IncludeAddressOnInvoice}}
+                        <div>
+                            {{.Client.City}}{{if .Client.State}}, {{.Client.State}}{{end}}{{if .Client.ZipCode}} {{.Client.ZipCode}}{{end}}
+                        </div>
+                    {{end}}
+                {{end}}
+            </div>
+        </div>
+        
+        <div class="billing-section">
+            <div class="billing-header">From:</div>
+            <div class="billing-content">
+                <div>{{.Settings.FreelancerName}}</div>
+                <div>{{.Settings.FreelancerAddress}}</div>
+                <div>{{.Settings.FreelancerCityStateZip}}</div>
+                <div>{{.Settings.FreelancerPhone}}</div>
+                <div>{{.Settings.FreelancerEmail}}</div>
+            </div>
+        </div>
+    </div>
+    
+    {{if and .Settings.ShowIndividualTimesheets .Invoice.DisplayDetails .Timesheets}}
+    <table class="services-table">
+        <thead>
+            <tr>
+                <th width="15%">Date</th>
+                <th width="40%">Description</th>
+                <th width="15%">Hours</th>
+                <th width="15%">Rate</th>
+                <th width="15%">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{range .Timesheets}}
+            <tr>
+                <td class="hours">{{.WorkDate.Format "Jan 2"}}</td>
+                <td class="description">{{.Description}}</td>
+                <td class="hours">{{printf "%.2f" .HoursWorked}}</td>
+                <td class="rate">{{$.Settings.CurrencySymbol}}{{printf "%.2f" .HourlyRate}}</td>
+                <td class="amount">{{$.Settings.CurrencySymbol}}{{printf "%.2f" (mul .HoursWorked .HourlyRate)}}</td>
+            </tr>
+            {{end}}
+        </tbody>
+    </table>
+    {{else}}
+    <table class="services-table">
+        <thead>
+            <tr>
+                <th width="55%">Description</th>
+                <th width="15%">Hours</th>
+                <th width="15%">Rate</th>
+                <th width="15%">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="description">{{.Project.Name}} ({{.Invoice.InvoiceDate.Format "January 2006"}})</td>
+                {{if .Project.FlatFeeInvoice}}
+                    <td class="hours">1</td>
+                    <td class="rate">Flat Fee</td>
+                    <td class="amount">{{.Settings.CurrencySymbol}}{{printf "%.2f" .Invoice.AmountDue}}</td>
+                {{else}}
+                    <td class="hours">{{printf "%.2f" .TotalHours}}</td>
+                    <td class="rate">{{.Settings.CurrencySymbol}}{{printf "%.2f" .AvgRate}}</td>
+                    <td class="amount">{{.Settings.CurrencySymbol}}{{printf "%.2f" .Invoice.AmountDue}}</td>
+                {{end}}
+            </tr>
+        </tbody>
+    </table>
+    {{end}}
+    
+    <div class="clearfix">
+        <div class="financial-summary">
+            {{if or (and .DiscountAmount (gt .DiscountAmount 0)) (and .AdjustmentAmount (ne .AdjustmentAmount 0))}}
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span>{{.Settings.CurrencySymbol}}{{printf "%.2f" .Invoice.AmountDue}}</span>
+                </div>
+            {{end}}
+            
+            {{if and .DiscountAmount (gt .DiscountAmount 0)}}
+                <div class="summary-row">
+                    <span>Discount{{if .Project.DiscountReason}} ({{.Project.DiscountReason}}){{end}}:</span>
+                    <span>-{{.Settings.CurrencySymbol}}{{printf "%.2f" .DiscountAmount}}</span>
+                </div>
+            {{end}}
+            
+            {{if and .AdjustmentAmount (ne .AdjustmentAmount 0)}}
+                <div class="summary-row">
+                    <span>Adjustment{{if .Project.AdjustmentReason}} ({{.Project.AdjustmentReason}}){{end}}:</span>
+                    <span>{{if and .AdjustmentAmount (gt .AdjustmentAmount 0)}}+{{end}}{{.Settings.CurrencySymbol}}{{printf "%.2f" .AdjustmentAmount}}</span>
+                </div>
+            {{end}}
+            
+            <div class="summary-row total-row">
+                <span>Total Due:</span>
+                <span>{{.Settings.CurrencySymbol}}{{printf "%.2f" .FinalTotal}}</span>
+            </div>
+        </div>
+    </div>
+    
+    {{if or .Invoice.PaymentTerms .Project.Notes}}
+    <div class="payment-terms">
+        <h3>Payment Terms & Notes:</h3>
+        {{if .Invoice.PaymentTerms}}
+            <p>{{.Invoice.PaymentTerms}}</p>
+        {{else}}
+            <p>{{.Settings.DefaultPaymentTerms}}</p>
+        {{end}}
+        {{if .Project.Notes}}
+            <p>{{.Project.Notes}}</p>
+        {{end}}
+    </div>
+    {{end}}
+    
+    <div class="thank-you">
+        {{.Settings.ThankYouMessage}}
+    </div>
+</body>
+</html>
