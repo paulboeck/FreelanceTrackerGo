@@ -8,7 +8,6 @@ require (
 	github.com/chromedp/cdproto v0.0.0-20250724212937-08a3db8b4327
 	github.com/chromedp/chromedp v0.14.1
 	github.com/go-playground/form/v4 v4.2.1
-	github.com/jung-kurt/gofpdf v1.16.2
 	github.com/justinas/alice v1.2.0
 	github.com/pressly/goose/v3 v3.24.3
 	github.com/stretchr/testify v1.10.0

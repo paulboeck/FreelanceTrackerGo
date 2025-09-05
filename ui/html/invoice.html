@@ -189,8 +189,6 @@
         <div class="logo-section">
             {{if .Settings.CompanyLogoDataURL}}
                 <img src="{{safeURL .Settings.CompanyLogoDataURL}}" alt="Company Logo" class="logo">
-            {{else if .Settings.HeaderDecoration}}
-                <div class="header-decoration">{{.Settings.HeaderDecoration}}</div>
             {{end}}
         </div>
         <div class="invoice-title">{{.Settings.InvoiceTitle}}</div>
@@ -309,24 +307,24 @@
     
     <div class="clearfix">
         <div class="financial-summary">
-            {{if or (and .DiscountAmount (gt .DiscountAmount 0)) (and .AdjustmentAmount (ne .AdjustmentAmount 0))}}
+            {{if or (isPositive .DiscountAmount) (isNonZero .AdjustmentAmount)}}
                 <div class="summary-row">
                     <span>Subtotal:</span>
                     <span>{{.Settings.CurrencySymbol}}{{printf "%.2f" .Invoice.AmountDue}}</span>
                 </div>
             {{end}}
             
-            {{if and .DiscountAmount (gt .DiscountAmount 0)}}
+            {{if isPositive .DiscountAmount}}
                 <div class="summary-row">
                     <span>Discount{{if .Project.DiscountReason}} ({{.Project.DiscountReason}}){{end}}:</span>
                     <span>-{{.Settings.CurrencySymbol}}{{printf "%.2f" .DiscountAmount}}</span>
                 </div>
             {{end}}
             
-            {{if and .AdjustmentAmount (ne .AdjustmentAmount 0)}}
+            {{if isNonZero .AdjustmentAmount}}
                 <div class="summary-row">
                     <span>Adjustment{{if .Project.AdjustmentReason}} ({{.Project.AdjustmentReason}}){{end}}:</span>
-                    <span>{{if and .AdjustmentAmount (gt .AdjustmentAmount 0)}}+{{end}}{{.Settings.CurrencySymbol}}{{printf "%.2f" .AdjustmentAmount}}</span>
+                    <span>{{if isPositive .AdjustmentAmount}}+{{end}}{{.Settings.CurrencySymbol}}{{printf "%.2f" .AdjustmentAmount}}</span>
                 </div>
             {{end}}
             
