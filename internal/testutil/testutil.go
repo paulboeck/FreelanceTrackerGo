@@ -151,7 +151,7 @@ func createSchema(db *sql.DB) error {
 			('freelancer_phone', 'Your Phone', 'string', 'Freelancer phone for invoices'),
 			('freelancer_email', 'your.email@example.com', 'string', 'Freelancer email for invoices');
 	`
-	
+
 	_, err := db.Exec(schema)
 	return err
 }
@@ -164,26 +164,26 @@ func (td *TestDatabase) TruncateTable(t *testing.T, tableName string) {
 
 // InsertTestClient inserts a test client and returns its ID
 func (td *TestDatabase) InsertTestClient(t *testing.T, name string) int {
-	result, err := td.DB.Exec("INSERT INTO client (name, email, hourly_rate) VALUES (?, ?, ?)", 
+	result, err := td.DB.Exec("INSERT INTO client (name, email, hourly_rate) VALUES (?, ?, ?)",
 		name, "test@example.com", 50.00)
 	require.NoError(t, err)
-	
+
 	id, err := result.LastInsertId()
 	require.NoError(t, err)
-	
+
 	return int(id)
 }
 
 // InsertTestClientWithDefaults inserts a test client with default values for all fields and returns its ID
 func (td *TestDatabase) InsertTestClientWithDefaults(t *testing.T, name string, hourlyRate float64, additionalInfo, additionalInfo2, invoiceCCEmail, invoiceCCDescription string) int {
 	result, err := td.DB.Exec(`INSERT INTO client (name, email, hourly_rate, additional_info, additional_info2, invoice_cc_email, invoice_cc_description) 
-		VALUES (?, ?, ?, ?, ?, ?, ?)`, 
+		VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		name, "test@example.com", hourlyRate, additionalInfo, additionalInfo2, invoiceCCEmail, invoiceCCDescription)
 	require.NoError(t, err)
-	
+
 	id, err := result.LastInsertId()
 	require.NoError(t, err)
-	
+
 	return int(id)
 }
 
@@ -192,22 +192,22 @@ func (td *TestDatabase) InsertTestProject(t *testing.T, name string, clientID in
 	result, err := td.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
 		VALUES (?, ?, ?, ?, ?, ?, ?)`, name, clientID, "Estimating", 50.0, "USD", 1.0, 0)
 	require.NoError(t, err)
-	
+
 	id, err := result.LastInsertId()
 	require.NoError(t, err)
-	
+
 	return int(id)
 }
 
 // InsertTestTimesheet inserts a test timesheet and returns its ID
 func (td *TestDatabase) InsertTestTimesheet(t *testing.T, projectID int, workDate, hoursWorked, hourlyRate, description string) int {
-	result, err := td.DB.Exec("INSERT INTO timesheet (project_id, work_date, hours_worked, hourly_rate, description) VALUES (?, ?, ?, ?, ?)", 
+	result, err := td.DB.Exec("INSERT INTO timesheet (project_id, work_date, hours_worked, hourly_rate, description) VALUES (?, ?, ?, ?, ?)",
 		projectID, workDate, hoursWorked, hourlyRate, description)
 	require.NoError(t, err)
-	
+
 	id, err := result.LastInsertId()
 	require.NoError(t, err)
-	
+
 	return int(id)
 }
 
@@ -217,13 +217,13 @@ func (td *TestDatabase) InsertTestInvoice(t *testing.T, projectID int, invoiceDa
 	if datePaid != "" {
 		datePaidParam = datePaid
 	}
-	
-	result, err := td.DB.Exec("INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due, display_details) VALUES (?, ?, ?, ?, ?, ?)", 
+
+	result, err := td.DB.Exec("INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due, display_details) VALUES (?, ?, ?, ?, ?, ?)",
 		projectID, invoiceDate, datePaidParam, paymentTerms, amountDue, false)
 	require.NoError(t, err)
-	
+
 	id, err := result.LastInsertId()
 	require.NoError(t, err)
-	
+
 	return int(id)
 }

@@ -22,7 +22,7 @@ import (
 // createTestApp creates an application instance for testing
 func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 	testDB := testutil.SetupTestSQLite(t)
-	
+
 	// Create a minimal template cache for testing with base template
 	templateCache := map[string]*template.Template{
 		"home.html": template.Must(template.New("base").Parse(`
@@ -175,7 +175,7 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 			{{end}}
 		`)),
 	}
-	
+
 	app := &application{
 		logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
 		clients:       models.NewClientModel(testDB.DB),
@@ -186,7 +186,7 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 		templateCache: templateCache,
 		formDecoder:   form.NewDecoder(),
 	}
-	
+
 	return app, testDB
 }
 
@@ -196,28 +196,28 @@ func TestHomeHandler(t *testing.T) {
 
 	t.Run("home with no clients", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
-		
+
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Contains(t, rr.Body.String(), "<h1>Clients</h1>")
 	})
 
 	t.Run("home with clients", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test clients
 		testDB.InsertTestClient(t, "Client A")
 		testDB.InsertTestClient(t, "Client B")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
-		
+
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Client A")
@@ -228,81 +228,81 @@ func TestHomeHandler(t *testing.T) {
 func TestHomeHandlerPagination(t *testing.T) {
 	app, testDB := createTestApp(t)
 	defer testDB.Cleanup(t)
-	
+
 	t.Run("pagination with default page size", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert 15 clients (more than default page size of 10)
 		for i := 1; i <= 15; i++ {
 			testDB.InsertTestClient(t, fmt.Sprintf("Client %d", i))
 		}
-		
+
 		// Test first page
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
-		
+
 		// Should show "Next" button but not "Previous"
 		assert.Contains(t, body, "Next →")
 		assert.Contains(t, body, "pagination-btn-disabled\">← Previous")
 		assert.Contains(t, body, "Page 1 of 2")
 	})
-	
+
 	t.Run("pagination second page", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert 15 clients
 		for i := 1; i <= 15; i++ {
 			testDB.InsertTestClient(t, fmt.Sprintf("Client %d", i))
 		}
-		
+
 		// Test second page
 		req := httptest.NewRequest(http.MethodGet, "/?page=2", nil)
 		rr := httptest.NewRecorder()
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
-		
+
 		// Should show "Previous" button but not "Next"
 		assert.Contains(t, body, "← Previous")
 		assert.Contains(t, body, "pagination-btn-disabled\">Next →")
 		assert.Contains(t, body, "Page 2 of 2")
 	})
-	
+
 	t.Run("pagination with invalid page number", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
 		testDB.InsertTestClient(t, "Test Client")
-		
+
 		// Test with invalid page number - should default to page 1
 		req := httptest.NewRequest(http.MethodGet, "/?page=invalid", nil)
 		rr := httptest.NewRecorder()
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		// Should not show pagination controls for single page
 		body := rr.Body.String()
 		assert.NotContains(t, body, "Page 1 of")
 	})
-	
+
 	t.Run("no pagination when items fit on one page", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert only 5 clients (less than page size)
 		for i := 1; i <= 5; i++ {
 			testDB.InsertTestClient(t, fmt.Sprintf("Client %d", i))
 		}
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
-		
+
 		// Should not show pagination controls
 		assert.NotContains(t, body, "pagination")
 		assert.NotContains(t, body, "Page 1 of")
@@ -312,57 +312,57 @@ func TestHomeHandlerPagination(t *testing.T) {
 func TestProjectsListPagination(t *testing.T) {
 	app, testDB := createTestApp(t)
 	defer testDB.Cleanup(t)
-	
+
 	t.Run("pagination with default page size", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client
 		clientID := testDB.InsertTestClient(t, "Test Client")
-		
+
 		// Insert 15 projects (more than default page size of 10)
 		for i := 1; i <= 15; i++ {
 			_, err := testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
 				VALUES (?, ?, ?, ?, ?, ?, ?)`, fmt.Sprintf("Project %d", i), clientID, "In Progress", 100.0, "USD", 1.0, 0)
 			require.NoError(t, err)
 		}
-		
+
 		// Test first page
 		req := httptest.NewRequest(http.MethodGet, "/projects", nil)
 		rr := httptest.NewRecorder()
 		app.projectsList(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
-		
+
 		// Should show "Next" button but not "Previous"
 		assert.Contains(t, body, "Next →")
 		assert.Contains(t, body, "pagination-btn-disabled\">← Previous")
 		assert.Contains(t, body, "Page 1 of 2")
 	})
-	
+
 	t.Run("pagination second page", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client
 		clientID := testDB.InsertTestClient(t, "Test Client")
-		
+
 		// Insert 15 projects
 		for i := 1; i <= 15; i++ {
 			_, err := testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
 				VALUES (?, ?, ?, ?, ?, ?, ?)`, fmt.Sprintf("Project %d", i), clientID, "In Progress", 100.0, "USD", 1.0, 0)
 			require.NoError(t, err)
 		}
-		
+
 		// Test second page
 		req := httptest.NewRequest(http.MethodGet, "/projects?page=2", nil)
 		rr := httptest.NewRecorder()
 		app.projectsList(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
-		
+
 		// Should show "Previous" button but not "Next"
 		assert.Contains(t, body, "← Previous")
 		assert.Contains(t, body, "pagination-btn-disabled\">Next →")
@@ -376,16 +376,16 @@ func TestClientViewHandler(t *testing.T) {
 
 	t.Run("view existing client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		id := testDB.InsertTestClient(t, "Test Client")
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/view/%d", id), nil)
 		req.SetPathValue("id", strconv.Itoa(id))
 		rr := httptest.NewRecorder()
-		
+
 		app.clientView(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Test Client")
@@ -394,13 +394,13 @@ func TestClientViewHandler(t *testing.T) {
 
 	t.Run("view non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/client/view/999", nil)
 		req.SetPathValue("id", "999")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientView(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
@@ -408,9 +408,9 @@ func TestClientViewHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/client/view/invalid", nil)
 		req.SetPathValue("id", "invalid")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientView(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
@@ -418,9 +418,9 @@ func TestClientViewHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/client/view/-1", nil)
 		req.SetPathValue("id", "-1")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientView(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -432,9 +432,9 @@ func TestClientCreateHandler(t *testing.T) {
 	t.Run("show create form", func(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/client/create", nil)
 		rr := httptest.NewRecorder()
-		
+
 		app.clientCreate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "<form method=\"POST\">")
@@ -448,23 +448,23 @@ func TestClientCreatePostHandler(t *testing.T) {
 
 	t.Run("successful client creation", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		form := url.Values{}
 		form.Add("name", "New Test Client")
 		form.Add("email", "newtest@example.com")
 		form.Add("hourly_rate", "75.00")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientCreatePost(rr, req)
-		
+
 		// Should redirect to the new client view
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		assert.Contains(t, location, "/client/view/")
-		
+
 		// Verify the client was actually created in the database
 		clients, err := app.clients.GetAll()
 		require.NoError(t, err)
@@ -474,21 +474,21 @@ func TestClientCreatePostHandler(t *testing.T) {
 
 	t.Run("validation error - empty name", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		form := url.Values{}
 		form.Add("name", "")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientCreatePost(rr, req)
-		
+
 		// Should return form with validation error
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Name is required")
-		
+
 		// Verify no client was created
 		clients, err := app.clients.GetAll()
 		require.NoError(t, err)
@@ -497,24 +497,24 @@ func TestClientCreatePostHandler(t *testing.T) {
 
 	t.Run("validation error - name too long", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Create a name longer than 255 characters
 		longName := strings.Repeat("a", 256)
-		
+
 		form := url.Values{}
 		form.Add("name", longName)
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientCreatePost(rr, req)
-		
+
 		// Should return form with validation error
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Name must be shorter than 255 characters")
-		
+
 		// Verify no client was created
 		clients, err := app.clients.GetAll()
 		require.NoError(t, err)
@@ -525,9 +525,9 @@ func TestClientCreatePostHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader("invalid-form-data"))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientCreatePost(rr, req)
-		
+
 		// The form parsing doesn't fail on "invalid-form-data", but validation does
 		// since no proper "name" field is provided, leading to validation error
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
@@ -540,48 +540,48 @@ func TestHandlersIntegration(t *testing.T) {
 
 	t.Run("full workflow - create and view client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// 1. Create a client via POST
 		form := url.Values{}
 		form.Add("name", "Integration Test Client")
 		form.Add("email", "integration@example.com")
 		form.Add("hourly_rate", "85.00")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/client/create", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientCreatePost(rr, req)
-		
+
 		// Extract the client ID from the redirect URL
 		require.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		require.Contains(t, location, "/client/view/")
-		
+
 		// Extract ID from URL
 		parts := strings.Split(location, "/")
 		idStr := parts[len(parts)-1]
 		id, err := strconv.Atoi(idStr)
 		require.NoError(t, err)
-		
+
 		// 2. View the created client
 		req = httptest.NewRequest(http.MethodGet, location, nil)
 		req.SetPathValue("id", idStr)
 		rr = httptest.NewRecorder()
-		
+
 		app.clientView(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Integration Test Client")
 		assert.Contains(t, body, fmt.Sprintf("ID: %d", id))
-		
+
 		// 3. Verify it appears on home page
 		req = httptest.NewRequest(http.MethodGet, "/", nil)
 		rr = httptest.NewRecorder()
-		
+
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
 		assert.Contains(t, body, "Integration Test Client")
@@ -594,16 +594,16 @@ func TestClientUpdateHandler(t *testing.T) {
 
 	t.Run("show update form for existing client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		id := testDB.InsertTestClient(t, "Test Client")
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/update/%d", id), nil)
 		req.SetPathValue("id", strconv.Itoa(id))
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "<form method=\"POST\">")
@@ -613,13 +613,13 @@ func TestClientUpdateHandler(t *testing.T) {
 
 	t.Run("update form for non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/client/update/999", nil)
 		req.SetPathValue("id", "999")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdate(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
@@ -627,9 +627,9 @@ func TestClientUpdateHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/client/update/invalid", nil)
 		req.SetPathValue("id", "invalid")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdate(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
@@ -637,9 +637,9 @@ func TestClientUpdateHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/client/update/-1", nil)
 		req.SetPathValue("id", "-1")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdate(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -650,27 +650,27 @@ func TestClientUpdatePostHandler(t *testing.T) {
 
 	t.Run("successful client update", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		id := testDB.InsertTestClient(t, "Original Name")
-		
+
 		form := url.Values{}
 		form.Add("name", "Updated Name")
 		form.Add("email", "updated@example.com")
 		form.Add("hourly_rate", "65.00")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(id))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdatePost(rr, req)
-		
+
 		// Should redirect to the client view
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		assert.Equal(t, fmt.Sprintf("/client/view/%d", id), location)
-		
+
 		// Verify the client was actually updated in the database
 		client, err := app.clients.Get(id)
 		require.NoError(t, err)
@@ -679,55 +679,55 @@ func TestClientUpdatePostHandler(t *testing.T) {
 
 	t.Run("update non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		form := url.Values{}
 		form.Add("name", "Updated Name")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/client/update/999", strings.NewReader(form.Encode()))
 		req.SetPathValue("id", "999")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdatePost(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
 	t.Run("update with invalid ID", func(t *testing.T) {
 		form := url.Values{}
 		form.Add("name", "Updated Name")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/client/update/invalid", strings.NewReader(form.Encode()))
 		req.SetPathValue("id", "invalid")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdatePost(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
 	t.Run("validation error - empty name", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		id := testDB.InsertTestClient(t, "Original Name")
-		
+
 		form := url.Values{}
 		form.Add("name", "")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(id))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdatePost(rr, req)
-		
+
 		// Should return form with validation error
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Name is required")
-		
+
 		// Verify the client was not updated
 		client, err := app.clients.Get(id)
 		require.NoError(t, err)
@@ -736,28 +736,28 @@ func TestClientUpdatePostHandler(t *testing.T) {
 
 	t.Run("validation error - name too long", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		id := testDB.InsertTestClient(t, "Original Name")
-		
+
 		// Create a name longer than 255 characters
 		longName := strings.Repeat("a", 256)
-		
+
 		form := url.Values{}
 		form.Add("name", longName)
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(id))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdatePost(rr, req)
-		
+
 		// Should return form with validation error
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Name must be shorter than 255 characters")
-		
+
 		// Verify the client was not updated
 		client, err := app.clients.Get(id)
 		require.NoError(t, err)
@@ -771,59 +771,59 @@ func TestUpdateHandlersIntegration(t *testing.T) {
 
 	t.Run("full update workflow", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// 1. Create a client
 		originalName := "Original Client Name"
 		id := testDB.InsertTestClient(t, originalName)
-		
+
 		// 2. Get the update form
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/update/%d", id), nil)
 		req.SetPathValue("id", strconv.Itoa(id))
 		rr := httptest.NewRecorder()
-		
+
 		app.clientUpdate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, originalName) // Should show current name
-		
+
 		// 3. Submit the update
 		newName := "Updated Client Name"
 		form := url.Values{}
 		form.Add("name", newName)
 		form.Add("email", "updatedclient@example.com")
 		form.Add("hourly_rate", "95.00")
-		
+
 		req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/update/%d", id), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(id))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr = httptest.NewRecorder()
-		
+
 		app.clientUpdatePost(rr, req)
-		
+
 		// Should redirect to client view
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		assert.Equal(t, fmt.Sprintf("/client/view/%d", id), location)
-		
+
 		// 4. Verify the client view shows updated name
 		req = httptest.NewRequest(http.MethodGet, location, nil)
 		req.SetPathValue("id", strconv.Itoa(id))
 		rr = httptest.NewRecorder()
-		
+
 		app.clientView(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
 		assert.Contains(t, body, newName)
 		assert.NotContains(t, body, originalName)
-		
+
 		// 5. Verify home page shows updated name
 		req = httptest.NewRequest(http.MethodGet, "/", nil)
 		rr = httptest.NewRecorder()
-		
+
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
 		assert.Contains(t, body, newName)
@@ -839,17 +839,17 @@ func TestProjectViewHandler(t *testing.T) {
 	t.Run("view existing project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and project
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/project/view/%d", projectID), nil)
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		rr := httptest.NewRecorder()
-		
+
 		app.projectView(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Test Project")
@@ -859,13 +859,13 @@ func TestProjectViewHandler(t *testing.T) {
 
 	t.Run("view non-existent project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/project/view/999", nil)
 		req.SetPathValue("id", "999")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectView(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
@@ -873,9 +873,9 @@ func TestProjectViewHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/project/view/invalid", nil)
 		req.SetPathValue("id", "invalid")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectView(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -886,16 +886,16 @@ func TestProjectCreateHandler(t *testing.T) {
 
 	t.Run("show create form", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client
 		clientID := testDB.InsertTestClient(t, "Test Client")
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/%d/project/create", clientID), nil)
 		req.SetPathValue("id", strconv.Itoa(clientID))
 		rr := httptest.NewRecorder()
-		
+
 		app.projectCreate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "<form method=\"POST\">")
@@ -904,13 +904,13 @@ func TestProjectCreateHandler(t *testing.T) {
 
 	t.Run("create form for non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/client/999/project/create", nil)
 		req.SetPathValue("id", "999")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectCreate(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -922,27 +922,27 @@ func TestProjectCreatePostHandler(t *testing.T) {
 	t.Run("successful project creation", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client
 		clientID := testDB.InsertTestClient(t, "Test Client")
-		
+
 		form := url.Values{}
 		form.Add("name", "New Test Project")
 		form.Add("status", "Estimating")
 		form.Add("hourly_rate", "50.00")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/%d/project/create", clientID), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(clientID))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectCreatePost(rr, req)
-		
+
 		// Should redirect to the client view
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		assert.Contains(t, location, fmt.Sprintf("/client/view/%d", clientID))
-		
+
 		// Verify the project was actually created in the database
 		projects, err := app.projects.GetByClient(clientID)
 		require.NoError(t, err)
@@ -954,25 +954,25 @@ func TestProjectCreatePostHandler(t *testing.T) {
 	t.Run("validation error - empty name", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client
 		clientID := testDB.InsertTestClient(t, "Test Client")
-		
+
 		form := url.Values{}
 		form.Add("name", "")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/%d/project/create", clientID), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(clientID))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectCreatePost(rr, req)
-		
+
 		// Should return form with validation error
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Name is required")
-		
+
 		// Verify no project was created
 		projects, err := app.projects.GetByClient(clientID)
 		require.NoError(t, err)
@@ -982,17 +982,17 @@ func TestProjectCreatePostHandler(t *testing.T) {
 	t.Run("create project for non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		form := url.Values{}
 		form.Add("name", "Test Project")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/client/999/project/create", strings.NewReader(form.Encode()))
 		req.SetPathValue("id", "999")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectCreatePost(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -1003,44 +1003,44 @@ func TestProjectCreateDefaulting(t *testing.T) {
 
 	t.Run("project form defaults from client fields", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client with specific values
-		clientID := testDB.InsertTestClientWithDefaults(t, "Test Client", 125.50, 
+		clientID := testDB.InsertTestClientWithDefaults(t, "Test Client", 125.50,
 			"Additional Info Value", "Additional Info 2 Value",
 			"cc@example.com", "CC Description Value")
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/%d/project/create", clientID), nil)
 		req.SetPathValue("id", strconv.Itoa(clientID))
 		rr := httptest.NewRecorder()
-		
+
 		app.projectCreate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
-		
+
 		// Check that form defaults are populated from client
-		assert.Contains(t, body, `value="125.50"`) // Hourly rate
-		assert.Contains(t, body, `value="Additional Info Value"`) // Additional Info
-		assert.Contains(t, body, `value="Additional Info 2 Value"`) // Additional Info 2  
-		assert.Contains(t, body, `value="cc@example.com"`) // Invoice CC Email
-		assert.Contains(t, body, `value="CC Description Value"`) // Invoice CC Description
+		assert.Contains(t, body, `value="125.50"`)                  // Hourly rate
+		assert.Contains(t, body, `value="Additional Info Value"`)   // Additional Info
+		assert.Contains(t, body, `value="Additional Info 2 Value"`) // Additional Info 2
+		assert.Contains(t, body, `value="cc@example.com"`)          // Invoice CC Email
+		assert.Contains(t, body, `value="CC Description Value"`)    // Invoice CC Description
 	})
 
 	t.Run("project form handles empty client fields", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client with empty optional fields
 		clientID := testDB.InsertTestClientWithDefaults(t, "Test Client", 75.00, "", "", "", "")
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/%d/project/create", clientID), nil)
 		req.SetPathValue("id", strconv.Itoa(clientID))
 		rr := httptest.NewRecorder()
-		
+
 		app.projectCreate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
-		
+
 		// Check that hourly rate still defaults but other fields are empty
 		assert.Contains(t, body, `value="75.00"`) // Hourly rate should still be set
 		// Empty fields should have empty values
@@ -1056,17 +1056,17 @@ func TestTimesheetCreate(t *testing.T) {
 		testDB.TruncateTable(t, "timesheet")
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and project
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/project/%d/timesheet/create", projectID), nil)
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		rr := httptest.NewRecorder()
-		
+
 		app.timesheetCreate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "<form method=\"POST\">")
@@ -1078,41 +1078,41 @@ func TestTimesheetCreate(t *testing.T) {
 		testDB.TruncateTable(t, "timesheet")
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client
 		clientID := testDB.InsertTestClient(t, "Test Client")
-		
+
 		// Insert project with specific hourly rate
 		result, err := testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
 			VALUES (?, ?, ?, ?, ?, ?, ?)`, "Test Project", clientID, "In Progress", 95.75, "USD", 1.0, 0)
 		require.NoError(t, err)
-		
+
 		projectIDRaw, err := result.LastInsertId()
 		require.NoError(t, err)
 		projectID := int(projectIDRaw)
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/project/%d/timesheet/create", projectID), nil)
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		rr := httptest.NewRecorder()
-		
+
 		app.timesheetCreate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
-		
+
 		// Check that hourly rate defaults from project
 		assert.Contains(t, body, `value="95.75"`) // Hourly rate from project
 	})
 
 	t.Run("timesheet create for non-existent project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/project/999/timesheet/create", nil)
 		req.SetPathValue("id", "999")
 		rr := httptest.NewRecorder()
-		
+
 		app.timesheetCreate(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -1125,29 +1125,29 @@ func TestTimesheetCreatePost(t *testing.T) {
 		testDB.TruncateTable(t, "timesheet")
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and project
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
-		
+
 		form := url.Values{}
 		form.Add("work_date", "2024-01-15")
 		form.Add("hours_worked", "8.0")
 		form.Add("hourly_rate", "85.00")
 		form.Add("description", "Test timesheet entry")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/project/%d/timesheet/create", projectID), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.timesheetCreatePost(rr, req)
-		
+
 		// Should redirect to the project view
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		assert.Contains(t, location, fmt.Sprintf("/project/view/%d", projectID))
-		
+
 		// Verify the timesheet was actually created in the database
 		timesheets, err := app.timesheets.GetByProject(projectID)
 		require.NoError(t, err)
@@ -1161,25 +1161,25 @@ func TestTimesheetCreatePost(t *testing.T) {
 		testDB.TruncateTable(t, "timesheet")
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and project
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
-		
+
 		form := url.Values{}
 		form.Add("work_date", "")
 		form.Add("hours_worked", "")
 		form.Add("hourly_rate", "")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/project/%d/timesheet/create", projectID), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.timesheetCreatePost(rr, req)
-		
+
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
-		
+
 		// Verify no timesheet was created
 		timesheets, err := app.timesheets.GetByProject(projectID)
 		require.NoError(t, err)
@@ -1188,19 +1188,19 @@ func TestTimesheetCreatePost(t *testing.T) {
 
 	t.Run("timesheet create for non-existent project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
-		
+
 		form := url.Values{}
 		form.Add("work_date", "2024-01-15")
 		form.Add("hours_worked", "8.0")
 		form.Add("hourly_rate", "85.00")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/project/999/timesheet/create", strings.NewReader(form.Encode()))
 		req.SetPathValue("id", "999")
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.timesheetCreatePost(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -1212,24 +1212,24 @@ func TestProjectsList(t *testing.T) {
 	t.Run("show projects list with projects", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and projects
 		clientID := testDB.InsertTestClient(t, "Test Client")
-		
+
 		// Insert a few projects
 		_, err := testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
 			VALUES (?, ?, ?, ?, ?, ?, ?)`, "Project 1", clientID, "In Progress", 100.0, "USD", 1.0, 0)
 		require.NoError(t, err)
-		
+
 		_, err = testDB.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice) 
 			VALUES (?, ?, ?, ?, ?, ?, ?)`, "Project 2", clientID, "Estimating", 125.0, "USD", 1.0, 0)
 		require.NoError(t, err)
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/projects", nil)
 		rr := httptest.NewRecorder()
-		
+
 		app.projectsList(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "<h2>All Projects</h2>")
@@ -1243,12 +1243,12 @@ func TestProjectsList(t *testing.T) {
 	t.Run("show projects list when empty", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/projects", nil)
 		rr := httptest.NewRecorder()
-		
+
 		app.projectsList(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "<h2>All Projects</h2>")
@@ -1263,17 +1263,17 @@ func TestProjectUpdateHandler(t *testing.T) {
 	t.Run("show update form for existing project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and project
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		projectID := testDB.InsertTestProject(t, "Test Project", clientID)
-		
+
 		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/project/update/%d", projectID), nil)
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		rr := httptest.NewRecorder()
-		
+
 		app.projectUpdate(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "<form method=\"POST\">")
@@ -1283,13 +1283,13 @@ func TestProjectUpdateHandler(t *testing.T) {
 
 	t.Run("update form for non-existent project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
-		
+
 		req := httptest.NewRequest(http.MethodGet, "/project/update/999", nil)
 		req.SetPathValue("id", "999")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectUpdate(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -1301,28 +1301,28 @@ func TestProjectUpdatePostHandler(t *testing.T) {
 	t.Run("successful project update", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and project
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		projectID := testDB.InsertTestProject(t, "Original Project", clientID)
-		
+
 		form := url.Values{}
 		form.Add("name", "Updated Project")
 		form.Add("status", "In Progress")
 		form.Add("hourly_rate", "60.00")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/project/update/%d", projectID), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectUpdatePost(rr, req)
-		
+
 		// Should redirect to the client view
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		assert.Contains(t, location, fmt.Sprintf("/client/view/%d", clientID))
-		
+
 		// Verify the project was actually updated in the database
 		project, err := app.projects.Get(projectID)
 		require.NoError(t, err)
@@ -1332,26 +1332,26 @@ func TestProjectUpdatePostHandler(t *testing.T) {
 	t.Run("validation error - empty name", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and project
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		projectID := testDB.InsertTestProject(t, "Original Project", clientID)
-		
+
 		form := url.Values{}
 		form.Add("name", "")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/project/update/%d", projectID), strings.NewReader(form.Encode()))
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectUpdatePost(rr, req)
-		
+
 		// Should return form with validation error
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Name is required")
-		
+
 		// Verify the project was not updated
 		project, err := app.projects.Get(projectID)
 		require.NoError(t, err)
@@ -1366,27 +1366,27 @@ func TestProjectDeleteHandler(t *testing.T) {
 	t.Run("successful project delete", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert test client and project
 		clientID := testDB.InsertTestClient(t, "Test Client")
 		projectID := testDB.InsertTestProject(t, "Project to Delete", clientID)
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/project/delete/%d", projectID), nil)
 		req.SetPathValue("id", strconv.Itoa(projectID))
 		rr := httptest.NewRecorder()
-		
+
 		app.projectDelete(rr, req)
-		
+
 		// Should redirect to client view page
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		assert.Contains(t, location, fmt.Sprintf("/client/view/%d", clientID))
-		
+
 		// Verify the project was soft deleted
 		projects, err := app.projects.GetByClient(clientID)
 		require.NoError(t, err)
 		assert.Empty(t, projects)
-		
+
 		// Verify the project can't be retrieved via Get
 		_, err = app.projects.Get(projectID)
 		assert.Error(t, err)
@@ -1395,13 +1395,13 @@ func TestProjectDeleteHandler(t *testing.T) {
 
 	t.Run("delete non-existent project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/project/delete/999", nil)
 		req.SetPathValue("id", "999")
 		rr := httptest.NewRecorder()
-		
+
 		app.projectDelete(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -1412,26 +1412,26 @@ func TestClientDeleteHandler(t *testing.T) {
 
 	t.Run("successful client delete", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		id := testDB.InsertTestClient(t, "Client to Delete")
-		
+
 		req := httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/delete/%d", id), nil)
 		req.SetPathValue("id", strconv.Itoa(id))
 		rr := httptest.NewRecorder()
-		
+
 		app.clientDelete(rr, req)
-		
+
 		// Should redirect to home page
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
 		location := rr.Header().Get("Location")
 		assert.Equal(t, "/", location)
-		
+
 		// Verify the client was soft deleted (no longer appears in GetAll)
 		clients, err := app.clients.GetAll()
 		require.NoError(t, err)
 		assert.Empty(t, clients)
-		
+
 		// Verify the client can't be retrieved via Get
 		_, err = app.clients.Get(id)
 		assert.Error(t, err)
@@ -1440,13 +1440,13 @@ func TestClientDeleteHandler(t *testing.T) {
 
 	t.Run("delete non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		req := httptest.NewRequest(http.MethodPost, "/client/delete/999", nil)
 		req.SetPathValue("id", "999")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientDelete(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
@@ -1454,9 +1454,9 @@ func TestClientDeleteHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/client/delete/invalid", nil)
 		req.SetPathValue("id", "invalid")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientDelete(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 
@@ -1464,9 +1464,9 @@ func TestClientDeleteHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodPost, "/client/delete/-1", nil)
 		req.SetPathValue("id", "-1")
 		rr := httptest.NewRecorder()
-		
+
 		app.clientDelete(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
 	})
 }
@@ -1477,56 +1477,56 @@ func TestDeleteHandlersIntegration(t *testing.T) {
 
 	t.Run("full delete workflow", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// 1. Create clients
 		client1ID := testDB.InsertTestClient(t, "Client 1")
 		client2ID := testDB.InsertTestClient(t, "Client 2")
 		_ = testDB.InsertTestClient(t, "Client 3")
-		
+
 		// 2. Verify all clients appear in home page
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
 		assert.Contains(t, body, "Client 1")
 		assert.Contains(t, body, "Client 2")
 		assert.Contains(t, body, "Client 3")
-		
+
 		// 3. Delete one client
 		req = httptest.NewRequest(http.MethodPost, fmt.Sprintf("/client/delete/%d", client2ID), nil)
 		req.SetPathValue("id", strconv.Itoa(client2ID))
 		rr = httptest.NewRecorder()
 		app.clientDelete(rr, req)
-		
+
 		assert.Equal(t, http.StatusSeeOther, rr.Code)
-		
+
 		// 4. Verify home page only shows remaining clients
 		req = httptest.NewRequest(http.MethodGet, "/", nil)
 		rr = httptest.NewRecorder()
 		app.home(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
 		assert.Contains(t, body, "Client 1")
 		assert.NotContains(t, body, "Client 2") // Deleted client should not appear
 		assert.Contains(t, body, "Client 3")
-		
+
 		// 5. Verify deleted client detail page returns 404
 		req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/view/%d", client2ID), nil)
 		req.SetPathValue("id", strconv.Itoa(client2ID))
 		rr = httptest.NewRecorder()
 		app.clientView(rr, req)
-		
+
 		assert.Equal(t, http.StatusNotFound, rr.Code)
-		
+
 		// 6. Verify remaining clients still accessible
 		req = httptest.NewRequest(http.MethodGet, fmt.Sprintf("/client/view/%d", client1ID), nil)
 		req.SetPathValue("id", strconv.Itoa(client1ID))
 		rr = httptest.NewRecorder()
 		app.clientView(rr, req)
-		
+
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
 		assert.Contains(t, body, "Client 1")

@@ -92,7 +92,7 @@ func (app *application) home(res http.ResponseWriter, req *http.Request) {
 			pageSize = ps
 		}
 	}
-	
+
 	// Get current page from query parameter
 	currentPage := 1
 	if pageParam := req.URL.Query().Get("page"); pageParam != "" {
@@ -100,26 +100,26 @@ func (app *application) home(res http.ResponseWriter, req *http.Request) {
 			currentPage = p
 		}
 	}
-	
+
 	// Calculate offset
 	offset := int64((currentPage - 1) * pageSize)
-	
+
 	// Get paginated clients and total count
 	clients, err := app.clients.GetWithPagination(int64(pageSize), offset)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
 	}
-	
+
 	totalCount, err := app.clients.GetCount()
 	if err != nil {
 		app.serverError(res, req, err)
 		return
 	}
-	
+
 	// Calculate pagination info
 	totalPages := int((totalCount + int64(pageSize) - 1) / int64(pageSize))
-	
+
 	pagination := &paginationData{
 		CurrentPage: currentPage,
 		TotalPages:  totalPages,
@@ -244,7 +244,7 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
-	
+
 	form.CheckField(validator.NotBlank(form.Email), "email", "Email is required")
 	form.CheckField(validator.Matches(strings.ToLower(form.Email), validator.EmailRegex), "email", "Email must be a valid email address")
 	form.CheckField(validator.MaxChars(form.Email, NAME_LENGTH), "email", fmt.Sprintf("Email must be shorter than %d characters", NAME_LENGTH))
@@ -264,7 +264,7 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 		form.CheckField(validator.Matches(strings.ToLower(form.InvoiceCCEmail), validator.EmailRegex), "invoice_cc_email", "Invoice CC email must be a valid email address")
 	}
 
-	// Validate optional field lengths  
+	// Validate optional field lengths
 	form.CheckField(validator.MaxChars(form.Phone, NAME_LENGTH), "phone", fmt.Sprintf("Phone must be shorter than %d characters", NAME_LENGTH))
 	form.CheckField(validator.MaxChars(form.Address1, NAME_LENGTH), "address1", fmt.Sprintf("Address 1 must be shorter than %d characters", NAME_LENGTH))
 	form.CheckField(validator.MaxChars(form.Address2, NAME_LENGTH), "address2", fmt.Sprintf("Address 2 must be shorter than %d characters", NAME_LENGTH))
@@ -288,7 +288,7 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 
 	// Convert string fields to pointers for optional fields
 	var phone, address1, address2, address3, city, state, zipCode, notes, additionalInfo, additionalInfo2, billTo, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string
-	
+
 	if form.Phone != "" {
 		phone = &form.Phone
 	}
@@ -333,23 +333,23 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 	}
 
 	id, err := app.clients.Insert(
-		form.Name, 
-		form.Email, 
-		phone, 
-		address1, 
-		address2, 
-		address3, 
-		city, 
-		state, 
-		zipCode, 
-		hourlyRate, 
-		notes, 
-		additionalInfo, 
-		additionalInfo2, 
-		billTo, 
-		form.IncludeAddressOnInvoice, 
-		invoiceCCEmail, 
-		invoiceCCDescription, 
+		form.Name,
+		form.Email,
+		phone,
+		address1,
+		address2,
+		address3,
+		city,
+		state,
+		zipCode,
+		hourlyRate,
+		notes,
+		additionalInfo,
+		additionalInfo2,
+		billTo,
+		form.IncludeAddressOnInvoice,
+		invoiceCCEmail,
+		invoiceCCDescription,
 		universityAffiliation,
 	)
 	if err != nil {
@@ -419,20 +419,20 @@ func formToProject(form projectForm, clientID, projectID int) (models.Project, e
 			deadline = &d
 		}
 	}
-	
+
 	var scheduledStart *time.Time
 	if form.ScheduledStart != "" {
 		if d, err := time.Parse("2006-01-02", form.ScheduledStart); err == nil {
 			scheduledStart = &d
 		}
 	}
-	
+
 	// Parse hourly rate
 	hourlyRate, err := strconv.ParseFloat(form.HourlyRate, 64)
 	if err != nil {
 		return models.Project{}, fmt.Errorf("invalid hourly rate: %w", err)
 	}
-	
+
 	// Parse discount percent
 	var discountPercent *float64
 	if form.DiscountPercent != "" {
@@ -440,7 +440,7 @@ func formToProject(form projectForm, clientID, projectID int) (models.Project, e
 			discountPercent = &dp
 		}
 	}
-	
+
 	// Parse adjustment amount
 	var adjustmentAmount *float64
 	if form.AdjustmentAmount != "" {
@@ -448,7 +448,7 @@ func formToProject(form projectForm, clientID, projectID int) (models.Project, e
 			adjustmentAmount = &aa
 		}
 	}
-	
+
 	// Parse currency conversion rate
 	currencyConversionRate := 1.0
 	if form.CurrencyConversionRate != "" {
@@ -456,13 +456,13 @@ func formToProject(form projectForm, clientID, projectID int) (models.Project, e
 			currencyConversionRate = ccr
 		}
 	}
-	
+
 	// Set defaults
 	currencyDisplay := form.CurrencyDisplay
 	if currencyDisplay == "" {
 		currencyDisplay = "USD"
 	}
-	
+
 	return models.Project{
 		ID:                     projectID,
 		Name:                   form.Name,
@@ -496,7 +496,7 @@ func projectToForm(project models.Project) projectForm {
 		}
 		return t.Format("2006-01-02")
 	}
-	
+
 	// Helper to format float pointers
 	formatFloatPtr := func(f *float64) string {
 		if f == nil {
@@ -504,7 +504,7 @@ func projectToForm(project models.Project) projectForm {
 		}
 		return fmt.Sprintf("%.4f", *f)
 	}
-	
+
 	return projectForm{
 		Name:                   project.Name,
 		Status:                 project.Status,
@@ -545,7 +545,7 @@ func (app *application) clientUpdatePost(res http.ResponseWriter, req *http.Requ
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
-	
+
 	form.CheckField(validator.NotBlank(form.Email), "email", "Email is required")
 	form.CheckField(validator.Matches(strings.ToLower(form.Email), validator.EmailRegex), "email", "Email must be a valid email address")
 	form.CheckField(validator.MaxChars(form.Email, NAME_LENGTH), "email", fmt.Sprintf("Email must be shorter than %d characters", NAME_LENGTH))
@@ -565,7 +565,7 @@ func (app *application) clientUpdatePost(res http.ResponseWriter, req *http.Requ
 		form.CheckField(validator.Matches(strings.ToLower(form.InvoiceCCEmail), validator.EmailRegex), "invoice_cc_email", "Invoice CC email must be a valid email address")
 	}
 
-	// Validate optional field lengths  
+	// Validate optional field lengths
 	form.CheckField(validator.MaxChars(form.Phone, NAME_LENGTH), "phone", fmt.Sprintf("Phone must be shorter than %d characters", NAME_LENGTH))
 	form.CheckField(validator.MaxChars(form.Address1, NAME_LENGTH), "address1", fmt.Sprintf("Address 1 must be shorter than %d characters", NAME_LENGTH))
 	form.CheckField(validator.MaxChars(form.Address2, NAME_LENGTH), "address2", fmt.Sprintf("Address 2 must be shorter than %d characters", NAME_LENGTH))
@@ -610,7 +610,7 @@ func (app *application) clientUpdatePost(res http.ResponseWriter, req *http.Requ
 
 	// Convert string fields to pointers for optional fields
 	var phone, address1, address2, address3, city, state, zipCode, notes, additionalInfo, additionalInfo2, billTo, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string
-	
+
 	if form.Phone != "" {
 		phone = &form.Phone
 	}
@@ -655,24 +655,24 @@ func (app *application) clientUpdatePost(res http.ResponseWriter, req *http.Requ
 	}
 
 	err = app.clients.Update(
-		id, 
-		form.Name, 
-		form.Email, 
-		phone, 
-		address1, 
-		address2, 
-		address3, 
-		city, 
-		state, 
-		zipCode, 
-		hourlyRate, 
-		notes, 
-		additionalInfo, 
-		additionalInfo2, 
-		billTo, 
-		form.IncludeAddressOnInvoice, 
-		invoiceCCEmail, 
-		invoiceCCDescription, 
+		id,
+		form.Name,
+		form.Email,
+		phone,
+		address1,
+		address2,
+		address3,
+		city,
+		state,
+		zipCode,
+		hourlyRate,
+		notes,
+		additionalInfo,
+		additionalInfo2,
+		billTo,
+		form.IncludeAddressOnInvoice,
+		invoiceCCEmail,
+		invoiceCCDescription,
 		universityAffiliation,
 	)
 	if err != nil {
@@ -732,14 +732,14 @@ func (app *application) projectCreate(res http.ResponseWriter, req *http.Request
 
 	data := app.newTemplateData(req)
 	data.Form = projectForm{
-		Status:                 "Estimating", // Default status
-		HourlyRate:             fmt.Sprintf("%.2f", client.HourlyRate), // Default from client
-		InvoiceCCEmail:         ptrToString(client.InvoiceCCEmail),    // Default from client
+		Status:                 "Estimating",                             // Default status
+		HourlyRate:             fmt.Sprintf("%.2f", client.HourlyRate),   // Default from client
+		InvoiceCCEmail:         ptrToString(client.InvoiceCCEmail),       // Default from client
 		InvoiceCCDescription:   ptrToString(client.InvoiceCCDescription), // Default from client
-		AdditionalInfo:         ptrToString(client.AdditionalInfo),   // Default from client
-		AdditionalInfo2:        ptrToString(client.AdditionalInfo2),  // Default from client
-		CurrencyDisplay:        "USD",        // Default currency
-		CurrencyConversionRate: "1.00000",    // Default conversion rate
+		AdditionalInfo:         ptrToString(client.AdditionalInfo),       // Default from client
+		AdditionalInfo2:        ptrToString(client.AdditionalInfo2),      // Default from client
+		CurrencyDisplay:        "USD",                                    // Default currency
+		CurrencyConversionRate: "1.00000",                                // Default conversion rate
 	}
 	data.Client = &client
 	app.render(res, req, http.StatusOK, "project_create.html", data)
@@ -774,7 +774,7 @@ func (app *application) projectCreatePost(res http.ResponseWriter, req *http.Req
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
-	
+
 	form.CheckField(validator.NotBlank(form.Status), "status", "Status is required")
 	form.CheckField(validator.NotBlank(form.HourlyRate), "hourly_rate", "Hourly rate is required")
 
@@ -865,7 +865,7 @@ func (app *application) projectUpdatePost(res http.ResponseWriter, req *http.Req
 
 	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
 	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
-	
+
 	form.CheckField(validator.NotBlank(form.Status), "status", "Status is required")
 	form.CheckField(validator.NotBlank(form.HourlyRate), "hourly_rate", "Hourly rate is required")
 
@@ -1702,7 +1702,7 @@ func (app *application) projectsList(res http.ResponseWriter, req *http.Request)
 			pageSize = ps
 		}
 	}
-	
+
 	// Get current page from query parameter
 	currentPage := 1
 	if pageParam := req.URL.Query().Get("page"); pageParam != "" {
@@ -1710,26 +1710,26 @@ func (app *application) projectsList(res http.ResponseWriter, req *http.Request)
 			currentPage = p
 		}
 	}
-	
+
 	// Calculate offset
 	offset := int64((currentPage - 1) * pageSize)
-	
+
 	// Get paginated projects and total count
 	projects, err := app.projects.GetWithPagination(int64(pageSize), offset)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
 	}
-	
+
 	totalCount, err := app.projects.GetCount()
 	if err != nil {
 		app.serverError(res, req, err)
 		return
 	}
-	
+
 	// Calculate pagination info
 	totalPages := int((totalCount + int64(pageSize) - 1) / int64(pageSize))
-	
+
 	pagination := &paginationData{
 		CurrentPage: currentPage,
 		TotalPages:  totalPages,

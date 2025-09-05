@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
 	"html/template"
 	"path/filepath"
 	"time"
+
+	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
 )
 
 type paginationData struct {
@@ -18,17 +19,17 @@ type paginationData struct {
 }
 
 type templateData struct {
-	CurrentYear     int
-	Client          *models.Client
-	Clients         []models.Client
-	Project         *models.Project
-	Projects        []models.Project
+	CurrentYear        int
+	Client             *models.Client
+	Clients            []models.Client
+	Project            *models.Project
+	Projects           []models.Project
 	ProjectsWithClient []models.ProjectWithClient
-	Timesheets      []models.Timesheet
-	Invoices        []models.Invoice
-	Settings        []models.AppSetting
-	Form            any
-	Pagination      *paginationData
+	Timesheets         []models.Timesheet
+	Invoices           []models.Invoice
+	Settings           []models.AppSetting
+	Form               any
+	Pagination         *paginationData
 }
 
 func humanDate(t time.Time) string {

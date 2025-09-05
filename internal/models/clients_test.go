@@ -18,15 +18,15 @@ func TestClientModel_Insert(t *testing.T) {
 
 	t.Run("successful insert", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		name := "Test Client"
 		email := "test@example.com"
 		hourlyRate := 50.0
 		id, err := model.Insert(name, email, nil, nil, nil, nil, nil, nil, nil, hourlyRate, nil, nil, nil, nil, true, nil, nil, nil)
-		
+
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
-		
+
 		// Verify the client was actually inserted using direct query
 		var insertedName string
 		err = testDB.DB.QueryRow("SELECT name FROM client WHERE id = ?", id).Scan(&insertedName)
@@ -36,9 +36,9 @@ func TestClientModel_Insert(t *testing.T) {
 
 	t.Run("insert empty name", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		id, err := model.Insert("", "test@example.com", nil, nil, nil, nil, nil, nil, nil, 50.0, nil, nil, nil, nil, true, nil, nil, nil)
-		
+
 		// Should succeed at database level (validation happens at handler level)
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
@@ -55,14 +55,14 @@ func TestClientModel_Get(t *testing.T) {
 
 	t.Run("get existing client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		expectedName := "Test Client"
 		id := testDB.InsertTestClient(t, expectedName)
-		
+
 		// Get the client using model
 		client, err := model.Get(id)
-		
+
 		require.NoError(t, err)
 		assert.Equal(t, id, client.ID)
 		assert.Equal(t, expectedName, client.Name)
@@ -72,9 +72,9 @@ func TestClientModel_Get(t *testing.T) {
 
 	t.Run("get non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		client, err := model.Get(999)
-		
+
 		assert.Error(t, err)
 		assert.Equal(t, ErrNoRecord, err)
 		assert.Equal(t, Client{}, client)
@@ -91,29 +91,29 @@ func TestClientModel_GetAll(t *testing.T) {
 
 	t.Run("get all with no clients", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		clients, err := model.GetAll()
-		
+
 		require.NoError(t, err)
 		assert.Empty(t, clients)
 	})
 
 	t.Run("get all with multiple clients", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert multiple clients
 		names := []string{"Client A", "Client B", "Client C"}
 		expectedIDs := make([]int, len(names))
-		
+
 		for i, name := range names {
 			expectedIDs[i] = testDB.InsertTestClient(t, name)
 		}
-		
+
 		clients, err := model.GetAll()
-		
+
 		require.NoError(t, err)
 		require.Len(t, clients, len(names))
-		
+
 		// Verify all clients are returned (SQLC orders by created_at DESC)
 		// So we expect reverse order from insertion
 		clientMap := make(map[int]string)
@@ -122,7 +122,7 @@ func TestClientModel_GetAll(t *testing.T) {
 			assert.False(t, client.Created.IsZero())
 			assert.False(t, client.Updated.IsZero())
 		}
-		
+
 		// Verify all expected clients exist regardless of order
 		for i, expectedID := range expectedIDs {
 			assert.Equal(t, names[i], clientMap[expectedID])
@@ -140,7 +140,7 @@ func TestClientModel_Integration(t *testing.T) {
 
 	t.Run("full CRUD workflow with model", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// 1. Insert a new client
 		clientName := "Integration Test Client"
 		email := "integration@example.com"
@@ -148,13 +148,13 @@ func TestClientModel_Integration(t *testing.T) {
 		id, err := model.Insert(clientName, email, nil, nil, nil, nil, nil, nil, nil, hourlyRate, nil, nil, nil, nil, true, nil, nil, nil)
 		require.NoError(t, err)
 		assert.Greater(t, id, 0)
-		
+
 		// 2. Get the client
 		client, err := model.Get(id)
 		require.NoError(t, err)
 		assert.Equal(t, id, client.ID)
 		assert.Equal(t, clientName, client.Name)
-		
+
 		// 3. Verify it appears in GetAll
 		clients, err := model.GetAll()
 		require.NoError(t, err)
@@ -168,32 +168,32 @@ func TestClientModel_Integration(t *testing.T) {
 func TestClientModelInterface(t *testing.T) {
 	testDB := testutil.SetupTestSQLite(t)
 	defer testDB.Cleanup(t)
-	
+
 	implementations := []struct {
 		name string
 		impl ClientModelInterface
 	}{
 		{"SQLite ClientModel", NewClientModel(testDB.DB)},
 	}
-	
+
 	for _, test := range implementations {
 		t.Run(test.name, func(t *testing.T) {
 			testDB.TruncateTable(t, "client")
-			
+
 			// Test that both implementations work identically
 			name := "Interface Test Client"
-			
+
 			// Insert
 			id, err := test.impl.Insert(name, "interface@example.com", nil, nil, nil, nil, nil, nil, nil, 60.0, nil, nil, nil, nil, true, nil, nil, nil)
 			require.NoError(t, err)
 			assert.Greater(t, id, 0)
-			
+
 			// Get
 			client, err := test.impl.Get(id)
 			require.NoError(t, err)
 			assert.Equal(t, id, client.ID)
 			assert.Equal(t, name, client.Name)
-			
+
 			// GetAll
 			clients, err := test.impl.GetAll()
 			require.NoError(t, err)
@@ -214,37 +214,37 @@ func TestClientModel_Update(t *testing.T) {
 
 	t.Run("successful update", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		originalName := "Original Client"
 		id := testDB.InsertTestClient(t, originalName)
-		
+
 		// Update the client
 		newName := "Updated Client"
 		newEmail := "updated@example.com"
 		newHourlyRate := 65.0
 		err := model.Update(id, newName, newEmail, nil, nil, nil, nil, nil, nil, nil, newHourlyRate, nil, nil, nil, nil, true, nil, nil, nil)
 		require.NoError(t, err)
-		
+
 		// Verify the client was updated
 		client, err := model.Get(id)
 		require.NoError(t, err)
 		assert.Equal(t, id, client.ID)
 		assert.Equal(t, newName, client.Name)
 		assert.False(t, client.Updated.IsZero())
-		
+
 		// Verify the updated_at timestamp changed (it should be after creation)
 		assert.True(t, client.Updated.After(client.Created) || client.Updated.Equal(client.Created))
 	})
 
 	t.Run("update non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		err := model.Update(999, "New Name", "new@example.com", nil, nil, nil, nil, nil, nil, nil, 45.0, nil, nil, nil, nil, true, nil, nil, nil)
-		
+
 		// Should not return an error (MySQL UPDATE doesn't fail for non-existent rows)
 		require.NoError(t, err)
-		
+
 		// Verify no client exists with this name
 		clients, err := model.GetAll()
 		require.NoError(t, err)
@@ -253,15 +253,15 @@ func TestClientModel_Update(t *testing.T) {
 
 	t.Run("update with empty name", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		originalName := "Original Client"
 		id := testDB.InsertTestClient(t, originalName)
-		
+
 		// Update with empty name (should succeed at database level)
 		err := model.Update(id, "", "empty@example.com", nil, nil, nil, nil, nil, nil, nil, 35.0, nil, nil, nil, nil, true, nil, nil, nil)
 		require.NoError(t, err)
-		
+
 		// Verify the client was updated
 		client, err := model.Get(id)
 		require.NoError(t, err)
@@ -273,37 +273,37 @@ func TestClientModel_Update(t *testing.T) {
 func TestClientModelInterface_Update(t *testing.T) {
 	testDB := testutil.SetupTestSQLite(t)
 	defer testDB.Cleanup(t)
-	
+
 	implementations := []struct {
 		name string
 		impl ClientModelInterface
 	}{
 		{"SQLite ClientModel", NewClientModel(testDB.DB)},
 	}
-	
+
 	for _, test := range implementations {
 		t.Run(test.name, func(t *testing.T) {
 			testDB.TruncateTable(t, "client")
-			
+
 			// Test that both implementations work identically for Update
 			originalName := "Interface Test Client"
-			
+
 			// Insert
 			id, err := test.impl.Insert(originalName, "interface2@example.com", nil, nil, nil, nil, nil, nil, nil, 70.0, nil, nil, nil, nil, true, nil, nil, nil)
 			require.NoError(t, err)
 			assert.Greater(t, id, 0)
-			
+
 			// Update
 			newName := "Updated Interface Test Client"
 			err = test.impl.Update(id, newName, "updated_interface@example.com", nil, nil, nil, nil, nil, nil, nil, 80.0, nil, nil, nil, nil, true, nil, nil, nil)
 			require.NoError(t, err)
-			
+
 			// Get and verify update
 			client, err := test.impl.Get(id)
 			require.NoError(t, err)
 			assert.Equal(t, id, client.ID)
 			assert.Equal(t, newName, client.Name)
-			
+
 			// Verify in GetAll
 			clients, err := test.impl.GetAll()
 			require.NoError(t, err)
@@ -324,31 +324,31 @@ func TestClientModel_Delete(t *testing.T) {
 
 	t.Run("successful delete", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert a test client
 		originalName := "Client to Delete"
 		id := testDB.InsertTestClient(t, originalName)
-		
+
 		// Verify client exists
 		client, err := model.Get(id)
 		require.NoError(t, err)
 		assert.Equal(t, originalName, client.Name)
 		assert.Nil(t, client.DeletedAt)
-		
+
 		// Delete the client
 		err = model.Delete(id)
 		require.NoError(t, err)
-		
+
 		// Verify the client is no longer returned by Get (soft deleted)
 		_, err = model.Get(id)
 		assert.Error(t, err)
 		assert.Equal(t, ErrNoRecord, err)
-		
+
 		// Verify the client is no longer in GetAll
 		clients, err := model.GetAll()
 		require.NoError(t, err)
 		assert.Empty(t, clients)
-		
+
 		// Verify the client still exists in database but with deleted_at set
 		var deletedAt interface{}
 		err = testDB.DB.QueryRow("SELECT deleted_at FROM client WHERE id = ?", id).Scan(&deletedAt)
@@ -358,26 +358,26 @@ func TestClientModel_Delete(t *testing.T) {
 
 	t.Run("delete non-existent client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		err := model.Delete(999)
-		
+
 		// Should not return an error (SQLite UPDATE doesn't fail for non-existent rows)
 		require.NoError(t, err)
 	})
 
 	t.Run("delete already deleted client", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert and delete a client
 		originalName := "Already Deleted Client"
 		id := testDB.InsertTestClient(t, originalName)
 		err := model.Delete(id)
 		require.NoError(t, err)
-		
+
 		// Try to delete again
 		err = model.Delete(id)
 		require.NoError(t, err) // Should not error, but should have no effect
-		
+
 		// Verify still deleted
 		_, err = model.Get(id)
 		assert.Error(t, err)
@@ -395,21 +395,21 @@ func TestClientModel_SoftDeleteIntegration(t *testing.T) {
 
 	t.Run("soft delete excludes clients from queries", func(t *testing.T) {
 		testDB.TruncateTable(t, "client")
-		
+
 		// Insert multiple clients
 		activeClient := testDB.InsertTestClient(t, "Active Client")
 		deletedClient := testDB.InsertTestClient(t, "Deleted Client")
 		anotherActiveClient := testDB.InsertTestClient(t, "Another Active Client")
-		
+
 		// Delete one client
 		err := model.Delete(deletedClient)
 		require.NoError(t, err)
-		
+
 		// Verify GetAll only returns active clients
 		clients, err := model.GetAll()
 		require.NoError(t, err)
 		require.Len(t, clients, 2)
-		
+
 		// Verify the correct clients are returned
 		clientIDs := make([]int, len(clients))
 		for i, client := range clients {
@@ -418,12 +418,12 @@ func TestClientModel_SoftDeleteIntegration(t *testing.T) {
 		assert.Contains(t, clientIDs, activeClient)
 		assert.Contains(t, clientIDs, anotherActiveClient)
 		assert.NotContains(t, clientIDs, deletedClient)
-		
+
 		// Verify Get returns active clients
 		activeClientResult, err := model.Get(activeClient)
 		require.NoError(t, err)
 		assert.Equal(t, "Active Client", activeClientResult.Name)
-		
+
 		// Verify Get doesn't return deleted client
 		_, err = model.Get(deletedClient)
 		assert.Error(t, err)

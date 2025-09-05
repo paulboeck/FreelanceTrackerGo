@@ -79,7 +79,7 @@ func NewProjectModel(database *sql.DB) *ProjectModel {
 // Insert adds a new project to the database and returns its ID
 func (p *ProjectModel) Insert(project Project) (int, error) {
 	ctx := context.Background()
-	
+
 	// Helper function to convert *time.Time to sql.NullString for dates
 	timeToNullString := func(t *time.Time) sql.NullString {
 		if t == nil {
@@ -87,7 +87,7 @@ func (p *ProjectModel) Insert(project Project) (int, error) {
 		}
 		return sql.NullString{String: t.Format("2006-01-02"), Valid: true}
 	}
-	
+
 	// Helper function to convert string to sql.NullString
 	stringToNullString := func(s string) sql.NullString {
 		if s == "" {
@@ -95,7 +95,7 @@ func (p *ProjectModel) Insert(project Project) (int, error) {
 		}
 		return sql.NullString{String: s, Valid: true}
 	}
-	
+
 	// Helper function to convert *float64 to sql.NullFloat64
 	floatToNullFloat64 := func(f *float64) sql.NullFloat64 {
 		if f == nil {
@@ -103,7 +103,7 @@ func (p *ProjectModel) Insert(project Project) (int, error) {
 		}
 		return sql.NullFloat64{Float64: *f, Valid: true}
 	}
-	
+
 	params := db.InsertProjectParams{
 		Name:                   project.Name,
 		ClientID:               int64(project.ClientID),
@@ -125,12 +125,12 @@ func (p *ProjectModel) Insert(project Project) (int, error) {
 		FlatFeeInvoice:         0, // Convert bool to int64 (0 = false, 1 = true)
 		Notes:                  stringToNullString(project.Notes),
 	}
-	
+
 	// Convert bool to int64 for SQLite
 	if project.FlatFeeInvoice {
 		params.FlatFeeInvoice = 1
 	}
-	
+
 	id, err := p.queries.InsertProject(ctx, params)
 	if err != nil {
 		return 0, err
@@ -272,7 +272,7 @@ func (p *ProjectModel) GetByClient(clientID int) ([]Project, error) {
 // Update modifies an existing project in the database
 func (p *ProjectModel) Update(project Project) error {
 	ctx := context.Background()
-	
+
 	// Helper functions (reused from Insert method)
 	timeToNullString := func(t *time.Time) sql.NullString {
 		if t == nil {
@@ -280,21 +280,21 @@ func (p *ProjectModel) Update(project Project) error {
 		}
 		return sql.NullString{String: t.Format("2006-01-02"), Valid: true}
 	}
-	
+
 	stringToNullString := func(s string) sql.NullString {
 		if s == "" {
 			return sql.NullString{Valid: false}
 		}
 		return sql.NullString{String: s, Valid: true}
 	}
-	
+
 	floatToNullFloat64 := func(f *float64) sql.NullFloat64 {
 		if f == nil {
 			return sql.NullFloat64{Valid: false}
 		}
 		return sql.NullFloat64{Float64: *f, Valid: true}
 	}
-	
+
 	params := db.UpdateProjectParams{
 		Name:                   project.Name,
 		Status:                 project.Status,
@@ -316,12 +316,12 @@ func (p *ProjectModel) Update(project Project) error {
 		Notes:                  stringToNullString(project.Notes),
 		ID:                     int64(project.ID),
 	}
-	
+
 	// Convert bool to int64 for SQLite
 	if project.FlatFeeInvoice {
 		params.FlatFeeInvoice = 1
 	}
-	
+
 	return p.queries.UpdateProject(ctx, params)
 }
 
@@ -363,7 +363,7 @@ func (p *ProjectModel) convertPaginationRowToProjectWithClient(row db.GetProject
 		}
 		return ""
 	}
-	
+
 	// Helper function to convert sql.NullFloat64 to *float64
 	nullFloat64ToFloat := func(nf sql.NullFloat64) *float64 {
 		if nf.Valid {
@@ -371,7 +371,7 @@ func (p *ProjectModel) convertPaginationRowToProjectWithClient(row db.GetProject
 		}
 		return nil
 	}
-	
+
 	// Helper function to convert sql.NullString date to *time.Time
 	nullStringToTime := func(ns sql.NullString) *time.Time {
 		if !ns.Valid || ns.String == "" {
@@ -382,7 +382,7 @@ func (p *ProjectModel) convertPaginationRowToProjectWithClient(row db.GetProject
 		}
 		return nil
 	}
-	
+
 	return ProjectWithClient{
 		ID:                     int(row.ID),
 		Name:                   row.Name,
@@ -423,7 +423,7 @@ func (p *ProjectModel) GetAll() ([]ProjectWithClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	
+
 	projects := make([]ProjectWithClient, len(rows))
 	for i, row := range rows {
 		project, err := p.convertRowToProjectWithClient(row)
@@ -432,7 +432,7 @@ func (p *ProjectModel) GetAll() ([]ProjectWithClient, error) {
 		}
 		projects[i] = project
 	}
-	
+
 	return projects, nil
 }
 
@@ -445,7 +445,7 @@ func (p *ProjectModel) convertRowToProjectWithClient(row db.GetAllProjectsWithCl
 		}
 		return ""
 	}
-	
+
 	// Helper function to convert sql.NullFloat64 to *float64
 	nullFloat64ToFloat := func(nf sql.NullFloat64) *float64 {
 		if nf.Valid {
@@ -453,7 +453,7 @@ func (p *ProjectModel) convertRowToProjectWithClient(row db.GetAllProjectsWithCl
 		}
 		return nil
 	}
-	
+
 	// Helper function to convert sql.NullString date to *time.Time
 	nullStringToTime := func(ns sql.NullString) *time.Time {
 		if !ns.Valid || ns.String == "" {
@@ -464,7 +464,7 @@ func (p *ProjectModel) convertRowToProjectWithClient(row db.GetAllProjectsWithCl
 		}
 		return nil
 	}
-	
+
 	return ProjectWithClient{
 		ID:                     int(row.ID),
 		Name:                   row.Name,

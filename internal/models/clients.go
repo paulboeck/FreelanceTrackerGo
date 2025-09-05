@@ -50,7 +50,7 @@ func NewClientModel(database *sql.DB) *ClientModel {
 // Insert adds a new client to the database and returns its ID
 func (c *ClientModel) Insert(name, email string, phone, address1, address2, address3, city, state, zipCode *string, hourlyRate float64, notes, additionalInfo, additionalInfo2, billTo *string, includeAddressOnInvoice bool, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string) (int, error) {
 	ctx := context.Background()
-	
+
 	params := db.InsertClientParams{
 		Name:                    name,
 		Email:                   email,
@@ -71,7 +71,7 @@ func (c *ClientModel) Insert(name, email string, phone, address1, address2, addr
 		InvoiceCcDescription:    convertStringPtr(invoiceCCDescription),
 		UniversityAffiliation:   convertStringPtr(universityAffiliation),
 	}
-	
+
 	id, err := c.queries.InsertClient(ctx, params)
 	if err != nil {
 		return 0, err

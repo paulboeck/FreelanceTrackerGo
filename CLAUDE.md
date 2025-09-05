@@ -102,3 +102,4 @@ The main application struct in `cmd/web/main.go` contains:
 - Configuration in `sqlc.yaml`
 - Run `sqlc generate` after query changes
 - always remember to disable browser interference from native HTML5 validation
+- check for and remove unused imports
