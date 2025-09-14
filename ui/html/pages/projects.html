@@ -1,6 +1,11 @@
 {{define "title"}}Projects{{end}}
 {{define "main"}}
-    <h2>All Projects</h2>
+    <div class="list-header">
+        <h3>Latest Projects</h3>
+        <a href="/client/create" class="btn-add" title="Add new project">
+            ➕ Add Project
+        </a>
+    </div>
     {{if .ProjectsWithClient}}
         <table>
             <tr>

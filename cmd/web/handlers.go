@@ -83,8 +83,8 @@ type settingsForm struct {
 	validator.Validator `form:"-"`
 }
 
-// home handles http requests to the root URl of the project
-func (app *application) home(res http.ResponseWriter, req *http.Request) {
+// clientsList handles http requests to the root URl of the project
+func (app *application) clientsList(res http.ResponseWriter, req *http.Request) {
 	// Get page size setting with fallback
 	pageSize := 10 // Default fallback
 	if pageSizeSetting, err := app.settings.GetString("list_page_size"); err == nil {
@@ -134,7 +134,7 @@ func (app *application) home(res http.ResponseWriter, req *http.Request) {
 	data.Clients = clients
 	data.Pagination = pagination
 
-	app.render(res, req, http.StatusOK, "home.html", data)
+	app.render(res, req, http.StatusOK, "clients.html", data)
 }
 
 // clientView handles a GET request to the for a specific client ID,
@@ -356,6 +356,10 @@ func (app *application) clientCreatePost(res http.ResponseWriter, req *http.Requ
 		app.serverError(res, req, err)
 		return
 	}
+
+	// Use the Put() method to add a string value ("Client successfully
+	// created!") and the corresponding key ("flash") to the session data.
+	app.sessionManager.Put(req.Context(), "flash", "Client successfully created!")
 	http.Redirect(res, req, fmt.Sprintf("/client/view/%d", id), http.StatusSeeOther)
 }
 
@@ -798,6 +802,11 @@ func (app *application) projectCreatePost(res http.ResponseWriter, req *http.Req
 		app.serverError(res, req, err)
 		return
 	}
+
+	// Use the Put() method to add a string value ("Project successfully
+	// created!") and the corresponding key ("flash") to the session data.
+	app.sessionManager.Put(req.Context(), "flash", "Project successfully created!")
+
 	http.Redirect(res, req, fmt.Sprintf("/client/view/%d", clientID), http.StatusSeeOther)
 }
 
@@ -1055,6 +1064,11 @@ func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.R
 		app.serverError(res, req, err)
 		return
 	}
+
+	// Use the Put() method to add a string value ("Timesheet successfully
+	// created!") and the corresponding key ("flash") to the session data.
+	app.sessionManager.Put(req.Context(), "flash", "Timesheet successfully created!")
+
 	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", projectID), http.StatusSeeOther)
 }
 
@@ -1363,6 +1377,11 @@ func (app *application) invoiceCreatePost(res http.ResponseWriter, req *http.Req
 		app.serverError(res, req, err)
 		return
 	}
+
+	// Use the Put() method to add a string value ("Invoice successfully
+	// created!") and the corresponding key ("flash") to the session data.
+	app.sessionManager.Put(req.Context(), "flash", "Invoice successfully created!")
+
 	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", projectID), http.StatusSeeOther)
 }
 
@@ -1744,4 +1763,24 @@ func (app *application) projectsList(res http.ResponseWriter, req *http.Request)
 	data.ProjectsWithClient = projects
 	data.Pagination = pagination
 	app.render(res, req, http.StatusOK, "projects.html", data)
+}
+
+func (app *application) userSignup(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Display a form for signing up a new user...")
+}
+
+func (app *application) userSignupPost(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Create a new user...")
+}
+
+func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Display a form for logging in a user...")
+}
+
+func (app *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Authenticate and login the user...")
+}
+
+func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintln(w, "Logout the user...")
 }

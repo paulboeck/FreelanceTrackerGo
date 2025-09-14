@@ -15,7 +15,8 @@ func (app *application) routes() http.Handler {
 
 	dynamic := alice.New(app.sessionManager.LoadAndSave)
 
-	mux.Handle("GET /{$}", dynamic.ThenFunc(app.home))
+	mux.Handle("GET /{$}", dynamic.ThenFunc(app.clientsList))
+	mux.Handle("GET /clients", dynamic.ThenFunc(app.clientsList))
 	mux.Handle("GET /projects", dynamic.ThenFunc(app.projectsList))
 	mux.Handle("GET /client/view/{id}", dynamic.ThenFunc(app.clientView))
 	mux.Handle("GET /client/create", dynamic.ThenFunc(app.clientCreate))
@@ -43,6 +44,11 @@ func (app *application) routes() http.Handler {
 	mux.Handle("GET /settings", dynamic.ThenFunc(app.settingsView))
 	mux.Handle("GET /settings/edit", dynamic.ThenFunc(app.settingsEdit))
 	mux.Handle("POST /settings/edit", dynamic.ThenFunc(app.settingsEditPost))
+	mux.Handle("GET /user/signup", dynamic.ThenFunc(app.userSignup))
+	mux.Handle("POST /user/signup", dynamic.ThenFunc(app.userSignupPost))
+	mux.Handle("GET /user/login", dynamic.ThenFunc(app.userLogin))
+	mux.Handle("POST /user/login", dynamic.ThenFunc(app.userLoginPost))
+	mux.Handle("POST /user/logout", dynamic.ThenFunc(app.userLogoutPost))
 
 	standardChain := alice.New(app.recoverPanic, app.logRequest, commonHeaders)
 	return standardChain.Then(mux)

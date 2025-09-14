@@ -30,6 +30,7 @@ type templateData struct {
 	Settings           []models.AppSetting
 	Form               any
 	Pagination         *paginationData
+	Flash              string
 }
 
 func humanDate(t time.Time) string {

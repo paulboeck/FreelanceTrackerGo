@@ -52,6 +52,12 @@ func (app *application) render(resp http.ResponseWriter, req *http.Request, stat
 func (app *application) newTemplateData(req *http.Request) templateData {
 	return templateData{
 		CurrentYear: time.Now().Year(),
+
+		// Use the PopString() method to retrieve the value for the "flash" key.
+		// PopString() also deletes the key and value from the session data, so it
+		// behaves like a one-time fetch. If there is no matching key in the session
+		// data this will return the empty string.
+		Flash: app.sessionManager.PopString(req.Context(), "flash"),
 	}
 }
 

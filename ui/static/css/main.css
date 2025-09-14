@@ -109,14 +109,16 @@ header a {
 }
 
 nav {
+    display: flex;
+    justify-content: space-between;
     border-bottom: 1px solid #e2e8f0;
-    padding: 1rem 0;
+    padding: 1rem 32px;
     background: #ffffff;
     color: #64748b;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
-nav a {
+nav a, nav form button {
     margin-right: 2rem;
     display: inline-block;
     padding: 0.75rem 1.5rem;
@@ -632,21 +634,21 @@ tr:hover {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
-.projects-header {
+.list-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 1.5rem;
 }
 
-.projects-header h3 {
+.list-header h3 {
     margin: 0;
     color: #1f2937;
     font-size: 1.25rem;
     font-weight: 600;
 }
 
-.btn-add-project {
+.btn-add {
     background-color: #3b82f6;
     color: white;
     padding: 0.5rem 1rem;
@@ -661,7 +663,7 @@ tr:hover {
     transition: all 0.2s ease;
 }
 
-.btn-add-project:hover {
+.btn-add:hover {
     background-color: #1d4ed8;
     transform: translateY(-1px);
     text-decoration: none;
