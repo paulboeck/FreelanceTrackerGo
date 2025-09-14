@@ -11,7 +11,7 @@ import (
 
 const getAllSettings = `-- name: GetAllSettings :many
 SELECT key, value, data_type, description, created_at, updated_at 
-FROM settings 
+FROM setting 
 ORDER BY key
 `
 
@@ -47,7 +47,7 @@ func (q *Queries) GetAllSettings(ctx context.Context) ([]Setting, error) {
 
 const getSetting = `-- name: GetSetting :one
 SELECT key, value, data_type, description, created_at, updated_at 
-FROM settings 
+FROM setting 
 WHERE key = ?
 `
 
@@ -66,7 +66,7 @@ func (q *Queries) GetSetting(ctx context.Context, key string) (Setting, error) {
 }
 
 const updateSetting = `-- name: UpdateSetting :exec
-UPDATE settings 
+UPDATE setting 
 SET value = ?, updated_at = CURRENT_TIMESTAMP 
 WHERE key = ?
 `

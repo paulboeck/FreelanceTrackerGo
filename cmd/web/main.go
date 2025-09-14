@@ -24,6 +24,7 @@ type application struct {
 	timesheets     models.TimesheetModelInterface
 	invoices       models.InvoiceModelInterface
 	settings       models.AppSettingModelInterface
+	users          models.UserModelInterface
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
 	sessionManager *scs.SessionManager
@@ -69,6 +70,7 @@ func main() {
 	timesheetModel := models.NewTimesheetModel(db)
 	invoiceModel := models.NewInvoiceModel(db)
 	settingModel := models.NewAppSettingModel(db)
+	userModel := models.NewUserModel(db)
 	logger.Info("Using SQLite models")
 
 	app := &application{
@@ -81,6 +83,7 @@ func main() {
 		templateCache:  templateCache,
 		formDecoder:    formDecoder,
 		sessionManager: sessionManager,
+		users:          userModel,
 	}
 
 	tlsConfig := &tls.Config{
@@ -99,7 +102,8 @@ func main() {
 
 	logger.Info("Starting server", slog.String("addr", srv.Addr))
 
-	err = srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
+	//err = srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
+	err = srv.ListenAndServe()
 	if err != nil {
 		logger.Error("error starting server", slog.String("err", err.Error()))
 		os.Exit(1)

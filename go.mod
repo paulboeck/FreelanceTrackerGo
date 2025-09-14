@@ -11,6 +11,7 @@ require (
 	github.com/justinas/alice v1.2.0
 	github.com/pressly/goose/v3 v3.24.3
 	github.com/stretchr/testify v1.10.0
+	golang.org/x/crypto v0.38.0
 	modernc.org/sqlite v1.38.2
 )
 

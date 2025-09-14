@@ -143,6 +143,27 @@ func createSchema(db *sql.DB) error {
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
 		
+		CREATE TABLE IF NOT EXISTS user (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			email TEXT NOT NULL UNIQUE,
+			hashed_password TEXT(60) NOT NULL,
+			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			deleted_at DATETIME NULL
+		);
+		
+		CREATE INDEX IF NOT EXISTS idx_user_email ON user(email);
+		CREATE INDEX IF NOT EXISTS idx_user_deleted_at ON user(deleted_at);
+		
+		CREATE TABLE IF NOT EXISTS sessions (
+			token CHAR(43) PRIMARY KEY,
+			data BLOB NOT NULL,
+			expiry TIMESTAMP(6) NOT NULL
+		);
+		
+		CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);
+		
 		INSERT OR IGNORE INTO settings (key, value, data_type, description) VALUES 
 			('default_hourly_rate', '85.00', 'decimal', 'Default hourly rate for new projects'),
 			('invoice_title', 'Invoice for Academic Editing', 'string', 'Title displayed on generated invoices'),

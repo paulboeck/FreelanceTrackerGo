@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"database/sql"
 	"time"
 )
 
@@ -54,6 +55,111 @@ func (q *Queries) GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, erro
 		&i.UpdatedAt,
 		&i.CreatedAt,
 		&i.DeletedAt,
+	)
+	return i, err
+}
+
+const getInvoiceComprehensiveForPDF = `-- name: GetInvoiceComprehensiveForPDF :one
+SELECT 
+    i.id, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
+    i.updated_at, i.created_at, i.deleted_at,
+    p.name as project_name, p.status as project_status, p.hourly_rate as project_hourly_rate,
+    p.discount_percent, p.discount_reason, p.adjustment_amount, p.adjustment_reason,
+    p.currency_display, p.currency_conversion_rate, p.flat_fee_invoice,
+    p.additional_info as project_additional_info, p.additional_info2 as project_additional_info2,
+    c.id as client_id, c.name as client_name, c.email as client_email,
+    c.phone as client_phone, c.address1 as client_address1, c.address2 as client_address2, 
+    c.address3 as client_address3, c.city as client_city, c.state as client_state, 
+    c.zip_code as client_zip_code, c.bill_to as client_bill_to,
+    c.include_address_on_invoice, c.university_affiliation,
+    c.additional_info as client_additional_info, c.additional_info2 as client_additional_info2
+FROM invoice i
+JOIN project p ON i.project_id = p.id
+JOIN client c ON p.client_id = c.id
+WHERE i.id = ? AND i.deleted_at IS NULL
+`
+
+type GetInvoiceComprehensiveForPDFRow struct {
+	ID                      int64           `json:"id"`
+	ProjectID               int64           `json:"project_id"`
+	InvoiceDate             time.Time       `json:"invoice_date"`
+	DatePaid                interface{}     `json:"date_paid"`
+	PaymentTerms            string          `json:"payment_terms"`
+	AmountDue               float64         `json:"amount_due"`
+	DisplayDetails          bool            `json:"display_details"`
+	UpdatedAt               time.Time       `json:"updated_at"`
+	CreatedAt               time.Time       `json:"created_at"`
+	DeletedAt               interface{}     `json:"deleted_at"`
+	ProjectName             string          `json:"project_name"`
+	ProjectStatus           string          `json:"project_status"`
+	ProjectHourlyRate       float64         `json:"project_hourly_rate"`
+	DiscountPercent         sql.NullFloat64 `json:"discount_percent"`
+	DiscountReason          sql.NullString  `json:"discount_reason"`
+	AdjustmentAmount        sql.NullFloat64 `json:"adjustment_amount"`
+	AdjustmentReason        sql.NullString  `json:"adjustment_reason"`
+	CurrencyDisplay         string          `json:"currency_display"`
+	CurrencyConversionRate  float64         `json:"currency_conversion_rate"`
+	FlatFeeInvoice          int64           `json:"flat_fee_invoice"`
+	ProjectAdditionalInfo   sql.NullString  `json:"project_additional_info"`
+	ProjectAdditionalInfo2  sql.NullString  `json:"project_additional_info2"`
+	ClientID                int64           `json:"client_id"`
+	ClientName              string          `json:"client_name"`
+	ClientEmail             string          `json:"client_email"`
+	ClientPhone             sql.NullString  `json:"client_phone"`
+	ClientAddress1          sql.NullString  `json:"client_address1"`
+	ClientAddress2          sql.NullString  `json:"client_address2"`
+	ClientAddress3          sql.NullString  `json:"client_address3"`
+	ClientCity              sql.NullString  `json:"client_city"`
+	ClientState             sql.NullString  `json:"client_state"`
+	ClientZipCode           sql.NullString  `json:"client_zip_code"`
+	ClientBillTo            sql.NullString  `json:"client_bill_to"`
+	IncludeAddressOnInvoice bool            `json:"include_address_on_invoice"`
+	UniversityAffiliation   sql.NullString  `json:"university_affiliation"`
+	ClientAdditionalInfo    sql.NullString  `json:"client_additional_info"`
+	ClientAdditionalInfo2   sql.NullString  `json:"client_additional_info2"`
+}
+
+func (q *Queries) GetInvoiceComprehensiveForPDF(ctx context.Context, id int64) (GetInvoiceComprehensiveForPDFRow, error) {
+	row := q.db.QueryRowContext(ctx, getInvoiceComprehensiveForPDF, id)
+	var i GetInvoiceComprehensiveForPDFRow
+	err := row.Scan(
+		&i.ID,
+		&i.ProjectID,
+		&i.InvoiceDate,
+		&i.DatePaid,
+		&i.PaymentTerms,
+		&i.AmountDue,
+		&i.DisplayDetails,
+		&i.UpdatedAt,
+		&i.CreatedAt,
+		&i.DeletedAt,
+		&i.ProjectName,
+		&i.ProjectStatus,
+		&i.ProjectHourlyRate,
+		&i.DiscountPercent,
+		&i.DiscountReason,
+		&i.AdjustmentAmount,
+		&i.AdjustmentReason,
+		&i.CurrencyDisplay,
+		&i.CurrencyConversionRate,
+		&i.FlatFeeInvoice,
+		&i.ProjectAdditionalInfo,
+		&i.ProjectAdditionalInfo2,
+		&i.ClientID,
+		&i.ClientName,
+		&i.ClientEmail,
+		&i.ClientPhone,
+		&i.ClientAddress1,
+		&i.ClientAddress2,
+		&i.ClientAddress3,
+		&i.ClientCity,
+		&i.ClientState,
+		&i.ClientZipCode,
+		&i.ClientBillTo,
+		&i.IncludeAddressOnInvoice,
+		&i.UniversityAffiliation,
+		&i.ClientAdditionalInfo,
+		&i.ClientAdditionalInfo2,
 	)
 	return i, err
 }

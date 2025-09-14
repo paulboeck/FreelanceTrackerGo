@@ -83,6 +83,19 @@ type settingsForm struct {
 	validator.Validator `form:"-"`
 }
 
+type userForm struct {
+	Name                string `form:"name"`
+	Email               string `form:"email"`
+	Password            string `form:"password"`
+	validator.Validator `form:"-"`
+}
+
+type loginForm struct {
+	Email               string `form:"email"`
+	Password            string `form:"password"`
+	validator.Validator `form:"-"`
+}
+
 // clientsList handles http requests to the root URl of the project
 func (app *application) clientsList(res http.ResponseWriter, req *http.Request) {
 	// Get page size setting with fallback
@@ -1766,21 +1779,126 @@ func (app *application) projectsList(res http.ResponseWriter, req *http.Request)
 }
 
 func (app *application) userSignup(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Display a form for signing up a new user...")
+	data := app.newTemplateData(r)
+	data.Form = userForm{}
+	app.render(w, r, http.StatusOK, "user_create.html", data)
 }
 
 func (app *application) userSignupPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Create a new user...")
+	var form userForm
+	err := app.decodePostForm(r, &form)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.Name), "name", "Name is required")
+	form.CheckField(validator.MaxChars(form.Name, NAME_LENGTH), "name", fmt.Sprintf("Name must be shorter than %d characters", NAME_LENGTH))
+
+	form.CheckField(validator.NotBlank(form.Email), "email", "Email is required")
+	form.CheckField(validator.Matches(strings.ToLower(form.Email), validator.EmailRegex), "email", "Email must be a valid email address")
+	form.CheckField(validator.MaxChars(form.Email, NAME_LENGTH), "email", fmt.Sprintf("Email must be shorter than %d characters", NAME_LENGTH))
+
+	form.CheckField(validator.NotBlank(form.Password), "password", "Password is required")
+	form.CheckField(validator.MaxChars(form.Password, 72), "password", "Password must be shorter than 72 characters")
+
+	// Check if email already exists
+	if form.Valid() {
+		exists, err := app.users.Exists(form.Email)
+		if err != nil {
+			app.serverError(w, r, err)
+			return
+		}
+		if exists {
+			form.AddFieldError("email", "Email address is already in use")
+		}
+	}
+
+	if !form.Valid() {
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, r, http.StatusUnprocessableEntity, "user_create.html", data)
+		return
+	}
+
+	// Create the user
+	_, err = app.users.Insert(form.Name, form.Email, form.Password)
+	if err != nil {
+		if errors.Is(err, models.ErrDuplicateEmail) {
+			form.AddFieldError("email", "Email address is already in use")
+			data := app.newTemplateData(r)
+			data.Form = form
+			app.render(w, r, http.StatusUnprocessableEntity, "user_create.html", data)
+		} else {
+			app.serverError(w, r, err)
+		}
+		return
+	}
+
+	app.sessionManager.Put(r.Context(), "flash", "Your signup was successful. Please log in.")
+
+	http.Redirect(w, r, fmt.Sprintf("/user/login"), http.StatusSeeOther)
 }
 
 func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Display a form for logging in a user...")
+	data := app.newTemplateData(r)
+	data.Form = loginForm{}
+	app.render(w, r, http.StatusOK, "user_login.html", data)
 }
 
 func (app *application) userLoginPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Authenticate and login the user...")
+	var form loginForm
+	err := app.decodePostForm(r, &form)
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	form.CheckField(validator.NotBlank(form.Email), "email", "Email is required")
+	form.CheckField(validator.Matches(strings.ToLower(form.Email), validator.EmailRegex), "email", "Email must be a valid email address")
+	form.CheckField(validator.NotBlank(form.Password), "password", "Password is required")
+
+	if !form.Valid() {
+		data := app.newTemplateData(r)
+		data.Form = form
+		app.render(w, r, http.StatusUnprocessableEntity, "user_login.html", data)
+		return
+	}
+
+	id, err := app.users.Authenticate(form.Email, form.Password)
+	if err != nil {
+		if errors.Is(err, models.ErrInvalidCredentials) {
+			form.AddFieldError("email", "Email or password is incorrect")
+			data := app.newTemplateData(r)
+			data.Form = form
+			app.render(w, r, http.StatusUnprocessableEntity, "user_login.html", data)
+		} else {
+			app.serverError(w, r, err)
+		}
+		return
+	}
+
+	err = app.sessionManager.RenewToken(r.Context())
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+
+	app.sessionManager.Put(r.Context(), "authenticatedUserID", id)
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (app *application) userLogoutPost(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "Logout the user...")
+func (app *application) userLogout(w http.ResponseWriter, r *http.Request) {
+	err := app.sessionManager.RenewToken(r.Context())
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+
+	app.sessionManager.Remove(r.Context(), "authenticatedUserID")
+
+	app.sessionManager.Put(r.Context(), "flash", "You've been logged out successfully!")
+
+	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

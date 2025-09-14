@@ -11,7 +11,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/alexedwards/scs/sqlite3store"
+	"github.com/alexedwards/scs/v2"
 	"github.com/go-playground/form/v4"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/testutil"
@@ -26,6 +29,38 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 	// Create a minimal template cache for testing with base template
 	templateCache := map[string]*template.Template{
 		"home.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<h1>Clients</h1>
+				{{range .Clients}}
+					<div>{{.Name}}</div>
+				{{end}}
+				{{template "pagination" .}}
+			</body></html>
+			{{end}}
+			{{define "pagination"}}
+			{{if and .Pagination (gt .Pagination.TotalPages 1)}}
+			<div class="pagination">
+				<div class="pagination-info">
+					Page {{.Pagination.CurrentPage}} of {{.Pagination.TotalPages}}
+				</div>
+				<div class="pagination-controls">
+					{{if .Pagination.HasPrev}}
+						<a href="?page={{.Pagination.PrevPage}}" class="pagination-btn pagination-btn-prev">← Previous</a>
+					{{else}}
+						<span class="pagination-btn pagination-btn-disabled">← Previous</span>
+					{{end}}
+					{{if .Pagination.HasNext}}
+						<a href="?page={{.Pagination.NextPage}}" class="pagination-btn pagination-btn-next">Next →</a>
+					{{else}}
+						<span class="pagination-btn pagination-btn-disabled">Next →</span>
+					{{end}}
+				</div>
+			</div>
+			{{end}}
+			{{end}}
+		`)),
+		"clients.html": template.Must(template.New("base").Parse(`
 			{{define "base"}}
 			<html><body>
 				<h1>Clients</h1>
@@ -174,17 +209,53 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 			</body></html>
 			{{end}}
 		`)),
+		"user_create.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<form method="POST" action="/user/signup">
+					<input type="text" name="name" value="{{.Form.Name}}">
+					{{if .Form.FieldErrors.name}}<span>{{.Form.FieldErrors.name}}</span>{{end}}
+					<input type="email" name="email" value="{{.Form.Email}}">
+					{{if .Form.FieldErrors.email}}<span>{{.Form.FieldErrors.email}}</span>{{end}}
+					<input type="password" name="password" value="{{.Form.Password}}">
+					{{if .Form.FieldErrors.password}}<span>{{.Form.FieldErrors.password}}</span>{{end}}
+					<button type="submit">Create account</button>
+				</form>
+			</body></html>
+			{{end}}
+		`)),
+		"user_login.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<h2>Login</h2>
+				<form method="POST" action="/user/login">
+					<input type="email" name="email" value="{{.Form.Email}}">
+					{{if .Form.FieldErrors.email}}<span>{{.Form.FieldErrors.email}}</span>{{end}}
+					<input type="password" name="password" value="{{.Form.Password}}">
+					{{if .Form.FieldErrors.password}}<span>{{.Form.FieldErrors.password}}</span>{{end}}
+					<button type="submit">Login</button>
+				</form>
+			</body></html>
+			{{end}}
+		`)),
 	}
 
+	// Create session manager for tests
+	sessionManager := scs.New()
+	sessionManager.Store = sqlite3store.New(testDB.DB)
+	sessionManager.Lifetime = 12 * time.Hour
+
 	app := &application{
-		logger:        slog.New(slog.NewTextHandler(os.Stdout, nil)),
-		clients:       models.NewClientModel(testDB.DB),
-		projects:      models.NewProjectModel(testDB.DB),
-		timesheets:    models.NewTimesheetModel(testDB.DB),
-		invoices:      models.NewInvoiceModel(testDB.DB),
-		settings:      models.NewAppSettingModel(testDB.DB),
-		templateCache: templateCache,
-		formDecoder:   form.NewDecoder(),
+		logger:         slog.New(slog.NewTextHandler(os.Stdout, nil)),
+		clients:        models.NewClientModel(testDB.DB),
+		projects:       models.NewProjectModel(testDB.DB),
+		timesheets:     models.NewTimesheetModel(testDB.DB),
+		invoices:       models.NewInvoiceModel(testDB.DB),
+		settings:       models.NewAppSettingModel(testDB.DB),
+		users:          models.NewUserModel(testDB.DB),
+		templateCache:  templateCache,
+		formDecoder:    form.NewDecoder(),
+		sessionManager: sessionManager,
 	}
 
 	return app, testDB
@@ -200,7 +271,9 @@ func TestHomeHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 
-		app.home(rr, req)
+		// Use the session middleware to wrap the handler
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.clientsList))
+		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		assert.Contains(t, rr.Body.String(), "<h1>Clients</h1>")
@@ -216,7 +289,9 @@ func TestHomeHandler(t *testing.T) {
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
 
-		app.home(rr, req)
+		// Use the session middleware to wrap the handler
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.clientsList))
+		handler.ServeHTTP(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
@@ -240,7 +315,7 @@ func TestHomeHandlerPagination(t *testing.T) {
 		// Test first page
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
-		app.home(rr, req)
+		app.clientsList(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
@@ -262,7 +337,7 @@ func TestHomeHandlerPagination(t *testing.T) {
 		// Test second page
 		req := httptest.NewRequest(http.MethodGet, "/?page=2", nil)
 		rr := httptest.NewRecorder()
-		app.home(rr, req)
+		app.clientsList(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
@@ -280,7 +355,7 @@ func TestHomeHandlerPagination(t *testing.T) {
 		// Test with invalid page number - should default to page 1
 		req := httptest.NewRequest(http.MethodGet, "/?page=invalid", nil)
 		rr := httptest.NewRecorder()
-		app.home(rr, req)
+		app.clientsList(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		// Should not show pagination controls for single page
@@ -298,7 +373,7 @@ func TestHomeHandlerPagination(t *testing.T) {
 
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
-		app.home(rr, req)
+		app.clientsList(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
@@ -580,7 +655,7 @@ func TestHandlersIntegration(t *testing.T) {
 		req = httptest.NewRequest(http.MethodGet, "/", nil)
 		rr = httptest.NewRecorder()
 
-		app.home(rr, req)
+		app.clientsList(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
@@ -822,7 +897,7 @@ func TestUpdateHandlersIntegration(t *testing.T) {
 		req = httptest.NewRequest(http.MethodGet, "/", nil)
 		rr = httptest.NewRecorder()
 
-		app.home(rr, req)
+		app.clientsList(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
@@ -1486,7 +1561,7 @@ func TestDeleteHandlersIntegration(t *testing.T) {
 		// 2. Verify all clients appear in home page
 		req := httptest.NewRequest(http.MethodGet, "/", nil)
 		rr := httptest.NewRecorder()
-		app.home(rr, req)
+		app.clientsList(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body := rr.Body.String()
@@ -1505,7 +1580,7 @@ func TestDeleteHandlersIntegration(t *testing.T) {
 		// 4. Verify home page only shows remaining clients
 		req = httptest.NewRequest(http.MethodGet, "/", nil)
 		rr = httptest.NewRecorder()
-		app.home(rr, req)
+		app.clientsList(rr, req)
 
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
@@ -1530,5 +1605,395 @@ func TestDeleteHandlersIntegration(t *testing.T) {
 		assert.Equal(t, http.StatusOK, rr.Code)
 		body = rr.Body.String()
 		assert.Contains(t, body, "Client 1")
+	})
+}
+
+func TestUserSignupHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("GET /user/signup returns signup form", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/user/signup", nil)
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userSignup))
+		handler.ServeHTTP(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "form method=\"POST\" action=\"/user/signup\"")
+		assert.Contains(t, body, "name=\"name\"")
+		assert.Contains(t, body, "name=\"email\"")
+		assert.Contains(t, body, "name=\"password\"")
+	})
+}
+
+func TestUserSignupPostHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("successful user creation", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		form := url.Values{}
+		form.Add("name", "John Doe")
+		form.Add("email", "john@example.com")
+		form.Add("password", "secretpassword123")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/signup", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userSignupPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should redirect to login page
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		assert.Equal(t, "/user/login", location)
+
+		// Verify the user was actually created in the database
+		exists, err := app.users.Exists("john@example.com")
+		require.NoError(t, err)
+		assert.True(t, exists)
+
+		// Verify user can be authenticated with the password
+		userID, err := app.users.Authenticate("john@example.com", "secretpassword123")
+		require.NoError(t, err)
+		assert.Greater(t, userID, 0)
+	})
+
+	t.Run("validation error - empty name", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		form := url.Values{}
+		form.Add("name", "")
+		form.Add("email", "test@example.com")
+		form.Add("password", "password123")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/signup", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userSignupPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Name is required")
+
+		// Verify no user was created
+		exists, err := app.users.Exists("test@example.com")
+		require.NoError(t, err)
+		assert.False(t, exists)
+	})
+
+	t.Run("validation error - empty email", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		form := url.Values{}
+		form.Add("name", "John Doe")
+		form.Add("email", "")
+		form.Add("password", "password123")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/signup", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userSignupPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Email is required")
+	})
+
+	t.Run("validation error - invalid email", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		form := url.Values{}
+		form.Add("name", "John Doe")
+		form.Add("email", "invalid-email")
+		form.Add("password", "password123")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/signup", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userSignupPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Email must be a valid email address")
+	})
+
+	t.Run("validation error - empty password", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		form := url.Values{}
+		form.Add("name", "John Doe")
+		form.Add("email", "john@example.com")
+		form.Add("password", "")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/signup", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userSignupPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Password is required")
+	})
+
+	t.Run("validation error - duplicate email", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		// First, create a user
+		_, err := app.users.Insert("Existing User", "existing@example.com", "password123")
+		require.NoError(t, err)
+
+		// Try to create another user with the same email
+		form := url.Values{}
+		form.Add("name", "New User")
+		form.Add("email", "existing@example.com")
+		form.Add("password", "newpassword123")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/signup", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userSignupPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should return form with validation error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Email address is already in use")
+	})
+}
+
+func TestUserLoginHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	req := httptest.NewRequest(http.MethodGet, "/user/login", nil)
+	rr := httptest.NewRecorder()
+
+	// Use the session middleware to load and save session
+	handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userLogin))
+	handler.ServeHTTP(rr, req)
+
+	assert.Equal(t, http.StatusOK, rr.Code)
+	body := rr.Body.String()
+	assert.Contains(t, body, "<h2>Login</h2>")
+	assert.Contains(t, body, `<form method="POST" action="/user/login"`)
+}
+
+func TestUserLoginPostHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	t.Run("successful login", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		// First create a user
+		_, err := app.users.Insert("John Doe", "john@example.com", "secretpassword123")
+		require.NoError(t, err)
+
+		form := url.Values{}
+		form.Add("email", "john@example.com")
+		form.Add("password", "secretpassword123")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/login", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userLoginPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should redirect to home page
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		assert.Equal(t, "/", location)
+	})
+
+	t.Run("invalid credentials", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		form := url.Values{}
+		form.Add("email", "nonexistent@example.com")
+		form.Add("password", "wrongpassword")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/login", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userLoginPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should return form with error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Email or password is incorrect")
+	})
+
+	t.Run("wrong password for existing user", func(t *testing.T) {
+		testDB.TruncateTable(t, "user")
+
+		// First create a user
+		_, err := app.users.Insert("John Doe", "john@example.com", "correctpassword")
+		require.NoError(t, err)
+
+		form := url.Values{}
+		form.Add("email", "john@example.com")
+		form.Add("password", "wrongpassword")
+
+		req := httptest.NewRequest(http.MethodPost, "/user/login", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rr := httptest.NewRecorder()
+
+		// Use the session middleware to load and save session
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userLoginPost))
+		handler.ServeHTTP(rr, req)
+
+		// Should return form with error
+		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Email or password is incorrect")
+	})
+
+	t.Run("validation errors", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			email    string
+			password string
+			contains string
+		}{
+			{"empty email", "", "password123", "Email is required"},
+			{"invalid email", "invalid-email", "password123", "Email must be a valid email address"},
+			{"empty password", "user@example.com", "", "Password is required"},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				form := url.Values{}
+				form.Add("email", tt.email)
+				form.Add("password", tt.password)
+
+				req := httptest.NewRequest(http.MethodPost, "/user/login", strings.NewReader(form.Encode()))
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				rr := httptest.NewRecorder()
+
+				// Use the session middleware to load and save session
+				handler := app.sessionManager.LoadAndSave(http.HandlerFunc(app.userLoginPost))
+				handler.ServeHTTP(rr, req)
+
+				// Should return form with validation error
+				assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
+				body := rr.Body.String()
+				assert.Contains(t, body, tt.contains)
+			})
+		}
+	})
+}
+
+func TestUserLogoutHandler(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	testDB.TruncateTable(t, "user")
+
+	// Create a user and simulate login
+	userID, err := app.users.Insert("John Doe", "john@example.com", "password123")
+	require.NoError(t, err)
+
+	req := httptest.NewRequest(http.MethodGet, "/user/logout", nil)
+	rr := httptest.NewRecorder()
+
+	// Use the session middleware and simulate an authenticated user
+	handler := app.sessionManager.LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		app.sessionManager.Put(r.Context(), "authenticatedUserID", userID)
+		app.userLogout(w, r)
+	}))
+	handler.ServeHTTP(rr, req)
+
+	// Should redirect to home page
+	assert.Equal(t, http.StatusSeeOther, rr.Code)
+	location := rr.Header().Get("Location")
+	assert.Equal(t, "/", location)
+}
+
+func TestAuthenticationMiddleware(t *testing.T) {
+	app, testDB := createTestApp(t)
+	defer testDB.Cleanup(t)
+
+	testDB.TruncateTable(t, "user")
+
+	t.Run("unauthenticated user redirected to login", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rr := httptest.NewRecorder()
+
+		// Create a handler chain with authentication required
+		handler := app.sessionManager.LoadAndSave(
+			app.authenticate(
+				app.requireAuthentication(
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+					}),
+				),
+			),
+		)
+		handler.ServeHTTP(rr, req)
+
+		// Should redirect to login
+		assert.Equal(t, http.StatusSeeOther, rr.Code)
+		location := rr.Header().Get("Location")
+		assert.Equal(t, "/user/login", location)
+	})
+
+	t.Run("authenticated user can access protected route", func(t *testing.T) {
+		// Create a user
+		userID, err := app.users.Insert("John Doe", "john@example.com", "password123")
+		require.NoError(t, err)
+
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		rr := httptest.NewRecorder()
+
+		// Create a handler chain with authentication that simulates a logged-in user
+		handler := app.sessionManager.LoadAndSave(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			app.sessionManager.Put(r.Context(), "authenticatedUserID", userID)
+			
+			authHandler := app.authenticate(
+				app.requireAuthentication(
+					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+						w.WriteHeader(http.StatusOK)
+						w.Write([]byte("Protected content"))
+					}),
+				),
+			)
+			authHandler.ServeHTTP(w, r)
+		}))
+		handler.ServeHTTP(rr, req)
+
+		// Should allow access
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+		assert.Contains(t, body, "Protected content")
 	})
 }

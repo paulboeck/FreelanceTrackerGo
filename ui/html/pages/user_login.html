@@ -1,0 +1,28 @@
+{{define "title"}}Login{{end}}
+
+{{define "main"}}
+<h2>Login</h2>
+<div class="form-container">
+    <form action='/user/login' method='POST' novalidate>
+        <div class="form-group">
+            <label>Email:</label>
+            {{with .Form.FieldErrors.email}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='email' name='email' value="{{.Form.Email}}" {{with .Form.FieldErrors.email}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-group">
+            <label>Password:</label>
+            {{with .Form.FieldErrors.password}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='password' name='password' value="{{.Form.Password}}" {{with .Form.FieldErrors.password}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+        
+        <div class="form-actions">
+            <input type='submit' value='Login'>
+        </div>
+    </form>
+</div>
+{{end}}

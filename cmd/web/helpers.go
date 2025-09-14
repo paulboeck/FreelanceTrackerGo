@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -77,4 +78,22 @@ func (app *application) decodePostForm(r *http.Request, dst any) error {
 	}
 	return nil
 
+}
+
+// isAuthenticated returns true if the current request is from an authenticated user
+func (app *application) isAuthenticated(r *http.Request) bool {
+	isAuthenticated, ok := r.Context().Value(isAuthenticatedContextKey).(bool)
+	if !ok {
+		return false
+	}
+
+	return isAuthenticated
+}
+
+type contextKey string
+
+const isAuthenticatedContextKey = contextKey("isAuthenticated")
+
+func contextSetUser(ctx context.Context, userID int) context.Context {
+	return context.WithValue(ctx, isAuthenticatedContextKey, userID != 0)
 }

@@ -13,6 +13,7 @@ type Querier interface {
 	DeleteInvoice(ctx context.Context, id int64) error
 	DeleteProject(ctx context.Context, id int64) error
 	DeleteTimesheet(ctx context.Context, id int64) error
+	DeleteUser(ctx context.Context, id int64) error
 	GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 	GetAllProjectsWithClient(ctx context.Context) ([]GetAllProjectsWithClientRow, error)
 	GetAllSettings(ctx context.Context) ([]Setting, error)
@@ -20,6 +21,7 @@ type Querier interface {
 	GetClientsCount(ctx context.Context) (int64, error)
 	GetClientsWithPagination(ctx context.Context, arg GetClientsWithPaginationParams) ([]GetClientsWithPaginationRow, error)
 	GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, error)
+	GetInvoiceComprehensiveForPDF(ctx context.Context, id int64) (GetInvoiceComprehensiveForPDFRow, error)
 	GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceForPDFRow, error)
 	GetInvoicesByProject(ctx context.Context, projectID int64) ([]GetInvoicesByProjectRow, error)
 	GetProject(ctx context.Context, id int64) (GetProjectRow, error)
@@ -29,15 +31,20 @@ type Querier interface {
 	GetSetting(ctx context.Context, key string) (Setting, error)
 	GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, error)
 	GetTimesheetsByProject(ctx context.Context, projectID int64) ([]GetTimesheetsByProjectRow, error)
+	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByID(ctx context.Context, id int64) (User, error)
 	InsertClient(ctx context.Context, arg InsertClientParams) (int64, error)
 	InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error)
 	InsertProject(ctx context.Context, arg InsertProjectParams) (int64, error)
 	InsertTimesheet(ctx context.Context, arg InsertTimesheetParams) (int64, error)
+	InsertUser(ctx context.Context, arg InsertUserParams) (int64, error)
 	UpdateClient(ctx context.Context, arg UpdateClientParams) error
 	UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
 	UpdateSetting(ctx context.Context, arg UpdateSettingParams) error
 	UpdateTimesheet(ctx context.Context, arg UpdateTimesheetParams) error
+	UpdateUser(ctx context.Context, arg UpdateUserParams) error
+	UserExists(ctx context.Context, email string) (int64, error)
 }
 
 var _ Querier = (*Queries)(nil)

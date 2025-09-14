@@ -99,3 +99,13 @@ type Timesheet struct {
 	Description sql.NullString `json:"description"`
 	HourlyRate  float64        `json:"hourly_rate"`
 }
+
+type User struct {
+	ID             int64       `json:"id"`
+	Name           string      `json:"name"`
+	Email          string      `json:"email"`
+	HashedPassword interface{} `json:"hashed_password"`
+	CreatedAt      time.Time   `json:"created_at"`
+	UpdatedAt      time.Time   `json:"updated_at"`
+	DeletedAt      interface{} `json:"deleted_at"`
+}
