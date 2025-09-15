@@ -3,3 +3,4 @@ ui/.DS_Store
 ui/static/.DS_Store
 tls/cert.pem
 tls/key.pem
+freelance_tracker.db
