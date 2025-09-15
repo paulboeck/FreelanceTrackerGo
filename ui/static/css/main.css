@@ -118,6 +118,10 @@ nav {
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
 }
 
+nav div.auth-nav {
+    display: none;
+}
+
 nav a {
     margin-right: 2rem;
     display: inline-block;

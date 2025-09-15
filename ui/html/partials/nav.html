@@ -6,11 +6,11 @@
       <a href="/settings">Settings</a>
     </div>
     {{if .IsAuthenticated}}
-    <div>
+    <div class="auth-nav">
       <a href='/user/logout'>Logout</a>
     </div>
     {{else}}
-    <div>
+    <div class="auth-nav">
       <a href='/user/signup'>Signup</a>
       <a href='/user/login'>Login</a>
     </div>
