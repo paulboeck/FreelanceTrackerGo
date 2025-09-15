@@ -59,6 +59,9 @@ func (app *application) newTemplateData(req *http.Request) templateData {
 		// behaves like a one-time fetch. If there is no matching key in the session
 		// data this will return the empty string.
 		Flash: app.sessionManager.PopString(req.Context(), "flash"),
+
+		// Check if the user is authenticated
+		IsAuthenticated: app.isAuthenticated(req),
 	}
 }
 

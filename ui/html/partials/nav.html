@@ -5,10 +5,15 @@
       <a href="/projects">Projects</a>
       <a href="/settings">Settings</a>
     </div>
+    {{if .IsAuthenticated}}
+    <div>
+      <a href='/user/logout'>Logout</a>
+    </div>
+    {{else}}
     <div>
       <a href='/user/signup'>Signup</a>
       <a href='/user/login'>Login</a>
-      <a href='/user/logout'>Logout</a>
     </div>
+    {{end}}
   </nav>
 {{end}}

@@ -31,6 +31,7 @@ type templateData struct {
 	Form               any
 	Pagination         *paginationData
 	Flash              string
+	IsAuthenticated    bool
 }
 
 func humanDate(t time.Time) string {
