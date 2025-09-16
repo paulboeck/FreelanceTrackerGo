@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paulboeck/FreelanceTrackerGo/internal/email"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/validator"
 )
@@ -1622,6 +1623,130 @@ func (app *application) invoicePrint(res http.ResponseWriter, req *http.Request)
 	}
 }
 
+// invoiceEmail handles a POST request to email an invoice to the client
+func (app *application) invoiceEmail(res http.ResponseWriter, req *http.Request) {
+	id, err := strconv.Atoi(req.PathValue("id"))
+	if err != nil || id < 0 {
+		http.NotFound(res, req)
+		return
+	}
+
+	// Get invoice and related project/client data
+	invoice, err := app.invoices.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			http.NotFound(res, req)
+		} else {
+			app.serverError(res, req, err)
+		}
+		return
+	}
+
+	project, err := app.projects.Get(invoice.ProjectID)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	client, err := app.clients.Get(project.ClientID)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Validate that client has an email address
+	if client.Email == "" {
+		app.sessionManager.Put(req.Context(), "flash", "Client does not have an email address configured")
+		http.Redirect(res, req, fmt.Sprintf("/project/view/%d", project.ID), http.StatusSeeOther)
+		return
+	}
+
+	// Get freelancer name for the email
+	freelancerName, err := app.settings.GetString("freelancer_name")
+	if err != nil {
+		freelancerName = "FreelanceTracker"
+	}
+
+	// Create email content
+	subject := fmt.Sprintf("Invoice #%d for %s", invoice.ID, project.Name)
+	
+	body := fmt.Sprintf(`Dear %s,
+
+Please find attached invoice #%d for the project "%s".
+
+Invoice Details:
+- Amount Due: $%.2f
+- Payment Terms: %s
+- Due Date: %s
+
+If you have any questions about this invoice, please don't hesitate to contact me.
+
+Best regards,
+%s`,
+		client.Name,
+		invoice.ID,
+		project.Name,
+		invoice.AmountDue,
+		invoice.PaymentTerms,
+		invoice.InvoiceDate.Format("January 2, 2006"),
+		freelancerName)
+
+	// Generate PDF attachment
+	allSettings, err := app.settings.GetAll()
+	if err != nil {
+		app.logger.Error("Failed to get settings for PDF generation", "error", err.Error())
+		app.sessionManager.Put(req.Context(), "flash", fmt.Sprintf("Failed to generate PDF: %v", err))
+		http.Redirect(res, req, fmt.Sprintf("/project/view/%d", project.ID), http.StatusSeeOther)
+		return
+	}
+
+	pdfBytes, err := app.invoices.GenerateComprehensivePDF(id, allSettings)
+	if err != nil {
+		app.logger.Error("Failed to generate invoice PDF", "error", err.Error(), "invoice_id", id)
+		app.sessionManager.Put(req.Context(), "flash", fmt.Sprintf("Failed to generate PDF: %v", err))
+		http.Redirect(res, req, fmt.Sprintf("/project/view/%d", project.ID), http.StatusSeeOther)
+		return
+	}
+
+	// Create fresh email service from current settings
+	emailService, err := email.NewServiceFromSettings(app.settings)
+	if err != nil {
+		app.logger.Error("Failed to initialize email service", "error", err.Error())
+		app.sessionManager.Put(req.Context(), "flash", fmt.Sprintf("Failed to initialize email service: %v", err))
+		http.Redirect(res, req, fmt.Sprintf("/project/view/%d", project.ID), http.StatusSeeOther)
+		return
+	}
+
+	// Create PDF attachment
+	pdfAttachment := email.Attachment{
+		Filename: fmt.Sprintf("invoice_%d.pdf", invoice.ID),
+		Data:     pdfBytes,
+		MimeType: "application/pdf",
+	}
+
+	// Send email with attachment
+	emailMsg := email.Email{
+		To:          []string{client.Email},
+		Subject:     subject,
+		Body:        body,
+		IsHTML:      false,
+		Attachments: []email.Attachment{pdfAttachment},
+	}
+
+	err = emailService.Send(emailMsg)
+	if err != nil {
+		app.logger.Error("Failed to send invoice email", "error", err.Error(), "invoice_id", id, "client_email", client.Email)
+		app.sessionManager.Put(req.Context(), "flash", fmt.Sprintf("Failed to send email: %v", err))
+		http.Redirect(res, req, fmt.Sprintf("/project/view/%d", project.ID), http.StatusSeeOther)
+		return
+	}
+
+	app.logger.Info("Invoice email sent successfully", "invoice_id", id, "client_email", client.Email)
+	app.sessionManager.Put(req.Context(), "flash", "Invoice email sent successfully!")
+	
+	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", project.ID), http.StatusSeeOther)
+}
+
 // settingsView handles a GET request to view all application settings
 func (app *application) settingsView(res http.ResponseWriter, req *http.Request) {
 	settings, err := app.settings.GetAllDetailed()
@@ -1672,7 +1797,10 @@ func (app *application) settingsEditPost(res http.ResponseWriter, req *http.Requ
 
 	// Extract values from form for each setting
 	for _, setting := range settings {
-		if value := req.PostForm.Get(setting.Key); value != "" {
+		value := req.PostForm.Get(setting.Key)
+		// For boolean fields, we must capture the value even if it's empty
+		// For other fields, we only process non-empty values
+		if setting.DataType == "bool" || value != "" {
 			form.Settings[setting.Key] = value
 		}
 	}
@@ -1681,6 +1809,10 @@ func (app *application) settingsEditPost(res http.ResponseWriter, req *http.Requ
 	for _, setting := range settings {
 		value, exists := form.Settings[setting.Key]
 		if !exists {
+			// SMTP password is optional - empty means "keep current password"
+			if setting.Key == "smtp_password" {
+				continue
+			}
 			form.AddFieldError(setting.Key, "This field is required")
 			continue
 		}

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/paulboeck/FreelanceTrackerGo/internal/crypto"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/db"
 )
 
@@ -62,13 +63,15 @@ func (sv AppSettingValue) AsBool() (bool, error) {
 
 // AppSettingModel wraps the generated SQLC Queries for setting operations
 type AppSettingModel struct {
-	queries *db.Queries
+	queries       *db.Queries
+	encryptionKey []byte
 }
 
 // NewAppSettingModel creates a new AppSettingModel
-func NewAppSettingModel(database *sql.DB) *AppSettingModel {
+func NewAppSettingModel(database *sql.DB, encryptionSeed string) *AppSettingModel {
 	return &AppSettingModel{
-		queries: db.New(database),
+		queries:       db.New(database),
+		encryptionKey: crypto.EncryptionKey(encryptionSeed),
 	}
 }
 
@@ -223,11 +226,56 @@ func (s *AppSettingModel) GetAllDetailed() ([]AppSetting, error) {
 // UpdateValue modifies only the value of an existing setting
 func (s *AppSettingModel) UpdateValue(key, value string) error {
 	ctx := context.Background()
+	
+	// Handle SMTP password encryption
+	if key == "smtp_password" {
+		if value == "" {
+			// Empty value means keep current password - don't update
+			return nil
+		}
+		
+		// Get the current encrypted value to compare
+		currentEncrypted, err := s.GetString("smtp_password")
+		if err != nil && err != ErrNoRecord {
+			return err
+		}
+		
+		// If the value is the same as the currently stored encrypted value,
+		// don't encrypt it again (this prevents double encryption)
+		if value != currentEncrypted {
+			// Only encrypt if this is a new/different value
+			encryptedValue, err := crypto.Encrypt(value, s.encryptionKey)
+			if err != nil {
+				return err
+			}
+			value = encryptedValue
+		}
+	}
+	
 	params := db.UpdateSettingParams{
 		Key:   key,
 		Value: value,
 	}
 	return s.queries.UpdateSetting(ctx, params)
+}
+
+// GetDecryptedSMTPPassword retrieves and decrypts the SMTP password
+func (s *AppSettingModel) GetDecryptedSMTPPassword() (string, error) {
+	encryptedPassword, err := s.GetString("smtp_password")
+	if err != nil {
+		return "", err
+	}
+	
+	if encryptedPassword == "" {
+		return "", nil
+	}
+	
+	decryptedPassword, err := crypto.Decrypt(encryptedPassword, s.encryptionKey)
+	if err != nil {
+		return "", err
+	}
+	
+	return decryptedPassword, nil
 }
 
 // AppSettingModelInterface defines the interface for setting operations
@@ -242,6 +290,7 @@ type AppSettingModelInterface interface {
 	GetAll() (map[string]AppSettingValue, error)
 	GetAllDetailed() ([]AppSetting, error)
 	UpdateValue(key, value string) error
+	GetDecryptedSMTPPassword() (string, error)
 }
 
 // Ensure implementation satisfies the interface

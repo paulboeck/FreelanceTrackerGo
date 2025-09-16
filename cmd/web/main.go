@@ -14,6 +14,7 @@ import (
 	"github.com/go-playground/form/v4"
 
 	"github.com/paulboeck/FreelanceTrackerGo/internal/database"
+	"github.com/paulboeck/FreelanceTrackerGo/internal/email"
 	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
 )
 
@@ -25,6 +26,7 @@ type application struct {
 	invoices       models.InvoiceModelInterface
 	settings       models.AppSettingModelInterface
 	users          models.UserModelInterface
+	emailService   *email.Service
 	templateCache  map[string]*template.Template
 	formDecoder    *form.Decoder
 	sessionManager *scs.SessionManager
@@ -64,14 +66,24 @@ func main() {
 	sessionManager.Store = sqlite3store.New(db)
 	sessionManager.Lifetime = 12 * time.Hour
 
+	// Create encryption seed from DSN for consistent key generation
+	encryptionSeed := "FreelanceTrackerGo-" + *dsn
+	
 	// Create SQLite models
 	clientModel := models.NewClientModel(db)
 	projectModel := models.NewProjectModel(db)
 	timesheetModel := models.NewTimesheetModel(db)
 	invoiceModel := models.NewInvoiceModel(db)
-	settingModel := models.NewAppSettingModel(db)
+	settingModel := models.NewAppSettingModel(db, encryptionSeed)
 	userModel := models.NewUserModel(db)
 	logger.Info("Using SQLite models")
+
+	// Initialize email service
+	emailService, err := email.NewServiceFromSettings(settingModel)
+	if err != nil {
+		logger.Warn("Failed to initialize email service", "error", err.Error())
+		emailService = email.NewService(email.Config{Enabled: false})
+	}
 
 	app := &application{
 		logger:         logger,
@@ -80,6 +92,7 @@ func main() {
 		timesheets:     timesheetModel,
 		invoices:       invoiceModel,
 		settings:       settingModel,
+		emailService:   emailService,
 		templateCache:  templateCache,
 		formDecoder:    formDecoder,
 		sessionManager: sessionManager,

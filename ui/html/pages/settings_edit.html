@@ -2,46 +2,89 @@
 
 {{define "main"}}
     <form action="/settings/edit" method="POST" novalidate>
+        <!-- Email Settings Section -->
         <div class="form-section">
-            <h2>Edit Setting Values</h2>
+            <h2>Email Settings</h2>
             <p class="text-muted">
-                You can only modify the values of existing settings. Settings are managed by the application.
+                Configure SMTP settings for sending invoice emails to clients.
             </p>
             
             {{range .Settings}}
-                <div class="form-group">
-                    <label for="{{.Key}}">{{.Key}}</label>
-                    {{if .Description}}
-                        <p class="form-help">{{.Description}}</p>
-                    {{end}}
-                    
-                    {{if eq .DataType "string"}}
-                        <input type="text" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
-                               {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
-                    {{else if eq .DataType "decimal"}}
-                        <input type="number" step="0.01" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
-                               {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
-                    {{else if eq .DataType "int"}}
-                        <input type="number" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
-                               {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
-                    {{else if eq .DataType "float"}}
-                        <input type="number" step="any" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
-                               {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
-                    {{else if eq .DataType "bool"}}
-                        <select id="{{.Key}}" name="{{.Key}}" 
-                                {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
-                            <option value="true" {{if eq .Value "true"}}selected{{end}}>Yes</option>
-                            <option value="false" {{if eq .Value "false"}}selected{{end}}>No</option>
-                        </select>
-                    {{else}}
-                        <input type="text" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
-                               {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
-                    {{end}}
-                    
-                    {{with index $.Form.FieldErrors .Key}}
-                        <label class="error">{{.}}</label>
-                    {{end}}
-                </div>
+                {{if or (eq .Key "email_enabled") (eq .Key "smtp_host") (eq .Key "smtp_port") (eq .Key "smtp_username") (eq .Key "smtp_password") (eq .Key "smtp_from_name") (eq .Key "smtp_use_tls")}}
+                    <div class="form-group">
+                        <label for="{{.Key}}">{{.Description}}</label>
+                        
+                        {{if eq .DataType "string"}}
+                            {{if eq .Key "smtp_password"}}
+                                <input type="password" id="{{.Key}}" name="{{.Key}}" value="" 
+                                       {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}
+                                       placeholder="Enter Gmail app password (leave blank to keep current)">
+                            {{else}}
+                                <input type="text" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
+                                       {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                            {{end}}
+                        {{else if eq .DataType "int"}}
+                            <input type="number" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
+                                   {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                        {{else if eq .DataType "bool"}}
+                            <select id="{{.Key}}" name="{{.Key}}" 
+                                    {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                                <option value="true" {{if eq .Value "true"}}selected{{end}}>Yes</option>
+                                <option value="false" {{if eq .Value "false"}}selected{{end}}>No</option>
+                            </select>
+                        {{else}}
+                            <input type="text" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
+                                   {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                        {{end}}
+                        
+                        {{with index $.Form.FieldErrors .Key}}
+                            <label class="error">{{.}}</label>
+                        {{end}}
+                    </div>
+                {{end}}
+            {{end}}
+        </div>
+
+        <!-- Other Settings Section -->
+        <div class="form-section">
+            <h2>Other Settings</h2>
+            <p class="text-muted">
+                General application settings and configuration options.
+            </p>
+            
+            {{range .Settings}}
+                {{if not (or (eq .Key "email_enabled") (eq .Key "smtp_host") (eq .Key "smtp_port") (eq .Key "smtp_username") (eq .Key "smtp_password") (eq .Key "smtp_from_name") (eq .Key "smtp_use_tls"))}}
+                    <div class="form-group">
+                        <label for="{{.Key}}">{{.Description}}</label>
+                        
+                        {{if eq .DataType "string"}}
+                            <input type="text" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
+                                   {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                        {{else if eq .DataType "decimal"}}
+                            <input type="number" step="0.01" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
+                                   {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                        {{else if eq .DataType "int"}}
+                            <input type="number" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
+                                   {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                        {{else if eq .DataType "float"}}
+                            <input type="number" step="any" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
+                                   {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                        {{else if eq .DataType "bool"}}
+                            <select id="{{.Key}}" name="{{.Key}}" 
+                                    {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                                <option value="true" {{if eq .Value "true"}}selected{{end}}>Yes</option>
+                                <option value="false" {{if eq .Value "false"}}selected{{end}}>No</option>
+                            </select>
+                        {{else}}
+                            <input type="text" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}" 
+                                   {{with index $.Form.FieldErrors .Key}}class="form-input error"{{else}}class="form-input"{{end}}>
+                        {{end}}
+                        
+                        {{with index $.Form.FieldErrors .Key}}
+                            <label class="error">{{.}}</label>
+                        {{end}}
+                    </div>
+                {{end}}
             {{end}}
         </div>
 

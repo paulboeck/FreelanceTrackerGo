@@ -13,14 +13,48 @@
         </div>
     </div>
     
+    <!-- Email Settings Section -->
     <div class="projects-section">
         <div class="projects-header">
-            <h3>Current Settings</h3>
+            <h3>Email Settings</h3>
         </div>
         
-        {{if .Settings}}
-            <div class="projects-list">
-                {{range .Settings}}
+        <div class="projects-list">
+            {{range .Settings}}
+                {{if or (eq .Key "email_enabled") (eq .Key "smtp_host") (eq .Key "smtp_port") (eq .Key "smtp_username") (eq .Key "smtp_password") (eq .Key "smtp_from_name") (eq .Key "smtp_use_tls")}}
+                    <div class="project-item">
+                        <div class="project-content">
+                            <div class="project-info">
+                                <strong class="project-name">{{.Description}}</strong>
+                            </div>
+                            <div class="project-value">
+                                <span class="setting-value">
+                                    {{if eq .Key "smtp_password"}}
+                                        {{if .Value}}[Password Set]{{else}}[Not Set]{{end}}
+                                    {{else}}
+                                        {{.Value}}
+                                    {{end}}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="project-meta">
+                            <time>{{.Updated | humanDate | printf "Updated: %s"}}</time>
+                        </div>
+                    </div>
+                {{end}}
+            {{end}}
+        </div>
+    </div>
+
+    <!-- Other Settings Section -->
+    <div class="projects-section">
+        <div class="projects-header">
+            <h3>Other Settings</h3>
+        </div>
+        
+        <div class="projects-list">
+            {{range .Settings}}
+                {{if not (or (eq .Key "email_enabled") (eq .Key "smtp_host") (eq .Key "smtp_port") (eq .Key "smtp_username") (eq .Key "smtp_password") (eq .Key "smtp_from_name") (eq .Key "smtp_use_tls"))}}
                     <div class="project-item">
                         <div class="project-content">
                             <div class="project-info">
@@ -35,11 +69,7 @@
                         </div>
                     </div>
                 {{end}}
-            </div>
-        {{else}}
-            <div class="projects-empty">
-                <p class="empty-message">No settings configured.</p>
-            </div>
-        {{end}}
+            {{end}}
+        </div>
     </div>
 {{end}}

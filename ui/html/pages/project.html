@@ -131,6 +131,11 @@
                                 <a href="/invoice/print/{{.ID}}" class="btn-icon btn-print" title="Print invoice PDF">
                                     🖨️
                                 </a>
+                                <form method="POST" action="/invoice/email/{{.ID}}" style="display: inline;">
+                                    <button type="submit" class="btn-icon btn-email" title="Email invoice to client">
+                                        ✉
+                                    </button>
+                                </form>
                                 <a href="/invoice/update/{{.ID}}" class="btn-icon btn-edit" title="Edit invoice">
                                     ✏️
                                 </a>

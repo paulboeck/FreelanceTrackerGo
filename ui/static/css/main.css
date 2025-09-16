@@ -593,6 +593,26 @@ tr:hover {
     transform: translateY(-1px);
 }
 
+.btn-print {
+    background-color: #7a7b7c;
+    color: #ffffff;
+}
+
+.btn-print:hover {
+    background-color: #4b5563;
+    transform: translateY(-1px);
+}
+
+.btn-email {
+    background-color: #059669;
+    color: #ffffff;
+}
+
+.btn-email:hover {
+    background-color: #047857;
+    transform: translateY(-1px);
+}
+
 .sr-only {
     position: absolute;
     width: 1px;

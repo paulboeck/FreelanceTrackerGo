@@ -238,6 +238,81 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 			</body></html>
 			{{end}}
 		`)),
+		"settings.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<h1>Application Settings</h1>
+				<a href="/settings/edit" class="btn-client-action">Edit Setting Values</a>
+				{{if .Settings}}
+					{{range .Settings}}
+						<div>
+							<strong>{{.Description}}</strong>: 
+							<span>
+								{{if eq .Key "smtp_password"}}
+									{{if .Value}}[Password Set]{{else}}[Not Set]{{end}}
+								{{else}}
+									{{.Value}}
+								{{end}}
+							</span>
+						</div>
+					{{end}}
+				{{end}}
+			</body></html>
+			{{end}}
+		`)),
+		"settings_edit.html": template.Must(template.New("base").Parse(`
+			{{define "base"}}
+			<html><body>
+				<h2>Email Settings</h2>
+				<form action="/settings/edit" method="POST">
+					{{range .Settings}}
+						{{if or (eq .Key "email_enabled") (eq .Key "smtp_host") (eq .Key "smtp_port") (eq .Key "smtp_username") (eq .Key "smtp_password") (eq .Key "smtp_from_name") (eq .Key "smtp_use_tls")}}
+							<div>
+								<label for="{{.Key}}">{{.Description}}</label>
+								{{if eq .DataType "bool"}}
+									<select id="{{.Key}}" name="{{.Key}}">
+										<option value="true" {{if eq .Value "true"}}selected{{end}}>Yes</option>
+										<option value="false" {{if eq .Value "false"}}selected{{end}}>No</option>
+									</select>
+								{{else if eq .Key "smtp_password"}}
+									<input type="password" id="{{.Key}}" name="{{.Key}}" value="" placeholder="Enter Gmail app password (leave blank to keep current)">
+								{{else if eq .DataType "int"}}
+									<input type="number" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}">
+								{{else}}
+									<input type="text" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}">
+								{{end}}
+								{{with index $.Form.FieldErrors .Key}}<span class="error">{{.}}</span>{{end}}
+							</div>
+						{{end}}
+					{{end}}
+					<h2>Other Settings</h2>
+					{{range .Settings}}
+						{{if not (or (eq .Key "email_enabled") (eq .Key "smtp_host") (eq .Key "smtp_port") (eq .Key "smtp_username") (eq .Key "smtp_password") (eq .Key "smtp_from_name") (eq .Key "smtp_use_tls"))}}
+							<div>
+								<label for="{{.Key}}">{{.Description}}</label>
+								{{if eq .DataType "bool"}}
+									<select id="{{.Key}}" name="{{.Key}}">
+										<option value="true" {{if eq .Value "true"}}selected{{end}}>Yes</option>
+										<option value="false" {{if eq .Value "false"}}selected{{end}}>No</option>
+									</select>
+								{{else if eq .DataType "decimal"}}
+									<input type="number" step="0.01" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}">
+								{{else if eq .DataType "int"}}
+									<input type="number" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}">
+								{{else if eq .DataType "float"}}
+									<input type="number" step="any" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}">
+								{{else}}
+									<input type="text" id="{{.Key}}" name="{{.Key}}" value="{{.Value}}">
+								{{end}}
+								{{with index $.Form.FieldErrors .Key}}<span class="error">{{.}}</span>{{end}}
+							</div>
+						{{end}}
+					{{end}}
+					<input type="submit" value="Save Settings">
+				</form>
+			</body></html>
+			{{end}}
+		`)),
 	}
 
 	// Create session manager for tests
@@ -251,7 +326,7 @@ func createTestApp(t *testing.T) (*application, *testutil.TestDatabase) {
 		projects:       models.NewProjectModel(testDB.DB),
 		timesheets:     models.NewTimesheetModel(testDB.DB),
 		invoices:       models.NewInvoiceModel(testDB.DB),
-		settings:       models.NewAppSettingModel(testDB.DB),
+		settings:       models.NewAppSettingModel(testDB.DB, "test-encryption-seed"),
 		users:          models.NewUserModel(testDB.DB),
 		templateCache:  templateCache,
 		formDecoder:    form.NewDecoder(),
