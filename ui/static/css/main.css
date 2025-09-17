@@ -1060,3 +1060,176 @@ footer {
         order: 1;
     }
 }
+
+/* Email Progress Modal */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: modalSlideIn 0.3s ease-out;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-50px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.modal-header h3 {
+    color: #1e293b;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.progress-steps {
+    margin-bottom: 2rem;
+}
+
+.progress-step {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+    opacity: 0.4;
+    transition: opacity 0.3s ease;
+}
+
+.progress-step.active {
+    opacity: 1;
+}
+
+.progress-step.complete {
+    opacity: 1;
+}
+
+.step-icon {
+    width: 32px;
+    height: 32px;
+    margin-right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e2e8f0;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    display: none;
+}
+
+.progress-step.active .spinner {
+    display: block;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.check-icon {
+    width: 24px;
+    height: 24px;
+    background-color: #10b981;
+    color: white;
+    border-radius: 50%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+.progress-step.complete .check-icon {
+    display: flex;
+}
+
+.step-text {
+    font-size: 1rem;
+    color: #64748b;
+    font-weight: 500;
+}
+
+.progress-step.active .step-text {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+.progress-step.complete .step-text {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background-color: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #10b981);
+    width: 0%;
+    transition: width 0.5s ease;
+    border-radius: 4px;
+}
+
+/* Button loading state */
+.btn-email.loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+.btn-email.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border: 2px solid transparent;
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: buttonSpin 1s linear infinite;
+}
+
+@keyframes buttonSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}

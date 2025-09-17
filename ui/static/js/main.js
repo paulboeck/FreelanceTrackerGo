@@ -155,10 +155,71 @@ function setupClientDetailsToggle() {
     }
 }
 
+// Email progress functionality
+function showEmailProgress() {
+    var modal = document.getElementById('emailProgressModal');
+    if (!modal) return;
+    
+    // Reset all steps
+    var steps = modal.querySelectorAll('.progress-step');
+    var progressFill = modal.querySelector('#progressFill');
+    
+    steps.forEach(function(step) {
+        step.classList.remove('active', 'complete');
+    });
+    progressFill.style.width = '0%';
+    
+    // Show modal
+    modal.classList.add('show');
+    
+    // Start step 1: PDF generation
+    setTimeout(function() {
+        document.getElementById('step-pdf').classList.add('active');
+        progressFill.style.width = '33%';
+    }, 100);
+    
+    // Start step 2: Email sending (after 1.5 seconds)
+    setTimeout(function() {
+        document.getElementById('step-pdf').classList.remove('active');
+        document.getElementById('step-pdf').classList.add('complete');
+        document.getElementById('step-email').classList.add('active');
+        progressFill.style.width = '66%';
+    }, 1500);
+    
+    // Complete (after another 1.5 seconds)
+    setTimeout(function() {
+        document.getElementById('step-email').classList.remove('active');
+        document.getElementById('step-email').classList.add('complete');
+        document.getElementById('step-complete').classList.add('active');
+        document.getElementById('step-complete').classList.add('complete');
+        progressFill.style.width = '100%';
+        
+        // Hide modal after showing complete state for 1 second
+        setTimeout(function() {
+            modal.classList.remove('show');
+        }, 1000);
+    }, 3000);
+}
+
+function setupEmailProgressButtons() {
+    var emailForms = document.querySelectorAll('form[action*="/invoice/email/"]');
+    
+    emailForms.forEach(function(form) {
+        form.addEventListener('submit', function(e) {
+            var button = form.querySelector('.btn-email');
+            if (button) {
+                button.classList.add('loading');
+                showEmailProgress();
+            }
+        });
+    });
+}
+
 // Set up all functionality when page loads
 function setupPageFunctions() {
     setupDeleteConfirmations();
     setupClientDetailsToggle();
+    setupEmailProgressButtons();
 }
 
 if (document.readyState === 'loading') {

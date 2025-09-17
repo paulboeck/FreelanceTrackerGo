@@ -26,6 +26,41 @@
         {{template "main" .}}
     </main>
     <footer>Copyright &copy; {{.CurrentYear}} </footer>
+    
+    <!-- Email Progress Modal -->
+    <div id="emailProgressModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Sending Invoice Email</h3>
+            </div>
+            <div class="modal-body">
+                <div class="progress-steps">
+                    <div class="progress-step" id="step-pdf">
+                        <div class="step-icon">
+                            <div class="spinner"></div>
+                        </div>
+                        <div class="step-text">Generating PDF...</div>
+                    </div>
+                    <div class="progress-step" id="step-email">
+                        <div class="step-icon">
+                            <div class="spinner"></div>
+                        </div>
+                        <div class="step-text">Sending email...</div>
+                    </div>
+                    <div class="progress-step" id="step-complete">
+                        <div class="step-icon">
+                            <div class="check-icon">✓</div>
+                        </div>
+                        <div class="step-text">Complete!</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- And include the JavaScript file -->
     <script src='/static/js/main.js' type='text/javascript'></script>
 </body>
