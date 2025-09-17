@@ -336,3 +336,41 @@ func (s *Service) createAttachmentPart(boundary string, attachment Attachment) s
 		"%s\r\n\r\n",
 		boundary, mimeType, attachment.Filename, attachment.Filename, strings.Join(lines, "\r\n"))
 }
+
+// SendPaymentReceivedEmail sends a payment received notification email to both client and freelancer
+func (s *Service) SendPaymentReceivedEmail(clientEmail, clientName, freelancerEmail, freelancerName, projectName string) error {
+	if !s.config.Enabled {
+		return fmt.Errorf("email service is disabled")
+	}
+
+	// Extract first name from client name (take first word)
+	clientFirstName := clientName
+	if fields := strings.Fields(clientName); len(fields) > 0 {
+		clientFirstName = fields[0]
+	}
+
+	// Extract first name from freelancer name (take first word)
+	freelancerFirstName := freelancerName
+	if fields := strings.Fields(freelancerName); len(fields) > 0 {
+		freelancerFirstName = fields[0]
+	}
+
+	subject := "Payment for Academic Editing Received"
+	body := fmt.Sprintf("Dear %s,\n\nWe have received payment for your project: %s\n\nThank you for your business!\n\nBest regards,\n%s",
+		clientFirstName, projectName, freelancerFirstName)
+
+	// Send to both client and freelancer
+	recipients := []string{clientEmail}
+	if freelancerEmail != "" && freelancerEmail != clientEmail {
+		recipients = append(recipients, freelancerEmail)
+	}
+
+	email := Email{
+		To:      recipients,
+		Subject: subject,
+		Body:    body,
+		IsHTML:  false,
+	}
+
+	return s.Send(email)
+}

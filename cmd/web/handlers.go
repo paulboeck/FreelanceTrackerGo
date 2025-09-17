@@ -916,11 +916,75 @@ func (app *application) projectUpdatePost(res http.ResponseWriter, req *http.Req
 		return
 	}
 
+	// Check if project status changed to "Payment Received" (Business Rule 1)
+	statusChanged := project.Status != updatedProject.Status
+	paymentReceived := updatedProject.Status == "Payment Received"
+
 	err = app.projects.Update(updatedProject)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
 	}
+
+	// If status changed to "Payment Received", send email and update invoice date_paid
+	if statusChanged && paymentReceived {
+		// Get client information for email
+		client, err := app.clients.Get(project.ClientID)
+		if err != nil {
+			app.logger.Error("Failed to get client for payment received email", "error", err.Error(), "project_id", id)
+		} else {
+			// Get freelancer email and name from settings
+			freelancerEmail, err := app.settings.GetString("smtp_username")
+			if err != nil {
+				freelancerEmail = ""
+			}
+			freelancerName, err := app.settings.GetString("freelancer_name")
+			if err != nil {
+				freelancerName = "FreelanceTracker"
+			}
+
+			// Create email service and send payment received email
+			emailService, err := email.NewServiceFromSettings(app.settings)
+			if err == nil {
+				err = emailService.SendPaymentReceivedEmail(
+					client.Email,
+					client.Name,
+					freelancerEmail,
+					freelancerName,
+					updatedProject.Name,
+				)
+				if err != nil {
+					app.logger.Error("Failed to send payment received email", "error", err.Error(), "project_id", id)
+				} else {
+					app.logger.Info("Payment received email sent successfully", "project_id", id, "client_email", client.Email)
+				}
+			}
+
+			// Update invoice date_paid to today's date
+			invoices, err := app.invoices.GetByProject(id)
+			if err == nil && len(invoices) > 0 {
+				// Find the most recent invoice without a date_paid
+				for i := len(invoices) - 1; i >= 0; i-- {
+					if invoices[i].DatePaid == nil {
+						today := time.Now()
+						err = app.invoices.Update(
+							invoices[i].ID,
+							invoices[i].InvoiceDate,
+							&today,
+							invoices[i].PaymentTerms,
+							invoices[i].AmountDue,
+							invoices[i].DisplayDetails,
+						)
+						if err != nil {
+							app.logger.Error("Failed to update invoice date_paid", "error", err.Error(), "invoice_id", invoices[i].ID)
+						}
+						break
+					}
+				}
+			}
+		}
+	}
+
 	http.Redirect(res, req, fmt.Sprintf("/client/view/%d", project.ClientID), http.StatusSeeOther)
 }
 
@@ -1547,11 +1611,54 @@ func (app *application) invoiceUpdatePost(res http.ResponseWriter, req *http.Req
 		return
 	}
 
+	// Check if date_paid field was modified and set for the first time (Business Rule 2)
+	datePaidModified := (invoice.DatePaid == nil && datePaid != nil)
+
 	err = app.invoices.Update(id, invoiceDate, datePaid, form.PaymentTerms, amountDue, form.DisplayDetails)
 	if err != nil {
 		app.serverError(res, req, err)
 		return
 	}
+
+	// If date_paid was set for the first time, send email and update project status
+	if datePaidModified {
+		// Get freelancer email and name from settings
+		freelancerEmail, err := app.settings.GetString("smtp_username")
+		if err != nil {
+			freelancerEmail = ""
+		}
+		freelancerName, err := app.settings.GetString("freelancer_name")
+		if err != nil {
+			freelancerName = "FreelanceTracker"
+		}
+
+		// Create email service and send payment received email
+		emailService, err := email.NewServiceFromSettings(app.settings)
+		if err == nil {
+			err = emailService.SendPaymentReceivedEmail(
+				client.Email,
+				client.Name,
+				freelancerEmail,
+				freelancerName,
+				project.Name,
+			)
+			if err != nil {
+				app.logger.Error("Failed to send payment received email", "error", err.Error(), "invoice_id", id)
+			} else {
+				app.logger.Info("Payment received email sent successfully", "invoice_id", id, "client_email", client.Email)
+			}
+		}
+
+		// Update associated project status to "Payment Received"
+		if project.Status != "Payment Received" {
+			project.Status = "Payment Received"
+			err = app.projects.Update(project)
+			if err != nil {
+				app.logger.Error("Failed to update project status to Payment Received", "error", err.Error(), "project_id", project.ID)
+			}
+		}
+	}
+
 	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", invoice.ProjectID), http.StatusSeeOther)
 }
 

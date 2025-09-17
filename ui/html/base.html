@@ -61,6 +61,40 @@
         </div>
     </div>
     
+    <!-- Payment Received Progress Modal -->
+    <div id="paymentReceivedModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Processing Payment Received</h3>
+            </div>
+            <div class="modal-body">
+                <div class="progress-steps">
+                    <div class="progress-step" id="payment-step-update">
+                        <div class="step-icon">
+                            <div class="spinner"></div>
+                        </div>
+                        <div class="step-text">Updating records...</div>
+                    </div>
+                    <div class="progress-step" id="payment-step-email">
+                        <div class="step-icon">
+                            <div class="spinner"></div>
+                        </div>
+                        <div class="step-text">Sending notification...</div>
+                    </div>
+                    <div class="progress-step" id="payment-step-complete">
+                        <div class="step-icon">
+                            <div class="check-icon">✓</div>
+                        </div>
+                        <div class="step-text">Complete!</div>
+                    </div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="paymentProgressFill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- And include the JavaScript file -->
     <script src='/static/js/main.js' type='text/javascript'></script>
 </body>

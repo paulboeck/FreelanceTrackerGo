@@ -215,11 +215,109 @@ function setupEmailProgressButtons() {
     });
 }
 
+// Payment Received progress functionality
+function showPaymentReceivedProgress() {
+    var modal = document.getElementById('paymentReceivedModal');
+    if (!modal) return;
+    
+    // Reset all steps
+    var steps = modal.querySelectorAll('.progress-step');
+    var progressFill = modal.querySelector('#paymentProgressFill');
+    
+    steps.forEach(function(step) {
+        step.classList.remove('active', 'complete');
+    });
+    
+    progressFill.style.width = '0%';
+    modal.classList.add('show');
+    
+    // Start step 1: Updating records
+    document.getElementById('payment-step-update').classList.add('active');
+    progressFill.style.width = '33%';
+    
+    // Start step 2: Sending notification (after 1.5 seconds)
+    setTimeout(function() {
+        document.getElementById('payment-step-update').classList.remove('active');
+        document.getElementById('payment-step-update').classList.add('complete');
+        document.getElementById('payment-step-email').classList.add('active');
+        progressFill.style.width = '66%';
+    }, 1500);
+    
+    // Complete (after another 1.5 seconds)
+    setTimeout(function() {
+        document.getElementById('payment-step-email').classList.remove('active');
+        document.getElementById('payment-step-email').classList.add('complete');
+        document.getElementById('payment-step-complete').classList.add('active');
+        document.getElementById('payment-step-complete').classList.add('complete');
+        progressFill.style.width = '100%';
+        
+        // Hide modal after showing complete state for 1 second
+        setTimeout(function() {
+            modal.classList.remove('show');
+        }, 1000);
+    }, 3000);
+}
+
+function setupPaymentReceivedProgressButtons() {
+    // Handle project update forms when status is changed to "Payment Received"
+    // Check if we're on a project update page by URL pattern
+    var isProjectUpdatePage = window.location.pathname.includes('/project/update/');
+    
+    if (isProjectUpdatePage) {
+        var projectForms = document.querySelectorAll('form[method="POST"]');
+        
+        projectForms.forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                var statusSelect = form.querySelector('select[name="status"]');
+                if (statusSelect && statusSelect.value === 'Payment Received') {
+                    var button = form.querySelector('input[type="submit"]');
+                    if (button) {
+                        button.classList.add('loading');
+                        showPaymentReceivedProgress();
+                    }
+                }
+            });
+        });
+    }
+    
+    // Handle invoice update forms when date_paid is set
+    var isInvoiceUpdatePage = window.location.pathname.includes('/invoice/update/');
+    
+    if (isInvoiceUpdatePage) {
+        var invoiceForms = document.querySelectorAll('form[method="POST"]');
+        
+        invoiceForms.forEach(function(form) {
+            form.addEventListener('submit', function(e) {
+                var datePaidInput = form.querySelector('input[name="date_paid"]');
+                // Check if date_paid field has a value and wasn't previously set (was empty or null)
+                if (datePaidInput && datePaidInput.value && 
+                    (!datePaidInput.dataset.originalValue || datePaidInput.dataset.originalValue === '')) {
+                    var button = form.querySelector('input[type="submit"]');
+                    if (button) {
+                        button.classList.add('loading');
+                        showPaymentReceivedProgress();
+                    }
+                }
+            });
+        });
+    }
+}
+
 // Set up all functionality when page loads
 function setupPageFunctions() {
     setupDeleteConfirmations();
     setupClientDetailsToggle();
     setupEmailProgressButtons();
+    setupPaymentReceivedProgressButtons();
+    trackOriginalDatePaidValues();
+}
+
+// Track original date_paid values for comparison
+function trackOriginalDatePaidValues() {
+    var datePaidInputs = document.querySelectorAll('input[name="date_paid"]');
+    datePaidInputs.forEach(function(input) {
+        input.dataset.originalValue = input.value;
+    });
 }
 
 if (document.readyState === 'loading') {

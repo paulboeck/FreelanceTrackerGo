@@ -1233,3 +1233,24 @@ footer {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
+
+/* Submit button loading state for Payment Received */
+input[type="submit"].loading {
+    opacity: 0.6;
+    pointer-events: none;
+    position: relative;
+}
+
+input[type="submit"].loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 12px;
+    height: 12px;
+    margin: -6px 0 0 -6px;
+    border: 2px solid transparent;
+    border-top: 2px solid #ffffff;
+    border-radius: 50%;
+    animation: buttonSpin 1s linear infinite;
+}
