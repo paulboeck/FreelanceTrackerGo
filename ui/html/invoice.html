@@ -272,8 +272,8 @@
                 <td class="hours">{{.WorkDate.Format "Jan 2"}}</td>
                 <td class="description">{{.Description}}</td>
                 <td class="hours">{{printf "%.2f" .HoursWorked}}</td>
-                <td class="rate">{{$.Settings.CurrencySymbol}}{{printf "%.2f" .HourlyRate}}</td>
-                <td class="amount">{{$.Settings.CurrencySymbol}}{{printf "%.2f" (mul .HoursWorked .HourlyRate)}}</td>
+                <td class="rate">{{currencySymbol $.Project}}{{printf "%.2f" .HourlyRate}}</td>
+                <td class="amount">{{currencySymbol $.Project}}{{printf "%.2f" (mul .HoursWorked .HourlyRate)}}</td>
             </tr>
             {{end}}
         </tbody>
@@ -294,11 +294,11 @@
                 {{if .Project.FlatFeeInvoice}}
                     <td class="hours">1</td>
                     <td class="rate">Flat Fee</td>
-                    <td class="amount">{{.Settings.CurrencySymbol}}{{printf "%.2f" .Invoice.AmountDue}}</td>
+                    <td class="amount">{{currencySymbol .Project}}{{printf "%.2f" .Invoice.AmountDue}}</td>
                 {{else}}
                     <td class="hours">{{printf "%.2f" .TotalHours}}</td>
-                    <td class="rate">{{.Settings.CurrencySymbol}}{{printf "%.2f" .AvgRate}}</td>
-                    <td class="amount">{{.Settings.CurrencySymbol}}{{printf "%.2f" .Invoice.AmountDue}}</td>
+                    <td class="rate">{{currencySymbol .Project}}{{printf "%.2f" .AvgRate}}</td>
+                    <td class="amount">{{currencySymbol .Project}}{{printf "%.2f" .Invoice.AmountDue}}</td>
                 {{end}}
             </tr>
         </tbody>
@@ -310,28 +310,60 @@
             {{if or (isPositive .DiscountAmount) (isNonZero .AdjustmentAmount)}}
                 <div class="summary-row">
                     <span>Subtotal:</span>
-                    <span>{{.Settings.CurrencySymbol}}{{printf "%.2f" .Invoice.AmountDue}}</span>
+                    <span>{{currencySymbol .Project}}{{printf "%.2f" .Invoice.AmountDue}}</span>
                 </div>
             {{end}}
             
             {{if isPositive .DiscountAmount}}
                 <div class="summary-row">
                     <span>Discount{{if .Project.DiscountReason}} ({{.Project.DiscountReason}}){{end}}:</span>
-                    <span>-{{.Settings.CurrencySymbol}}{{printf "%.2f" .DiscountAmount}}</span>
+                    <span>-{{currencySymbol .Project}}{{printf "%.2f" .DiscountAmount}}</span>
                 </div>
             {{end}}
             
             {{if isNonZero .AdjustmentAmount}}
                 <div class="summary-row">
                     <span>Adjustment{{if .Project.AdjustmentReason}} ({{.Project.AdjustmentReason}}){{end}}:</span>
-                    <span>{{if isPositive .AdjustmentAmount}}+{{end}}{{.Settings.CurrencySymbol}}{{printf "%.2f" .AdjustmentAmount}}</span>
+                    <span>{{if isPositive .AdjustmentAmount}}+{{end}}{{currencySymbol .Project}}{{printf "%.2f" .AdjustmentAmount}}</span>
                 </div>
             {{end}}
             
             <div class="summary-row total-row">
                 <span>Total Due:</span>
-                <span>{{.Settings.CurrencySymbol}}{{printf "%.2f" .FinalTotal}}</span>
+                <span>{{currencySymbol .Project}}{{printf "%.2f" .FinalTotal}}</span>
             </div>
+            
+            {{if .ShowConvertedAmounts}}
+                <div class="summary-section">
+                    <h4>Converted to {{.Project.CurrencyDisplay}} (Rate: {{printf "%.5f" .Project.CurrencyConversionRate}})</h4>
+                    
+                    {{if or (isPositive .ConvertedDiscountAmount) (isNonZero .ConvertedAdjustmentAmount)}}
+                        <div class="summary-row">
+                            <span>Subtotal:</span>
+                            <span>{{currencyDisplayOnInvoice .Project}}{{printf "%.2f" .ConvertedSubtotal}}</span>
+                        </div>
+                    {{end}}
+                    
+                    {{if isPositive .ConvertedDiscountAmount}}
+                        <div class="summary-row">
+                            <span>Discount{{if .Project.DiscountReason}} ({{.Project.DiscountReason}}){{end}}:</span>
+                            <span>-{{currencyDisplayOnInvoice .Project}}{{printf "%.2f" .ConvertedDiscountAmount}}</span>
+                        </div>
+                    {{end}}
+                    
+                    {{if isNonZero .ConvertedAdjustmentAmount}}
+                        <div class="summary-row">
+                            <span>Adjustment{{if .Project.AdjustmentReason}} ({{.Project.AdjustmentReason}}){{end}}:</span>
+                            <span>{{if isPositive .ConvertedAdjustmentAmount}}+{{end}}{{currencyDisplayOnInvoice .Project}}{{printf "%.2f" .ConvertedAdjustmentAmount}}</span>
+                        </div>
+                    {{end}}
+                    
+                    <div class="summary-row total-row">
+                        <span>Total Due ({{.Project.CurrencyDisplay}}):</span>
+                        <span>{{currencyDisplayOnInvoice .Project}}{{printf "%.2f" .ConvertedFinalTotal}}</span>
+                    </div>
+                </div>
+            {{end}}
         </div>
     </div>
     

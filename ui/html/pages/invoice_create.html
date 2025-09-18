@@ -1,5 +1,5 @@
 {{define "title"}}
-{{if .Form.AmountDue}}Update Invoice{{else}}Create a New Invoice{{end}} - {{.Project.Name}}
+{{if .Form.IsUpdate}}Update Invoice{{else}}Create a New Invoice{{end}} - {{.Project.Name}}
 {{end}}
 
 {{define "main"}}
@@ -10,7 +10,7 @@
     </p>
 </div>
 
-<h2>{{if .Form.AmountDue}}Update Invoice{{else}}Create a New Invoice{{end}}</h2>
+<h2>{{if .Form.IsUpdate}}Update Invoice{{else}}Create a New Invoice{{end}}</h2>
 
 <div class="form-container">
     <form method='POST'>
@@ -27,7 +27,7 @@
                 <label class="error">{{.}}</label>
             {{end}}
             <input type='number' name='amount_due' value="{{.Form.AmountDue}}" step="0.01" min="0" placeholder="e.g., 1250.00" {{with .Form.FieldErrors.amount_due}}class="form-input error"{{else}}class="form-input"{{end}}>
-            <small class="form-help">Enter amount in decimal format (e.g., 1250.00)</small>
+            <small class="form-help">Pre-calculated from timesheets with project discounts and adjustments applied. You can override this amount if needed.</small>
         </div>
         <div class="form-group">
             <label>Payment Terms:</label>
@@ -53,8 +53,8 @@
             <small class="form-help">Show detailed breakdown on invoice</small>
         </div>
         <div class="form-actions">
-            <input type='submit' value='{{if .Form.AmountDue}}Update invoice{{else}}Create invoice{{end}}'>
-            {{if .Form.AmountDue}}
+            <input type='submit' value='{{if .Form.IsUpdate}}Update invoice{{else}}Create invoice{{end}}'>
+            {{if .Form.IsUpdate}}
             <a href="/project/view/{{.Project.ID}}" class="btn-cancel">Cancel</a>
             {{end}}
         </div>

@@ -1254,3 +1254,26 @@ input[type="submit"].loading::after {
     border-radius: 50%;
     animation: buttonSpin 1s linear infinite;
 }
+
+/* Form help text */
+.form-help {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-style: italic;
+}
+
+/* Currency conversion section in invoices */
+.summary-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e5e7eb;
+}
+
+.summary-section h4 {
+    font-size: 0.9rem;
+    color: #6b7280;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}

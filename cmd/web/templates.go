@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"path/filepath"
 	"time"
@@ -38,8 +39,49 @@ func humanDate(t time.Time) string {
 	return t.Format("02 Jan 2006 at 15:04")
 }
 
+func currencySymbol(project models.Project) string {
+	return project.CurrencySymbol()
+}
+
+func currencyDisplayOnInvoice(project models.Project) string {
+	return project.CurrencyDisplayOnInvoice()
+}
+
+func isPositive(value float64) bool {
+	return value > 0
+}
+
+func isNonZero(value float64) bool {
+	return value != 0
+}
+
+func mul(a, b float64) float64 {
+	return a * b
+}
+
+func formatDiscountPercent(discount *float64) string {
+	if discount == nil {
+		return "0.0000"
+	}
+	return fmt.Sprintf("%.4f", *discount)
+}
+
+func formatAdjustmentAmount(adjustment *float64) string {
+	if adjustment == nil {
+		return "0.00"
+	}
+	return fmt.Sprintf("%.2f", *adjustment)
+}
+
 var functions = template.FuncMap{
-	"humanDate": humanDate,
+	"humanDate":                humanDate,
+	"currencySymbol":           currencySymbol,
+	"currencyDisplayOnInvoice": currencyDisplayOnInvoice,
+	"isPositive":               isPositive,
+	"isNonZero":                isNonZero,
+	"mul":                      mul,
+	"formatDiscountPercent":    formatDiscountPercent,
+	"formatAdjustmentAmount":   formatAdjustmentAmount,
 }
 
 func newTemplateCache() (map[string]*template.Template, error) {

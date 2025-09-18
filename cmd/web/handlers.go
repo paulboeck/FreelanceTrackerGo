@@ -76,6 +76,7 @@ type invoiceForm struct {
 	PaymentTerms        string `form:"payment_terms"`
 	AmountDue           string `form:"amount_due"`
 	DisplayDetails      bool   `form:"display_details"`
+	IsUpdate            bool   `form:"-"`
 	validator.Validator `form:"-"`
 }
 
@@ -1361,9 +1362,21 @@ func (app *application) invoiceCreate(res http.ResponseWriter, req *http.Request
 		return
 	}
 
+	// Get timesheets for the project to calculate amount due
+	timesheets, err := app.timesheets.GetByProject(projectID)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Calculate the adjusted amount due using the Python logic
+	adjustedAmountDue := project.AdjustedAmountDue(timesheets)
+
 	data := app.newTemplateData(req)
 	data.Form = invoiceForm{
 		InvoiceDate: time.Now().Format("2006-01-02"),
+		AmountDue:   fmt.Sprintf("%.2f", adjustedAmountDue),
+		IsUpdate:    false,
 	}
 	data.Project = &project
 	data.Client = &client
@@ -1443,6 +1456,7 @@ func (app *application) invoiceCreatePost(res http.ResponseWriter, req *http.Req
 
 	if !form.Valid() {
 		data := app.newTemplateData(req)
+		form.IsUpdate = false
 		data.Form = form
 		data.Project = &project
 		data.Client = &client
@@ -1515,6 +1529,7 @@ func (app *application) invoiceUpdate(res http.ResponseWriter, req *http.Request
 		PaymentTerms:   invoice.PaymentTerms,
 		AmountDue:      fmt.Sprintf("%.2f", invoice.AmountDue),
 		DisplayDetails: invoice.DisplayDetails,
+		IsUpdate:       true,
 	}
 	data.Project = &project
 	data.Client = &client
@@ -1604,6 +1619,7 @@ func (app *application) invoiceUpdatePost(res http.ResponseWriter, req *http.Req
 
 	if !form.Valid() {
 		data := app.newTemplateData(req)
+		form.IsUpdate = true
 		data.Form = form
 		data.Project = &project
 		data.Client = &client

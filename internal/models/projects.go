@@ -504,5 +504,104 @@ type ProjectModelInterface interface {
 	Delete(id int) error
 }
 
+// Currency options mapping
+var CurrencyOptions = map[string]string{
+	"USD": "$",
+	"EUR": "€",
+	"GBP": "£",
+	"CAD": "C$",
+	"AUD": "A$",
+	"JPY": "¥",
+	"CHF": "₣",
+	"SEK": "kr",
+	"NOK": "kr",
+	"DKK": "kr",
+}
+
+// Financial calculation methods for Project
+
+// TotalAmountDue calculates the total amount due for all timesheets
+func (p *Project) TotalAmountDue(timesheets []Timesheet) float64 {
+	total := 0.0
+	for _, timesheet := range timesheets {
+		total += timesheet.HoursWorked * timesheet.HourlyRate
+	}
+	return total
+}
+
+// ConvertedTotalAmountDue calculates total with currency conversion
+func (p *Project) ConvertedTotalAmountDue(timesheets []Timesheet) float64 {
+	total := 0.0
+	for _, timesheet := range timesheets {
+		total += timesheet.HoursWorked * (timesheet.HourlyRate * p.CurrencyConversionRate)
+	}
+	return total
+}
+
+// ConvertedHourlyRate applies currency conversion to hourly rate
+func (p *Project) ConvertedHourlyRate() float64 {
+	return p.HourlyRate * p.CurrencyConversionRate
+}
+
+// DiscountAmount calculates the discount amount
+func (p *Project) DiscountAmount(subtotal float64) float64 {
+	if p.DiscountPercent != nil && *p.DiscountPercent > 0 {
+		return subtotal * (*p.DiscountPercent / 100.0)
+	}
+	return 0.0
+}
+
+// ConvertedAdjustmentAmount applies currency conversion to adjustment
+func (p *Project) ConvertedAdjustmentAmount() float64 {
+	if p.AdjustmentAmount != nil {
+		return *p.AdjustmentAmount * p.CurrencyConversionRate
+	}
+	return 0.0
+}
+
+// AdjustedAmountDue calculates final amount after discounts and adjustments
+func (p *Project) AdjustedAmountDue(timesheets []Timesheet) float64 {
+	subtotal := p.TotalAmountDue(timesheets)
+	discount := p.DiscountAmount(subtotal)
+	adjustment := 0.0
+	if p.AdjustmentAmount != nil {
+		adjustment = *p.AdjustmentAmount
+	}
+	return subtotal - discount - adjustment
+}
+
+// ConvertedAdjustedAmountDue calculates final converted amount
+func (p *Project) ConvertedAdjustedAmountDue(timesheets []Timesheet) float64 {
+	subtotal := p.ConvertedTotalAmountDue(timesheets)
+	discount := p.DiscountAmount(subtotal) // Discount applied to converted amount
+	adjustment := p.ConvertedAdjustmentAmount()
+	return subtotal - discount - adjustment
+}
+
+// CurrencyDisplayOnInvoice formats currency for display
+func (p *Project) CurrencyDisplayOnInvoice() string {
+	if p.CurrencyDisplay != "USD" {
+		return p.CurrencyDisplay + " "
+	}
+	return "USD $"
+}
+
+// CurrencySymbol returns the symbol for the project's currency
+func (p *Project) CurrencySymbol() string {
+	if symbol, exists := CurrencyOptions[p.CurrencyDisplay]; exists {
+		return symbol
+	}
+	return "$" // Default to USD
+}
+
+// TotalHours calculates total hours from timesheets
+func (p *Project) TotalHours(timesheets []Timesheet) float64 {
+	total := 0.0
+	for _, timesheet := range timesheets {
+		total += timesheet.HoursWorked
+	}
+	return total
+}
+
 // Ensure implementation satisfies the interface
 var _ ProjectModelInterface = (*ProjectModel)(nil)

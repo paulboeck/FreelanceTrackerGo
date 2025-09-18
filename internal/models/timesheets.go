@@ -145,5 +145,22 @@ type TimesheetModelInterface interface {
 	Delete(id int) error
 }
 
+// Financial calculation methods for Timesheet
+
+// ConvertedHourlyRate applies project currency conversion to timesheet rate
+func (t *Timesheet) ConvertedHourlyRate(project Project) float64 {
+	return t.HourlyRate * project.CurrencyConversionRate
+}
+
+// ConvertedTotal calculates converted total for this timesheet
+func (t *Timesheet) ConvertedTotal(project Project) float64 {
+	return t.HoursWorked * t.ConvertedHourlyRate(project)
+}
+
+// Total calculates base total for this timesheet
+func (t *Timesheet) Total() float64 {
+	return t.HoursWorked * t.HourlyRate
+}
+
 // Ensure implementation satisfies the interface
 var _ TimesheetModelInterface = (*TimesheetModel)(nil)

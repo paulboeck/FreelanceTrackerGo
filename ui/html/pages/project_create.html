@@ -99,11 +99,12 @@
         </div>
         
         <div class="form-group">
-            <label>Discount Percent:</label>
+            <label>Discount Percent (%):</label>
             {{with .Form.FieldErrors.discount_percent}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='number' name='discount_percent' value="{{.Form.DiscountPercent}}" step="0.0001" min="0" max="1" placeholder="0.0000" {{with .Form.FieldErrors.discount_percent}}class="form-input error"{{else}}class="form-input"{{end}}>
+            <input type='number' name='discount_percent' value="{{.Form.DiscountPercent}}" step="0.01" min="0" max="100" placeholder="10.00" {{with .Form.FieldErrors.discount_percent}}class="form-input error"{{else}}class="form-input"{{end}}>
+            <small class="form-help">Enter percentage (e.g., 10 for 10%)</small>
         </div>
         
         <div class="form-group">
@@ -135,7 +136,18 @@
             {{with .Form.FieldErrors.currency_display}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='text' name='currency_display' value="{{.Form.CurrencyDisplay}}" placeholder="USD" {{with .Form.FieldErrors.currency_display}}class="form-input error"{{else}}class="form-input"{{end}}>
+            <select name='currency_display' {{with .Form.FieldErrors.currency_display}}class="form-input error"{{else}}class="form-input"{{end}}>
+                <option value="USD" {{if eq .Form.CurrencyDisplay "USD"}}selected{{end}}>USD ($)</option>
+                <option value="EUR" {{if eq .Form.CurrencyDisplay "EUR"}}selected{{end}}>EUR (€)</option>
+                <option value="GBP" {{if eq .Form.CurrencyDisplay "GBP"}}selected{{end}}>GBP (£)</option>
+                <option value="CAD" {{if eq .Form.CurrencyDisplay "CAD"}}selected{{end}}>CAD (C$)</option>
+                <option value="AUD" {{if eq .Form.CurrencyDisplay "AUD"}}selected{{end}}>AUD (A$)</option>
+                <option value="JPY" {{if eq .Form.CurrencyDisplay "JPY"}}selected{{end}}>JPY (¥)</option>
+                <option value="CHF" {{if eq .Form.CurrencyDisplay "CHF"}}selected{{end}}>CHF (₣)</option>
+                <option value="SEK" {{if eq .Form.CurrencyDisplay "SEK"}}selected{{end}}>SEK (kr)</option>
+                <option value="NOK" {{if eq .Form.CurrencyDisplay "NOK"}}selected{{end}}>NOK (kr)</option>
+                <option value="DKK" {{if eq .Form.CurrencyDisplay "DKK"}}selected{{end}}>DKK (kr)</option>
+            </select>
         </div>
         
         <div class="form-group">

@@ -34,10 +34,10 @@
                 <p><strong>Currency Conversion Rate:</strong> {{printf "%.5f" .Project.CurrencyConversionRate}}</p>
                 <p><strong>Flat Fee Invoice:</strong> {{if .Project.FlatFeeInvoice}}Yes{{else}}No{{end}}</p>
                 
-                {{if .Project.DiscountPercent}}<p><strong>Discount:</strong> {{printf "%.4f" .Project.DiscountPercent}}</p>{{end}}
+                {{if .Project.DiscountPercent}}<p><strong>Discount:</strong> {{formatDiscountPercent .Project.DiscountPercent}}%</p>{{end}}
                 {{if .Project.DiscountReason}}<p><strong>Discount Reason:</strong> {{.Project.DiscountReason}}</p>{{end}}
                 
-                {{if .Project.AdjustmentAmount}}<p><strong>Adjustment:</strong> ${{printf "%.2f" .Project.AdjustmentAmount}}</p>{{end}}
+                {{if .Project.AdjustmentAmount}}<p><strong>Adjustment:</strong> ${{formatAdjustmentAmount .Project.AdjustmentAmount}}</p>{{end}}
                 {{if .Project.AdjustmentReason}}<p><strong>Adjustment Reason:</strong> {{.Project.AdjustmentReason}}</p>{{end}}
             </div>
             
@@ -63,9 +63,9 @@
     </div>
     
     <div class="projects-section">
-        <div class="projects-header">
+        <div class="list-header">
             <h3>Timesheets</h3>
-            <a href="/project/{{.Project.ID}}/timesheet/create" class="btn-add-project" title="Add new timesheet">
+            <a href="/project/{{.Project.ID}}/timesheet/create" class="btn-add" title="Add new timesheet">
                 ➕ Add Timesheet
             </a>
         </div>
@@ -111,9 +111,9 @@
     </div>
     
     <div class="projects-section">
-        <div class="projects-header">
+        <div class="list-header">
             <h3>Invoices</h3>
-            <a href="/project/{{.Project.ID}}/invoice/create" class="btn-add-project" title="Add new invoice">
+            <a href="/project/{{.Project.ID}}/invoice/create" class="btn-add" title="Add new invoice">
                 ➕ Add Invoice
             </a>
         </div>

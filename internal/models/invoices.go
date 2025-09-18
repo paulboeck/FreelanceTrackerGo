@@ -192,17 +192,22 @@ type ComprehensiveInvoiceData struct {
 
 // InvoiceTemplateData represents the data structure for HTML template rendering
 type InvoiceTemplateData struct {
-	Invoice          Invoice
-	Project          Project
-	Client           Client
-	Timesheets       []Timesheet
-	TotalHours       float64
-	AvgRate          float64
-	Subtotal         float64
-	DiscountAmount   float64
-	AdjustmentAmount float64
-	FinalTotal       float64
-	Settings         InvoiceTemplateSettings
+	Invoice                 Invoice
+	Project                 Project
+	Client                  Client
+	Timesheets              []Timesheet
+	TotalHours              float64
+	AvgRate                 float64
+	Subtotal                float64
+	DiscountAmount          float64
+	AdjustmentAmount        float64
+	FinalTotal              float64
+	ConvertedSubtotal       float64
+	ConvertedDiscountAmount float64
+	ConvertedAdjustmentAmount float64
+	ConvertedFinalTotal     float64
+	ShowConvertedAmounts    bool
+	Settings                InvoiceTemplateSettings
 }
 
 // InvoiceTemplateSettings represents settings for the HTML template
@@ -317,33 +322,42 @@ func (i *InvoiceModel) GetComprehensiveForPDF(id int) (ComprehensiveInvoiceData,
 		totalHours += tsRow.HoursWorked
 	}
 
-	// Calculate amounts
-	subtotal := invoice.AmountDue
-	discountAmount := 0.0
+	// Calculate amounts - handle flat fee vs hourly projects differently
+	var baseTotal, discountAmount, finalTotal float64
 	adjustmentAmountValue := 0.0
-
-	// Apply project-level discount if applicable
-	if project.DiscountPercent != nil && *project.DiscountPercent > 0 {
-		discountAmount = subtotal * (*project.DiscountPercent / 100.0)
-		subtotal -= discountAmount
+	
+	if project.FlatFeeInvoice {
+		// For flat fee projects, use the invoice amount as the base
+		baseTotal = invoice.AmountDue
+		discountAmount = project.DiscountAmount(baseTotal)
+		if project.AdjustmentAmount != nil {
+			adjustmentAmountValue = *project.AdjustmentAmount
+		}
+		finalTotal = baseTotal - discountAmount + adjustmentAmountValue
+	} else {
+		// For hourly projects, calculate from timesheets
+		baseTotal = project.TotalAmountDue(timesheets)
+		discountAmount = project.DiscountAmount(baseTotal)
+		if project.AdjustmentAmount != nil {
+			adjustmentAmountValue = *project.AdjustmentAmount
+		}
+		finalTotal = baseTotal - discountAmount + adjustmentAmountValue
 	}
 
-	// Apply project-level adjustment if applicable
-	if project.AdjustmentAmount != nil {
-		adjustmentAmountValue = *project.AdjustmentAmount
-		subtotal += adjustmentAmountValue
-	}
-
+	// For backward compatibility, the "Subtotal" field represents the final amount
+	// after discounts and adjustments (this matches existing test expectations)
+	subtotalAmount := finalTotal
+	
 	return ComprehensiveInvoiceData{
 		Invoice:          invoice,
 		Project:          project,
 		Client:           client,
 		Timesheets:       timesheets,
 		TotalHours:       totalHours,
-		Subtotal:         subtotal,
+		Subtotal:         subtotalAmount,
 		DiscountAmount:   discountAmount,
 		AdjustmentAmount: adjustmentAmountValue,
-		FinalTotal:       subtotal, // After discounts and adjustments
+		FinalTotal:       finalTotal,
 	}, nil
 }
 
@@ -427,18 +441,32 @@ func (i *InvoiceModel) GenerateHTMLPDF(id int, settings map[string]AppSettingVal
 		avgRate = data.Invoice.AmountDue / data.TotalHours
 	}
 
+	// Check if we should show converted amounts (when conversion rate != 1.0)
+	showConverted := data.Project.CurrencyConversionRate != 1.0
+	
+	// Calculate converted amounts for template
+	convertedSubtotal := data.Project.TotalAmountDue(data.Timesheets) * data.Project.CurrencyConversionRate
+	convertedDiscountAmount := data.Project.DiscountAmount(convertedSubtotal)
+	convertedAdjustmentAmount := data.Project.ConvertedAdjustmentAmount()
+	convertedFinalTotal := convertedSubtotal - convertedDiscountAmount + convertedAdjustmentAmount
+
 	// Prepare template data
 	templateData := InvoiceTemplateData{
-		Invoice:          data.Invoice,
-		Project:          data.Project,
-		Client:           data.Client,
-		Timesheets:       data.Timesheets,
-		TotalHours:       data.TotalHours,
-		AvgRate:          avgRate,
-		Subtotal:         data.Subtotal,
-		DiscountAmount:   data.DiscountAmount,
-		AdjustmentAmount: data.AdjustmentAmount,
-		FinalTotal:       data.FinalTotal,
+		Invoice:                   data.Invoice,
+		Project:                   data.Project,
+		Client:                    data.Client,
+		Timesheets:                data.Timesheets,
+		TotalHours:                data.TotalHours,
+		AvgRate:                   avgRate,
+		Subtotal:                  data.Subtotal,
+		DiscountAmount:            data.DiscountAmount,
+		AdjustmentAmount:          data.AdjustmentAmount,
+		FinalTotal:                data.FinalTotal,
+		ConvertedSubtotal:         convertedSubtotal,
+		ConvertedDiscountAmount:   convertedDiscountAmount,
+		ConvertedAdjustmentAmount: convertedAdjustmentAmount,
+		ConvertedFinalTotal:       convertedFinalTotal,
+		ShowConvertedAmounts:      showConverted,
 		Settings: InvoiceTemplateSettings{
 			InvoiceTitle:             getSetting("invoice_title", "Invoice for Academic Editing"),
 			CompanyLogoPath:          getSetting("company_logo_path", "./ui/static/img/logo.png"),
@@ -475,6 +503,12 @@ func (i *InvoiceModel) GenerateHTMLPDF(id int, settings map[string]AppSettingVal
 		},
 		"isNonZero": func(val float64) bool {
 			return val != 0
+		},
+		"currencySymbol": func(project Project) string {
+			return project.CurrencySymbol()
+		},
+		"currencyDisplayOnInvoice": func(project Project) string {
+			return project.CurrencyDisplayOnInvoice()
 		},
 	})
 
@@ -567,6 +601,13 @@ type InvoiceModelInterface interface {
 	GetComprehensiveForPDF(id int) (ComprehensiveInvoiceData, error)
 	GenerateComprehensivePDF(id int, settings map[string]AppSettingValue) ([]byte, error)
 	GenerateHTMLPDF(id int, settings map[string]AppSettingValue) ([]byte, error)
+}
+
+// Financial calculation methods for Invoice
+
+// ConvertedAmountDue applies currency conversion to invoice amount
+func (i *Invoice) ConvertedAmountDue(project Project) float64 {
+	return i.AmountDue * project.CurrencyConversionRate
 }
 
 // Ensure implementation satisfies the interface
