@@ -1,0 +1,80 @@
+{{define "title"}}Freelance Tracker - YTD Income{{end}}
+
+{{define "main"}}
+<div class="report-container">
+    <div class="report-header">
+        <h2>YTD Income Report</h2>
+        <form method="POST" class="year-selector" id="yearForm">
+            <label for="year">Year:</label>
+            <select name="year" id="year">
+                {{if eq 2020 .Year}}
+                    <option value="2020" selected>2020</option>
+                {{else}}
+                    <option value="2020">2020</option>
+                {{end}}
+                {{if eq 2021 .Year}}
+                    <option value="2021" selected>2021</option>
+                {{else}}
+                    <option value="2021">2021</option>
+                {{end}}
+                {{if eq 2022 .Year}}
+                    <option value="2022" selected>2022</option>
+                {{else}}
+                    <option value="2022">2022</option>
+                {{end}}
+                {{if eq 2023 .Year}}
+                    <option value="2023" selected>2023</option>
+                {{else}}
+                    <option value="2023">2023</option>
+                {{end}}
+                {{if eq 2024 .Year}}
+                    <option value="2024" selected>2024</option>
+                {{else}}
+                    <option value="2024">2024</option>
+                {{end}}
+                {{if eq 2025 .Year}}
+                    <option value="2025" selected>2025</option>
+                {{else}}
+                    <option value="2025">2025</option>
+                {{end}}
+            </select>
+            <noscript>
+                <input type="submit" value="Go" class="year-submit-btn">
+            </noscript>
+        </form>
+    </div>
+
+    {{if .InvoicesWithProject}}
+        <div class="report-table-container">
+            <table class="report-table">
+                <thead>
+                    <tr>
+                        <th>Client</th>
+                        <th>Project</th>
+                        <th>Date Paid</th>
+                        <th class="amount">Amount Paid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{range .InvoicesWithProject}}
+                        <tr>
+                            <td>{{.ClientName}}</td>
+                            <td>{{.ProjectName}}</td>
+                            <td>{{.DatePaid.Format "2006-01-02"}}</td>
+                            <td class="amount">${{printf "%.2f" .AmountDue}}</td>
+                        </tr>
+                    {{end}}
+                    <tr class="total-row">
+                        <td colspan="3"><strong>Total</strong></td>
+                        <td class="amount"><strong>${{printf "%.2f" .Total}}</strong></td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    {{else}}
+        <div class="no-data">
+            <p>No paid invoices found for {{.Year}}.</p>
+        </div>
+    {{end}}
+</div>
+{{end}}

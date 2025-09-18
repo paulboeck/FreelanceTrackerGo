@@ -28,11 +28,15 @@ type templateData struct {
 	ProjectsWithClient []models.ProjectWithClient
 	Timesheets         []models.Timesheet
 	Invoices           []models.Invoice
+	InvoicesWithProject []models.InvoiceWithProject
 	Settings           []models.AppSetting
 	Form               any
 	Pagination         *paginationData
 	Flash              string
 	IsAuthenticated    bool
+	// Additional fields for income report
+	Total              float64
+	Year               int
 }
 
 func humanDate(t time.Time) string {

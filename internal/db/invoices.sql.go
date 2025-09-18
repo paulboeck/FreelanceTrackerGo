@@ -265,6 +265,78 @@ func (q *Queries) GetInvoicesByProject(ctx context.Context, projectID int64) ([]
 	return items, nil
 }
 
+const getPaidInvoicesForYear = `-- name: GetPaidInvoicesForYear :many
+SELECT 
+    i.id, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
+    i.updated_at, i.created_at, i.deleted_at,
+    p.name as project_name,
+    c.name as client_name
+FROM invoice i
+JOIN project p ON i.project_id = p.id
+JOIN client c ON p.client_id = c.id
+WHERE i.date_paid IS NOT NULL 
+AND i.date_paid >= ? 
+AND i.date_paid < ?
+AND i.deleted_at IS NULL
+ORDER BY i.date_paid DESC
+`
+
+type GetPaidInvoicesForYearParams struct {
+	DatePaid   interface{} `json:"date_paid"`
+	DatePaid_2 interface{} `json:"date_paid_2"`
+}
+
+type GetPaidInvoicesForYearRow struct {
+	ID             int64       `json:"id"`
+	ProjectID      int64       `json:"project_id"`
+	InvoiceDate    time.Time   `json:"invoice_date"`
+	DatePaid       interface{} `json:"date_paid"`
+	PaymentTerms   string      `json:"payment_terms"`
+	AmountDue      float64     `json:"amount_due"`
+	DisplayDetails bool        `json:"display_details"`
+	UpdatedAt      time.Time   `json:"updated_at"`
+	CreatedAt      time.Time   `json:"created_at"`
+	DeletedAt      interface{} `json:"deleted_at"`
+	ProjectName    string      `json:"project_name"`
+	ClientName     string      `json:"client_name"`
+}
+
+func (q *Queries) GetPaidInvoicesForYear(ctx context.Context, arg GetPaidInvoicesForYearParams) ([]GetPaidInvoicesForYearRow, error) {
+	rows, err := q.db.QueryContext(ctx, getPaidInvoicesForYear, arg.DatePaid, arg.DatePaid_2)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetPaidInvoicesForYearRow{}
+	for rows.Next() {
+		var i GetPaidInvoicesForYearRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.ProjectID,
+			&i.InvoiceDate,
+			&i.DatePaid,
+			&i.PaymentTerms,
+			&i.AmountDue,
+			&i.DisplayDetails,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.DeletedAt,
+			&i.ProjectName,
+			&i.ClientName,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertInvoice = `-- name: InsertInvoice :execlastid
 INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due, display_details) 
 VALUES (?, ?, ?, ?, ?, ?)

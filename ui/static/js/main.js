@@ -303,12 +303,34 @@ function setupPaymentReceivedProgressButtons() {
     }
 }
 
+// Income Report year selector functionality
+function submitYearForm() {
+    // Add a small delay to ensure the change is registered
+    setTimeout(function() {
+        var yearForm = document.getElementById('yearForm');
+        if (yearForm) {
+            yearForm.submit();
+        }
+    }, 50);
+}
+
+function setupIncomeReportYearSelector() {
+    var yearSelect = document.getElementById('year');
+    if (yearSelect) {
+        yearSelect.addEventListener('change', function() {
+            console.log('Year changed to:', this.value);
+            submitYearForm();
+        });
+    }
+}
+
 // Set up all functionality when page loads
 function setupPageFunctions() {
     setupDeleteConfirmations();
     setupClientDetailsToggle();
     setupEmailProgressButtons();
     setupPaymentReceivedProgressButtons();
+    setupIncomeReportYearSelector();
     trackOriginalDatePaidValues();
 }
 

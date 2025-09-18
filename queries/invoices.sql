@@ -52,3 +52,18 @@ FROM invoice i
 JOIN project p ON i.project_id = p.id
 JOIN client c ON p.client_id = c.id
 WHERE i.id = ? AND i.deleted_at IS NULL;
+
+-- name: GetPaidInvoicesForYear :many
+SELECT 
+    i.id, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
+    i.updated_at, i.created_at, i.deleted_at,
+    p.name as project_name,
+    c.name as client_name
+FROM invoice i
+JOIN project p ON i.project_id = p.id
+JOIN client c ON p.client_id = c.id
+WHERE i.date_paid IS NOT NULL 
+AND i.date_paid >= ? 
+AND i.date_paid < ?
+AND i.deleted_at IS NULL
+ORDER BY i.date_paid DESC;

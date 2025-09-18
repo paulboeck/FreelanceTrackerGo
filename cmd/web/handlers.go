@@ -85,6 +85,11 @@ type settingsForm struct {
 	validator.Validator `form:"-"`
 }
 
+type incomeReportForm struct {
+	Year                string `form:"year"`
+	validator.Validator `form:"-"`
+}
+
 type userForm struct {
 	Name                string `form:"name"`
 	Email               string `form:"email"`
@@ -1978,6 +1983,60 @@ func (app *application) settingsEditPost(res http.ResponseWriter, req *http.Requ
 
 	// Redirect to settings view
 	http.Redirect(res, req, "/settings", http.StatusSeeOther)
+}
+
+// incomeReport handles a GET request which returns the income report for a given year
+func (app *application) incomeReport(res http.ResponseWriter, req *http.Request) {
+	currentYear := time.Now().Year()
+	yearStr := req.URL.Query().Get("year")
+	
+	var year int
+	if yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil && y >= 2020 && y <= currentYear+1 {
+			year = y
+		} else {
+			year = currentYear
+		}
+	} else {
+		year = currentYear
+	}
+
+	// Get paid invoices for the year
+	invoices, err := app.invoices.GetPaidInvoicesForYear(year)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Calculate total income
+	var total float64
+	for _, invoice := range invoices {
+		total += invoice.AmountDue
+	}
+
+	data := app.newTemplateData(req)
+	data.Form = incomeReportForm{
+		Year: fmt.Sprintf("%d", year),
+	}
+	data.InvoicesWithProject = invoices
+	data.Total = total
+	data.Year = year
+
+	app.render(res, req, http.StatusOK, "income_report.html", data)
+}
+
+// incomeReportPost handles a POST request to filter the income report by year
+func (app *application) incomeReportPost(res http.ResponseWriter, req *http.Request) {
+	var form incomeReportForm
+	err := app.decodePostForm(req, &form)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	// Redirect to GET with year parameter
+	redirectURL := fmt.Sprintf("/reports/income?year=%s", form.Year)
+	http.Redirect(res, req, redirectURL, http.StatusSeeOther)
 }
 
 // projectsList handles a GET request which displays all projects

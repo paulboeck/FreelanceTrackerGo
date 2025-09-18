@@ -24,6 +24,7 @@ type Querier interface {
 	GetInvoiceComprehensiveForPDF(ctx context.Context, id int64) (GetInvoiceComprehensiveForPDFRow, error)
 	GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceForPDFRow, error)
 	GetInvoicesByProject(ctx context.Context, projectID int64) ([]GetInvoicesByProjectRow, error)
+	GetPaidInvoicesForYear(ctx context.Context, arg GetPaidInvoicesForYearParams) ([]GetPaidInvoicesForYearRow, error)
 	GetProject(ctx context.Context, id int64) (GetProjectRow, error)
 	GetProjectsByClient(ctx context.Context, clientID int64) ([]GetProjectsByClientRow, error)
 	GetProjectsCount(ctx context.Context) (int64, error)

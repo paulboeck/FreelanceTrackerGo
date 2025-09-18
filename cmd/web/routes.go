@@ -50,6 +50,8 @@ func (app *application) routes() http.Handler {
 	mux.Handle("POST /invoice/delete/{id}", protected.ThenFunc(app.invoiceDelete))
 	mux.Handle("GET /invoice/print/{id}", protected.ThenFunc(app.invoicePrint))
 	mux.Handle("POST /invoice/email/{id}", protected.ThenFunc(app.invoiceEmail))
+	mux.Handle("GET /reports/income", protected.ThenFunc(app.incomeReport))
+	mux.Handle("POST /reports/income", protected.ThenFunc(app.incomeReportPost))
 	mux.Handle("GET /settings", protected.ThenFunc(app.settingsView))
 	mux.Handle("GET /settings/edit", protected.ThenFunc(app.settingsEdit))
 	mux.Handle("POST /settings/edit", protected.ThenFunc(app.settingsEditPost))

@@ -601,6 +601,14 @@ type InvoiceModelInterface interface {
 	GetComprehensiveForPDF(id int) (ComprehensiveInvoiceData, error)
 	GenerateComprehensivePDF(id int, settings map[string]AppSettingValue) ([]byte, error)
 	GenerateHTMLPDF(id int, settings map[string]AppSettingValue) ([]byte, error)
+	GetPaidInvoicesForYear(year int) ([]InvoiceWithProject, error)
+}
+
+// InvoiceWithProject represents an invoice with project and client info for reporting
+type InvoiceWithProject struct {
+	Invoice
+	ProjectName string
+	ClientName  string
 }
 
 // Financial calculation methods for Invoice
@@ -608,6 +616,61 @@ type InvoiceModelInterface interface {
 // ConvertedAmountDue applies currency conversion to invoice amount
 func (i *Invoice) ConvertedAmountDue(project Project) float64 {
 	return i.AmountDue * project.CurrencyConversionRate
+}
+
+// GetPaidInvoicesForYear retrieves all paid invoices for a specific year with project and client info
+func (i *InvoiceModel) GetPaidInvoicesForYear(year int) ([]InvoiceWithProject, error) {
+	ctx := context.Background()
+	
+	// Create start and end dates for the year
+	startDate := time.Date(year, 1, 1, 0, 0, 0, 0, time.UTC)
+	endDate := time.Date(year+1, 1, 1, 0, 0, 0, 0, time.UTC)
+	
+	rows, err := i.queries.GetPaidInvoicesForYear(ctx, db.GetPaidInvoicesForYearParams{
+		DatePaid:   &startDate,
+		DatePaid_2: &endDate,
+	})
+	if err != nil {
+		return nil, err
+	}
+	
+	var invoices []InvoiceWithProject
+	for _, row := range rows {
+		var deletedAt *time.Time
+		if row.DeletedAt != nil {
+			if dt, ok := row.DeletedAt.(time.Time); ok {
+				deletedAt = &dt
+			}
+		}
+
+		var datePaid *time.Time
+		if row.DatePaid != nil {
+			if dp, ok := row.DatePaid.(time.Time); ok {
+				datePaid = &dp
+			}
+		}
+
+		invoice := InvoiceWithProject{
+			Invoice: Invoice{
+				ID:             int(row.ID),
+				ProjectID:      int(row.ProjectID),
+				InvoiceDate:    row.InvoiceDate,
+				DatePaid:       datePaid,
+				PaymentTerms:   row.PaymentTerms,
+				AmountDue:      row.AmountDue,
+				DisplayDetails: row.DisplayDetails,
+				Updated:        row.UpdatedAt,
+				Created:        row.CreatedAt,
+				DeletedAt:      deletedAt,
+			},
+			ProjectName: row.ProjectName,
+			ClientName:  row.ClientName,
+		}
+		
+		invoices = append(invoices, invoice)
+	}
+	
+	return invoices, nil
 }
 
 // Ensure implementation satisfies the interface
