@@ -25,6 +25,18 @@ SELECT COUNT(*)
 FROM client 
 WHERE deleted_at IS NULL;
 
+-- name: SearchClientsWithPagination :many
+SELECT id, name, email, phone, address1, address2, address3, city, state, zip_code, hourly_rate, notes, additional_info, additional_info2, bill_to, include_address_on_invoice, invoice_cc_email, invoice_cc_description, university_affiliation, updated_at, created_at, deleted_at 
+FROM client 
+WHERE deleted_at IS NULL AND (name LIKE ? OR email LIKE ?)
+ORDER BY updated_at DESC
+LIMIT ? OFFSET ?;
+
+-- name: SearchClientsCount :one
+SELECT COUNT(*) 
+FROM client 
+WHERE deleted_at IS NULL AND (name LIKE ? OR email LIKE ?);
+
 -- name: UpdateClient :exec
 UPDATE client 
 SET name = ?, email = ?, phone = ?, address1 = ?, address2 = ?, address3 = ?, city = ?, state = ?, zip_code = ?, hourly_rate = ?, notes = ?, additional_info = ?, additional_info2 = ?, bill_to = ?, include_address_on_invoice = ?, invoice_cc_email = ?, invoice_cc_description = ?, university_affiliation = ?, updated_at = CURRENT_TIMESTAMP 

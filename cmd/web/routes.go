@@ -26,6 +26,8 @@ func (app *application) routes() http.Handler {
 	mux.Handle("GET /{$}", protected.ThenFunc(app.clientsList))
 	mux.Handle("GET /clients", protected.ThenFunc(app.clientsList))
 	mux.Handle("GET /projects", protected.ThenFunc(app.projectsList))
+	mux.Handle("GET /project/create", protected.ThenFunc(app.projectCreateGeneral))
+	mux.Handle("POST /project/create", protected.ThenFunc(app.projectCreateGeneralPost))
 	mux.Handle("GET /client/view/{id}", protected.ThenFunc(app.clientView))
 	mux.Handle("GET /client/create", protected.ThenFunc(app.clientCreate))
 	mux.Handle("POST /client/create", protected.ThenFunc(app.clientCreatePost))
@@ -55,6 +57,7 @@ func (app *application) routes() http.Handler {
 	mux.Handle("GET /settings", protected.ThenFunc(app.settingsView))
 	mux.Handle("GET /settings/edit", protected.ThenFunc(app.settingsEdit))
 	mux.Handle("POST /settings/edit", protected.ThenFunc(app.settingsEditPost))
+	mux.Handle("GET /api/client/{id}/hourlyrate", protected.ThenFunc(app.clientHourlyRateAPI))
 	mux.Handle("GET /user/logout", protected.ThenFunc(app.userLogout))
 
 	standardChain := alice.New(app.recoverPanic, app.logRequest, commonHeaders)

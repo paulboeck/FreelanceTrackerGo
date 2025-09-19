@@ -34,6 +34,7 @@ type templateData struct {
 	Pagination         *paginationData
 	Flash              string
 	IsAuthenticated    bool
+	SearchTerm         string
 	// Additional fields for income report
 	Total              float64
 	Year               int

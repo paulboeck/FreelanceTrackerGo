@@ -2,9 +2,30 @@
 {{define "main"}}
     <div class="list-header">
         <h3>Latest Projects</h3>
-        <a href="/client/create" class="btn-add" title="Add new project">
+        <a href="/project/create" class="btn-add" title="Create a new project">
             ➕ Add Project
         </a>
+    </div>
+    <div class="search-form">
+        <form method="GET" action="/projects">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    name="search" 
+                    id="projectSearch"
+                    value="{{.SearchTerm}}" 
+                    placeholder="Search projects by name or client name..." 
+                    class="search-input"
+                />
+                <button 
+                    type="button" 
+                    class="btn-icon btn-clear"
+                    title="Clear search"
+                >
+                    ✕
+                </button>
+            </div>
+        </form>
     </div>
     {{if .ProjectsWithClient}}
         <table>

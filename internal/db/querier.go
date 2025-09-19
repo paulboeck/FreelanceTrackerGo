@@ -39,6 +39,10 @@ type Querier interface {
 	InsertProject(ctx context.Context, arg InsertProjectParams) (int64, error)
 	InsertTimesheet(ctx context.Context, arg InsertTimesheetParams) (int64, error)
 	InsertUser(ctx context.Context, arg InsertUserParams) (int64, error)
+	SearchClientsCount(ctx context.Context, arg SearchClientsCountParams) (int64, error)
+	SearchClientsWithPagination(ctx context.Context, arg SearchClientsWithPaginationParams) ([]SearchClientsWithPaginationRow, error)
+	SearchProjectsCount(ctx context.Context, arg SearchProjectsCountParams) (int64, error)
+	SearchProjectsWithClientPagination(ctx context.Context, arg SearchProjectsWithClientPaginationParams) ([]SearchProjectsWithClientPaginationRow, error)
 	UpdateClient(ctx context.Context, arg UpdateClientParams) error
 	UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) error

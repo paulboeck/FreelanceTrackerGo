@@ -324,6 +324,89 @@ function setupIncomeReportYearSelector() {
     }
 }
 
+// Search functionality - Enter key only
+function setupSearchForms() {
+    // Handle client search
+    var clientSearchInput = document.getElementById('clientSearch');
+    var clientClearButton = document.querySelector('.search-form .btn-clear');
+    
+    if (clientSearchInput) {
+        clientSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.form.submit();
+            }
+        });
+    }
+    
+    if (clientClearButton) {
+        clientClearButton.addEventListener('click', function() {
+            var searchInput = document.getElementById('clientSearch');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.form.submit();
+            }
+        });
+    }
+    
+    // Handle project search
+    var projectSearchInput = document.getElementById('projectSearch');
+    var projectClearButton = document.querySelector('.search-form .btn-clear');
+    
+    if (projectSearchInput) {
+        projectSearchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                this.form.submit();
+            }
+        });
+    }
+    
+    if (projectClearButton) {
+        projectClearButton.addEventListener('click', function() {
+            var searchInput = document.getElementById('projectSearch');
+            if (searchInput) {
+                searchInput.value = '';
+                searchInput.form.submit();
+            }
+        });
+    }
+}
+
+// Client hourly rate auto-population functionality
+function setupClientHourlyRateAutoPopulation() {
+    var clientSelect = document.querySelector('select[name="client_id"]');
+    var hourlyRateInput = document.querySelector('input[name="hourly_rate"]');
+    
+    if (clientSelect && hourlyRateInput) {
+        clientSelect.addEventListener('change', function() {
+            var clientId = this.value;
+            
+            if (clientId && clientId !== '') {
+                // Fetch the client's hourly rate
+                fetch('/api/client/' + clientId + '/hourlyrate')
+                    .then(function(response) {
+                        if (response.ok) {
+                            return response.json();
+                        }
+                        throw new Error('Failed to fetch hourly rate');
+                    })
+                    .then(function(data) {
+                        if (data.hourly_rate) {
+                            hourlyRateInput.value = data.hourly_rate;
+                        }
+                    })
+                    .catch(function(error) {
+                        console.error('Error fetching hourly rate:', error);
+                    });
+            } else {
+                // Clear hourly rate if no client selected
+                hourlyRateInput.value = '';
+            }
+        });
+    }
+}
+
 // Set up all functionality when page loads
 function setupPageFunctions() {
     setupDeleteConfirmations();
@@ -331,7 +414,9 @@ function setupPageFunctions() {
     setupEmailProgressButtons();
     setupPaymentReceivedProgressButtons();
     setupIncomeReportYearSelector();
+    setupSearchForms();
     trackOriginalDatePaidValues();
+    setupClientHourlyRateAutoPopulation();
 }
 
 // Track original date_paid values for comparison

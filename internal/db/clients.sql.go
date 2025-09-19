@@ -311,6 +311,115 @@ func (q *Queries) InsertClient(ctx context.Context, arg InsertClientParams) (int
 	return result.LastInsertId()
 }
 
+const searchClientsCount = `-- name: SearchClientsCount :one
+SELECT COUNT(*) 
+FROM client 
+WHERE deleted_at IS NULL AND (name LIKE ? OR email LIKE ?)
+`
+
+type SearchClientsCountParams struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
+}
+
+func (q *Queries) SearchClientsCount(ctx context.Context, arg SearchClientsCountParams) (int64, error) {
+	row := q.db.QueryRowContext(ctx, searchClientsCount, arg.Name, arg.Email)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const searchClientsWithPagination = `-- name: SearchClientsWithPagination :many
+SELECT id, name, email, phone, address1, address2, address3, city, state, zip_code, hourly_rate, notes, additional_info, additional_info2, bill_to, include_address_on_invoice, invoice_cc_email, invoice_cc_description, university_affiliation, updated_at, created_at, deleted_at 
+FROM client 
+WHERE deleted_at IS NULL AND (name LIKE ? OR email LIKE ?)
+ORDER BY updated_at DESC
+LIMIT ? OFFSET ?
+`
+
+type SearchClientsWithPaginationParams struct {
+	Name   string `json:"name"`
+	Email  string `json:"email"`
+	Limit  int64  `json:"limit"`
+	Offset int64  `json:"offset"`
+}
+
+type SearchClientsWithPaginationRow struct {
+	ID                      int64          `json:"id"`
+	Name                    string         `json:"name"`
+	Email                   string         `json:"email"`
+	Phone                   sql.NullString `json:"phone"`
+	Address1                sql.NullString `json:"address1"`
+	Address2                sql.NullString `json:"address2"`
+	Address3                sql.NullString `json:"address3"`
+	City                    sql.NullString `json:"city"`
+	State                   sql.NullString `json:"state"`
+	ZipCode                 sql.NullString `json:"zip_code"`
+	HourlyRate              float64        `json:"hourly_rate"`
+	Notes                   sql.NullString `json:"notes"`
+	AdditionalInfo          sql.NullString `json:"additional_info"`
+	AdditionalInfo2         sql.NullString `json:"additional_info2"`
+	BillTo                  sql.NullString `json:"bill_to"`
+	IncludeAddressOnInvoice bool           `json:"include_address_on_invoice"`
+	InvoiceCcEmail          sql.NullString `json:"invoice_cc_email"`
+	InvoiceCcDescription    sql.NullString `json:"invoice_cc_description"`
+	UniversityAffiliation   sql.NullString `json:"university_affiliation"`
+	UpdatedAt               time.Time      `json:"updated_at"`
+	CreatedAt               time.Time      `json:"created_at"`
+	DeletedAt               interface{}    `json:"deleted_at"`
+}
+
+func (q *Queries) SearchClientsWithPagination(ctx context.Context, arg SearchClientsWithPaginationParams) ([]SearchClientsWithPaginationRow, error) {
+	rows, err := q.db.QueryContext(ctx, searchClientsWithPagination,
+		arg.Name,
+		arg.Email,
+		arg.Limit,
+		arg.Offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SearchClientsWithPaginationRow{}
+	for rows.Next() {
+		var i SearchClientsWithPaginationRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.Phone,
+			&i.Address1,
+			&i.Address2,
+			&i.Address3,
+			&i.City,
+			&i.State,
+			&i.ZipCode,
+			&i.HourlyRate,
+			&i.Notes,
+			&i.AdditionalInfo,
+			&i.AdditionalInfo2,
+			&i.BillTo,
+			&i.IncludeAddressOnInvoice,
+			&i.InvoiceCcEmail,
+			&i.InvoiceCcDescription,
+			&i.UniversityAffiliation,
+			&i.UpdatedAt,
+			&i.CreatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const updateClient = `-- name: UpdateClient :exec
 UPDATE client 
 SET name = ?, email = ?, phone = ?, address1 = ?, address2 = ?, address3 = ?, city = ?, state = ?, zip_code = ?, hourly_rate = ?, notes = ?, additional_info = ?, additional_info2 = ?, bill_to = ?, include_address_on_invoice = ?, invoice_cc_email = ?, invoice_cc_description = ?, university_affiliation = ?, updated_at = CURRENT_TIMESTAMP 

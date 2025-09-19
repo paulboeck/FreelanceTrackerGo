@@ -6,6 +6,27 @@
             ➕ Add Client
         </a>
     </div>
+    <div class="search-form">
+        <form method="GET" action="/">
+            <div class="search-container">
+                <input 
+                    type="text" 
+                    name="search" 
+                    id="clientSearch"
+                    value="{{.SearchTerm}}" 
+                    placeholder="Search clients by name or email..." 
+                    class="search-input"
+                />
+                <button 
+                    type="button" 
+                    class="btn-icon btn-clear"
+                    title="Clear search"
+                >
+                    ✕
+                </button>
+            </div>
+        </form>
+    </div>
     {{if .Clients}}
         <table>
             <tr>

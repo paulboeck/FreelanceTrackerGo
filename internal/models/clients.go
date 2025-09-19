@@ -278,6 +278,71 @@ func (c *ClientModel) GetCount() (int64, error) {
 	return c.queries.GetClientsCount(ctx)
 }
 
+// SearchWithPagination searches clients by name or email with pagination
+func (c *ClientModel) SearchWithPagination(searchTerm string, limit, offset int64) ([]Client, error) {
+	ctx := context.Background()
+	searchPattern := "%" + searchTerm + "%"
+	rows, err := c.queries.SearchClientsWithPagination(ctx, db.SearchClientsWithPaginationParams{
+		Name:   searchPattern,
+		Email:  searchPattern,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	var clients []Client
+	for _, row := range rows {
+		var deletedAt *time.Time
+		if row.DeletedAt != nil {
+			if timeStr, ok := row.DeletedAt.(string); ok {
+				parsedTime, err := time.Parse("2006-01-02 15:04:05", timeStr)
+				if err == nil {
+					deletedAt = &parsedTime
+				}
+			}
+		}
+
+		clients = append(clients, Client{
+			ID:                      int(row.ID),
+			Name:                    row.Name,
+			Email:                   row.Email,
+			Phone:                   convertNullString(row.Phone),
+			Address1:                convertNullString(row.Address1),
+			Address2:                convertNullString(row.Address2),
+			Address3:                convertNullString(row.Address3),
+			City:                    convertNullString(row.City),
+			State:                   convertNullString(row.State),
+			ZipCode:                 convertNullString(row.ZipCode),
+			HourlyRate:              row.HourlyRate,
+			Notes:                   convertNullString(row.Notes),
+			AdditionalInfo:          convertNullString(row.AdditionalInfo),
+			AdditionalInfo2:         convertNullString(row.AdditionalInfo2),
+			BillTo:                  convertNullString(row.BillTo),
+			IncludeAddressOnInvoice: row.IncludeAddressOnInvoice,
+			InvoiceCCEmail:          convertNullString(row.InvoiceCcEmail),
+			InvoiceCCDescription:    convertNullString(row.InvoiceCcDescription),
+			UniversityAffiliation:   convertNullString(row.UniversityAffiliation),
+			Updated:                 row.UpdatedAt,
+			Created:                 row.CreatedAt,
+			DeletedAt:               deletedAt,
+		})
+	}
+
+	return clients, nil
+}
+
+// SearchCount returns the count of clients matching the search term
+func (c *ClientModel) SearchCount(searchTerm string) (int64, error) {
+	ctx := context.Background()
+	searchPattern := "%" + searchTerm + "%"
+	return c.queries.SearchClientsCount(ctx, db.SearchClientsCountParams{
+		Name:  searchPattern,
+		Email: searchPattern,
+	})
+}
+
 // ClientModelInterface defines the interface for client operations
 type ClientModelInterface interface {
 	Insert(name, email string, phone, address1, address2, address3, city, state, zipCode *string, hourlyRate float64, notes, additionalInfo, additionalInfo2, billTo *string, includeAddressOnInvoice bool, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string) (int, error)
@@ -285,6 +350,8 @@ type ClientModelInterface interface {
 	GetAll() ([]Client, error)
 	GetWithPagination(limit, offset int64) ([]Client, error)
 	GetCount() (int64, error)
+	SearchWithPagination(searchTerm string, limit, offset int64) ([]Client, error)
+	SearchCount(searchTerm string) (int64, error)
 	Update(id int, name, email string, phone, address1, address2, address3, city, state, zipCode *string, hourlyRate float64, notes, additionalInfo, additionalInfo2, billTo *string, includeAddressOnInvoice bool, invoiceCCEmail, invoiceCCDescription, universityAffiliation *string) error
 	Delete(id int) error
 }

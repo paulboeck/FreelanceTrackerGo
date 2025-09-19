@@ -416,6 +416,116 @@ func (p *ProjectModel) GetCount() (int64, error) {
 	return p.queries.GetProjectsCount(ctx)
 }
 
+// SearchWithPagination searches projects by name or client name with pagination
+func (p *ProjectModel) SearchWithPagination(searchTerm string, limit, offset int64) ([]ProjectWithClient, error) {
+	ctx := context.Background()
+	searchPattern := "%" + searchTerm + "%"
+	rows, err := p.queries.SearchProjectsWithClientPagination(ctx, db.SearchProjectsWithClientPaginationParams{
+		Name:   searchPattern,
+		Name_2: searchPattern,
+		Limit:  limit,
+		Offset: offset,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	projects := make([]ProjectWithClient, len(rows))
+	for i, row := range rows {
+		project, err := p.convertSearchRowToProjectWithClient(row)
+		if err != nil {
+			return nil, err
+		}
+		projects[i] = project
+	}
+
+	return projects, nil
+}
+
+// SearchCount returns the count of projects matching the search term
+func (p *ProjectModel) SearchCount(searchTerm string) (int64, error) {
+	ctx := context.Background()
+	searchPattern := "%" + searchTerm + "%"
+	return p.queries.SearchProjectsCount(ctx, db.SearchProjectsCountParams{
+		Name:   searchPattern,
+		Name_2: searchPattern,
+	})
+}
+
+// convertSearchRowToProjectWithClient converts a search database row to a ProjectWithClient struct
+func (p *ProjectModel) convertSearchRowToProjectWithClient(row db.SearchProjectsWithClientPaginationRow) (ProjectWithClient, error) {
+	// Helper function to convert sql.NullString to string
+	nullStringToString := func(ns sql.NullString) string {
+		if ns.Valid {
+			return ns.String
+		}
+		return ""
+	}
+
+	// Helper function to convert sql.NullFloat64 to *float64
+	nullFloat64ToFloat := func(nf sql.NullFloat64) *float64 {
+		if nf.Valid {
+			return &nf.Float64
+		}
+		return nil
+	}
+
+	// Helper function to convert sql.NullString date to *time.Time
+	nullStringToTime := func(ns sql.NullString) *time.Time {
+		if !ns.Valid || ns.String == "" {
+			return nil
+		}
+		if t, err := time.Parse("2006-01-02", ns.String); err == nil {
+			return &t
+		}
+		if t, err := time.Parse("2006-01-02T15:04:05Z", ns.String); err == nil {
+			return &t
+		}
+		return nil
+	}
+
+	// Helper function to convert DeletedAt interface{} to *time.Time
+	interfaceToTime := func(i interface{}) *time.Time {
+		if i == nil {
+			return nil
+		}
+		if timeStr, ok := i.(string); ok {
+			parsedTime, err := time.Parse("2006-01-02 15:04:05", timeStr)
+			if err == nil {
+				return &parsedTime
+			}
+		}
+		return nil
+	}
+
+	return ProjectWithClient{
+		ID:                     int(row.ID),
+		Name:                   row.Name,
+		ClientID:               int(row.ClientID),
+		ClientName:             row.ClientName,
+		Status:                 row.Status,
+		HourlyRate:             row.HourlyRate,
+		Deadline:               nullStringToTime(row.Deadline),
+		ScheduledStart:         nullStringToTime(row.ScheduledStart),
+		InvoiceCCEmail:         nullStringToString(row.InvoiceCcEmail),
+		InvoiceCCDescription:   nullStringToString(row.InvoiceCcDescription),
+		ScheduleComments:       nullStringToString(row.ScheduleComments),
+		AdditionalInfo:         nullStringToString(row.AdditionalInfo),
+		AdditionalInfo2:        nullStringToString(row.AdditionalInfo2),
+		DiscountPercent:        nullFloat64ToFloat(row.DiscountPercent),
+		DiscountReason:         nullStringToString(row.DiscountReason),
+		AdjustmentAmount:       nullFloat64ToFloat(row.AdjustmentAmount),
+		AdjustmentReason:       nullStringToString(row.AdjustmentReason),
+		CurrencyDisplay:        row.CurrencyDisplay,
+		CurrencyConversionRate: row.CurrencyConversionRate,
+		FlatFeeInvoice:         row.FlatFeeInvoice != 0,
+		Notes:                  nullStringToString(row.Notes),
+		Updated:                row.UpdatedAt,
+		Created:                row.CreatedAt,
+		DeletedAt:              interfaceToTime(row.DeletedAt),
+	}, nil
+}
+
 // GetAll retrieves all projects with their client information
 func (p *ProjectModel) GetAll() ([]ProjectWithClient, error) {
 	ctx := context.Background()
@@ -500,6 +610,8 @@ type ProjectModelInterface interface {
 	GetAll() ([]ProjectWithClient, error)
 	GetWithPagination(limit, offset int64) ([]ProjectWithClient, error)
 	GetCount() (int64, error)
+	SearchWithPagination(searchTerm string, limit, offset int64) ([]ProjectWithClient, error)
+	SearchCount(searchTerm string) (int64, error)
 	Update(project Project) error
 	Delete(id int) error
 }

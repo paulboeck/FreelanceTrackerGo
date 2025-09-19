@@ -40,6 +40,7 @@ type clientForm struct {
 }
 
 type projectForm struct {
+	ClientID               int    `form:"client_id"`
 	Name                   string `form:"name"`
 	Status                 string `form:"status"`
 	HourlyRate             string `form:"hourly_rate"`
@@ -121,20 +122,41 @@ func (app *application) clientsList(res http.ResponseWriter, req *http.Request) 
 		}
 	}
 
+	// Get search term from query parameter
+	searchTerm := req.URL.Query().Get("search")
+
 	// Calculate offset
 	offset := int64((currentPage - 1) * pageSize)
 
-	// Get paginated clients and total count
-	clients, err := app.clients.GetWithPagination(int64(pageSize), offset)
-	if err != nil {
-		app.serverError(res, req, err)
-		return
-	}
+	var clients []models.Client
+	var totalCount int64
+	var err error
 
-	totalCount, err := app.clients.GetCount()
-	if err != nil {
-		app.serverError(res, req, err)
-		return
+	// Use search or regular pagination based on search term
+	if searchTerm != "" {
+		clients, err = app.clients.SearchWithPagination(searchTerm, int64(pageSize), offset)
+		if err != nil {
+			app.serverError(res, req, err)
+			return
+		}
+
+		totalCount, err = app.clients.SearchCount(searchTerm)
+		if err != nil {
+			app.serverError(res, req, err)
+			return
+		}
+	} else {
+		clients, err = app.clients.GetWithPagination(int64(pageSize), offset)
+		if err != nil {
+			app.serverError(res, req, err)
+			return
+		}
+
+		totalCount, err = app.clients.GetCount()
+		if err != nil {
+			app.serverError(res, req, err)
+			return
+		}
 	}
 
 	// Calculate pagination info
@@ -153,6 +175,7 @@ func (app *application) clientsList(res http.ResponseWriter, req *http.Request) 
 	data := app.newTemplateData(req)
 	data.Clients = clients
 	data.Pagination = pagination
+	data.SearchTerm = searchTerm
 
 	app.render(res, req, http.StatusOK, "clients.html", data)
 }
@@ -767,6 +790,157 @@ func (app *application) projectCreate(res http.ResponseWriter, req *http.Request
 	}
 	data.Client = &client
 	app.render(res, req, http.StatusOK, "project_create.html", data)
+}
+
+// projectCreateGeneral handles a GET request for general project creation (with client selection)
+func (app *application) projectCreateGeneral(res http.ResponseWriter, req *http.Request) {
+	// Get all clients for the dropdown
+	clients, err := app.clients.GetAll()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	data := app.newTemplateData(req)
+	data.Form = projectForm{
+		Status:                 "Estimating", // Default status
+		CurrencyDisplay:        "USD",        // Default currency
+		CurrencyConversionRate: "1.00000",    // Default conversion rate
+	}
+	data.Clients = clients
+	app.render(res, req, http.StatusOK, "project_create_general.html", data)
+}
+
+// projectCreateGeneralPost handles a POST request for general project creation
+func (app *application) projectCreateGeneralPost(res http.ResponseWriter, req *http.Request) {
+	var form projectForm
+	err := app.decodePostForm(req, &form)
+	if err != nil {
+		app.clientError(res, http.StatusBadRequest)
+		return
+	}
+
+	// Get all clients for redisplay if validation fails
+	clients, err := app.clients.GetAll()
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	// Validate client ID from form
+	if form.ClientID < 1 {
+		form.CheckField(false, "client_id", "Please select a client")
+	}
+
+	// Validate form fields (same as existing projectCreatePost)
+	form.CheckField(validator.NotBlank(form.Name), "name", "This field cannot be blank")
+	form.CheckField(validator.MaxChars(form.Name, 100), "name", "This field cannot be more than 100 characters long")
+
+	form.CheckField(validator.NotBlank(form.Status), "status", "This field cannot be blank")
+
+	hourlyRate, err := strconv.ParseFloat(form.HourlyRate, 64)
+	if err != nil {
+		form.CheckField(false, "hourlyRate", "Please enter a valid hourly rate")
+	} else {
+		form.CheckField(hourlyRate >= 0, "hourlyRate", "Hourly rate must be 0 or greater")
+	}
+
+	// Parse and validate deadline
+	var deadline *time.Time
+	if form.Deadline != "" {
+		parsedDeadline, err := time.Parse("2006-01-02", form.Deadline)
+		if err != nil {
+			form.CheckField(false, "deadline", "Please enter a valid date (YYYY-MM-DD)")
+		} else {
+			deadline = &parsedDeadline
+		}
+	}
+
+	// Parse and validate scheduled start
+	var scheduledStart *time.Time
+	if form.ScheduledStart != "" {
+		parsedStart, err := time.Parse("2006-01-02", form.ScheduledStart)
+		if err != nil {
+			form.CheckField(false, "scheduledStart", "Please enter a valid date (YYYY-MM-DD)")
+		} else {
+			scheduledStart = &parsedStart
+		}
+	}
+
+	// Parse discount percentage
+	var discountPercent *float64
+	if form.DiscountPercent != "" {
+		discount, err := strconv.ParseFloat(form.DiscountPercent, 64)
+		if err != nil {
+			form.CheckField(false, "discountPercent", "Please enter a valid discount percentage")
+		} else {
+			form.CheckField(discount >= 0 && discount <= 100, "discountPercent", "Discount must be between 0 and 100")
+			discountPercent = &discount
+		}
+	}
+
+	// Parse adjustment amount
+	var adjustmentAmount *float64
+	if form.AdjustmentAmount != "" {
+		adjustment, err := strconv.ParseFloat(form.AdjustmentAmount, 64)
+		if err != nil {
+			form.CheckField(false, "adjustmentAmount", "Please enter a valid adjustment amount")
+		} else {
+			adjustmentAmount = &adjustment
+		}
+	}
+
+	// Parse currency conversion rate
+	currencyRate, err := strconv.ParseFloat(form.CurrencyConversionRate, 64)
+	if err != nil {
+		form.CheckField(false, "currencyConversionRate", "Please enter a valid conversion rate")
+	} else {
+		form.CheckField(currencyRate > 0, "currencyConversionRate", "Conversion rate must be greater than 0")
+	}
+
+	// Parse flat fee invoice
+	flatFeeInvoice := form.FlatFeeInvoice
+
+	// If there are validation errors, redisplay the form
+	if !form.Valid() {
+		data := app.newTemplateData(req)
+		data.Form = form
+		data.Clients = clients
+		app.render(res, req, http.StatusUnprocessableEntity, "project_create_general.html", data)
+		return
+	}
+
+	// Create the project
+	project := models.Project{
+		Name:                   form.Name,
+		ClientID:               form.ClientID,
+		Status:                 form.Status,
+		HourlyRate:             hourlyRate,
+		Deadline:               deadline,
+		ScheduledStart:         scheduledStart,
+		InvoiceCCEmail:         form.InvoiceCCEmail,
+		InvoiceCCDescription:   form.InvoiceCCDescription,
+		ScheduleComments:       form.ScheduleComments,
+		AdditionalInfo:         form.AdditionalInfo,
+		AdditionalInfo2:        form.AdditionalInfo2,
+		DiscountPercent:        discountPercent,
+		DiscountReason:         form.DiscountReason,
+		AdjustmentAmount:       adjustmentAmount,
+		AdjustmentReason:       form.AdjustmentReason,
+		CurrencyDisplay:        form.CurrencyDisplay,
+		CurrencyConversionRate: currencyRate,
+		FlatFeeInvoice:         flatFeeInvoice,
+		Notes:                  form.Notes,
+	}
+
+	id, err := app.projects.Insert(project)
+	if err != nil {
+		app.serverError(res, req, err)
+		return
+	}
+
+	app.sessionManager.Put(req.Context(), "flash", "Project successfully created!")
+	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", id), http.StatusSeeOther)
 }
 
 // projectCreatePost handles a POST request with project form data which is then
@@ -2057,20 +2231,41 @@ func (app *application) projectsList(res http.ResponseWriter, req *http.Request)
 		}
 	}
 
+	// Get search term from query parameter
+	searchTerm := req.URL.Query().Get("search")
+
 	// Calculate offset
 	offset := int64((currentPage - 1) * pageSize)
 
-	// Get paginated projects and total count
-	projects, err := app.projects.GetWithPagination(int64(pageSize), offset)
-	if err != nil {
-		app.serverError(res, req, err)
-		return
-	}
+	var projects []models.ProjectWithClient
+	var totalCount int64
+	var err error
 
-	totalCount, err := app.projects.GetCount()
-	if err != nil {
-		app.serverError(res, req, err)
-		return
+	// Use search or regular pagination based on search term
+	if searchTerm != "" {
+		projects, err = app.projects.SearchWithPagination(searchTerm, int64(pageSize), offset)
+		if err != nil {
+			app.serverError(res, req, err)
+			return
+		}
+
+		totalCount, err = app.projects.SearchCount(searchTerm)
+		if err != nil {
+			app.serverError(res, req, err)
+			return
+		}
+	} else {
+		projects, err = app.projects.GetWithPagination(int64(pageSize), offset)
+		if err != nil {
+			app.serverError(res, req, err)
+			return
+		}
+
+		totalCount, err = app.projects.GetCount()
+		if err != nil {
+			app.serverError(res, req, err)
+			return
+		}
 	}
 
 	// Calculate pagination info
@@ -2089,6 +2284,7 @@ func (app *application) projectsList(res http.ResponseWriter, req *http.Request)
 	data := app.newTemplateData(req)
 	data.ProjectsWithClient = projects
 	data.Pagination = pagination
+	data.SearchTerm = searchTerm
 	app.render(res, req, http.StatusOK, "projects.html", data)
 }
 
@@ -2215,4 +2411,28 @@ func (app *application) userLogout(w http.ResponseWriter, r *http.Request) {
 	app.sessionManager.Put(r.Context(), "flash", "You've been logged out successfully!")
 
 	http.Redirect(w, r, "/", http.StatusSeeOther)
+}
+
+func (app *application) clientHourlyRateAPI(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.Atoi(r.PathValue("id"))
+	if err != nil || id < 1 {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+
+	client, err := app.clients.Get(id)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.clientError(w, http.StatusNotFound)
+		} else {
+			app.serverError(w, r, err)
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	
+	hourlyRateJSON := fmt.Sprintf(`{"hourly_rate": "%.2f"}`, client.HourlyRate)
+	w.Write([]byte(hourlyRateJSON))
 }
