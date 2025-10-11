@@ -9,8 +9,15 @@ A Go web application for tracking freelance clients, projects, timesheets, and i
 go run ./cmd/web
 
 # Access the application
-open http://localhost:4000
+open http://localhost:8080
 ```
+
+The application will automatically create a database at `~/FreelanceTracker/freelance_tracker.db`.
+
+**Database Location:**
+- By default, the database is stored in `~/FreelanceTracker/` on all platforms
+- You can override this with the `-dsn` flag: `go run ./cmd/web -dsn="/path/to/database.db"`
+- The application will automatically create the directory if it doesn't exist
 
 ## Email Configuration
 

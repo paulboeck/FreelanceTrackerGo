@@ -3,10 +3,12 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"html/template"
 	"log/slog"
 	"net/http"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/alexedwards/scs/sqlite3store"
@@ -32,12 +34,50 @@ type application struct {
 	sessionManager *scs.SessionManager
 }
 
+// getDefaultDatabasePath returns the default database path in ~/FreelanceTracker/
+func getDefaultDatabasePath() (string, error) {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("failed to get user home directory: %w", err)
+	}
+
+	// Create FreelanceTracker directory in user's home
+	dbDir := filepath.Join(homeDir, "FreelanceTracker")
+	dbPath := filepath.Join(dbDir, "freelance_tracker.db")
+
+	return dbPath, nil
+}
+
+// ensureDirectoryExists creates the directory if it doesn't exist
+func ensureDirectoryExists(path string) error {
+	dir := filepath.Dir(path)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		return fmt.Errorf("failed to create directory %s: %w", dir, err)
+	}
+	return nil
+}
+
 func main() {
+	// Get default database path
+	defaultDBPath, err := getDefaultDatabasePath()
+	if err != nil {
+		// Fallback to current directory if we can't get home dir
+		defaultDBPath = "./freelance_tracker.db"
+	}
+
 	addr := flag.String("addr", ":8080", "http service address")
-	dsn := flag.String("dsn", "./freelance_tracker.db", "SQLite database file path")
+	dsn := flag.String("dsn", defaultDBPath, "SQLite database file path")
 	flag.Parse()
 
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+
+	// Ensure the database directory exists
+	if err := ensureDirectoryExists(*dsn); err != nil {
+		logger.Error("Failed to create database directory", "error", err.Error())
+		os.Exit(1)
+	}
+
+	logger.Info("Database configuration", "path", *dsn)
 
 	// Open SQLite database
 	db, err := database.OpenDB(*dsn)
