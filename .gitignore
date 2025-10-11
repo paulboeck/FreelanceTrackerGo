@@ -4,3 +4,27 @@ ui/static/.DS_Store
 tls/cert.pem
 tls/key.pem
 freelance_tracker.db
+
+# Build artifacts
+bin/
+web
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test databases and artifacts
+test_*.db
+coverage.out
+coverage.html
+*.test
+
+# Development databases
+freelance_tracker_dev.db
+
+# Docker data directory
+data/
+
+# Environment files
+.env
+.env.*

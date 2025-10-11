@@ -103,17 +103,283 @@ Authentication is currently disabled. To re-enable:
 
 ## Development
 
-### Testing
+FreelanceTrackerGo uses a modern, reproducible build system with Make, Docker, and GitHub Actions.
+
+### Quick Reference
+
 ```bash
-go test ./...
+# Show all available commands
+make help
+
+# Run tests
+make test
+
+# Build the application
+make build
+
+# Run the application
+make run
+
+# Generate code from SQL
+make generate
+
+# Run database migrations
+make migrate
 ```
+
+### Available Make Commands
+
+**Basic Commands:**
+- `make build` - Build the application binary
+- `make build-release` - Build optimized release binary with version info
+- `make test` - Run all tests
+- `make test-verbose` - Run tests with verbose output
+- `make test-coverage` - Run tests with coverage report
+- `make clean` - Clean build artifacts and test databases
+- `make run` - Run the application (localhost:8080)
+- `make run-dev` - Run with development database
+- `make migrate` - Run database migrations
+- `make migrate-status` - Show migration status
+- `make generate` - Generate code from SQL queries using sqlc
+- `make install-tools` - Install development tools (goose, sqlc)
+- `make tidy` - Tidy and verify go.mod dependencies
+- `make all` - Run full build pipeline (clean, tidy, generate, test, build)
+
+**Cross-Platform Builds:**
+- `make build-macos` - Build macOS universal binary (Intel + Apple Silicon)
+- `make build-macos-intel` - Build macOS Intel-only (optimized, smaller)
+- `make build-macos-arm` - Build macOS Apple Silicon-only (optimized, smaller)
+- `make build-macos-app` - Build macOS .app bundle
+- `make build-windows` - Build Windows x86_64 (default)
+- `make build-windows-amd64` - Build Windows x86_64 (explicit)
+- `make build-windows-arm64` - Build Windows ARM64 (Surface Pro X, etc.)
+- `make build-linux` - Build Linux x86_64 (default)
+- `make build-linux-amd64` - Build Linux x86_64 (explicit)
+- `make build-linux-arm64` - Build Linux ARM64 (Raspberry Pi, AWS Graviton)
+- `make build-linux-arm` - Build Linux ARM 32-bit (older Raspberry Pi)
+- `make build-all-platforms` - Build default for all platforms + Docker
+- `make build-all-specific` - Build all platform-specific optimized binaries
+
+**Distribution Packaging:**
+- `make package-macos-app` - Create macOS .dmg installer
+- `make package-windows` - Create Windows .zip package
+- `make package-linux` - Create Linux .tar.gz package
+- `make package-all` - Create distribution packages for all platforms
+
+### Cross-Platform Builds
+
+FreelanceTrackerGo supports building for multiple platforms with optimized, platform-specific binaries.
+
+**Building for macOS:**
+```bash
+# Build universal binary (Intel + Apple Silicon) - recommended for distribution
+make build-macos
+
+# Or build platform-specific optimized binaries:
+make build-macos-intel      # Intel Macs only (smaller file size)
+make build-macos-arm        # Apple Silicon only (M1/M2/M3)
+
+# Build complete macOS .app bundle (uses universal binary)
+make build-macos-app
+
+# Create DMG installer for distribution
+make package-macos-app
+```
+
+The macOS .app bundle includes:
+- Universal binary supporting both Intel and Apple Silicon
+- All UI assets and database migrations
+- Automatic database setup in ~/Library/Application Support/FreelanceTracker/
+- Double-clickable application
+
+**Building for Windows:**
+```bash
+# Build for x86_64 (standard Windows PCs)
+make build-windows-amd64
+
+# Build for ARM64 (Windows on ARM devices like Surface Pro X)
+make build-windows-arm64
+
+# Or use the default (builds x86_64)
+make build-windows
+
+# Create Windows package with launcher scripts
+make package-windows
+```
+
+The Windows package includes:
+- 64-bit executable optimized for your target architecture
+- Batch file launcher for easy startup
+- PowerShell launcher (modern alternative)
+- All UI assets and database migrations
+- Automatic database setup in %APPDATA%\FreelanceTracker\
+
+**Building for Linux:**
+```bash
+# Build for x86_64 (standard servers/desktops)
+make build-linux-amd64
+
+# Build for ARM64 (Raspberry Pi 4/5, AWS Graviton, etc.)
+make build-linux-arm64
+
+# Build for ARM (32-bit Raspberry Pi 3 and older)
+make build-linux-arm
+
+# Or use the default (builds x86_64)
+make build-linux
+
+# Create Linux package
+make package-linux
+```
+
+**Requirements for cross-compilation:**
+- **Windows builds**: Requires mingw-w64 cross-compiler
+  ```bash
+  # macOS (via Homebrew)
+  brew install mingw-w64
+
+  # For ARM64 Windows builds, also install:
+  brew install mingw-w64     # Includes aarch64 compiler
+
+  # Linux (Ubuntu/Debian)
+  sudo apt-get install mingw-w64 gcc-mingw-w64-x86-64 gcc-mingw-w64-i686
+  ```
+
+- **Linux ARM builds**: Requires ARM cross-compilation toolchain
+  ```bash
+  # macOS (via Homebrew)
+  brew tap messense/macos-cross-toolchains
+  brew install aarch64-unknown-linux-gnu arm-unknown-linux-gnueabihf
+
+  # Linux (Ubuntu/Debian)
+  sudo apt-get install gcc-aarch64-linux-gnu gcc-arm-linux-gnueabihf
+  ```
+
+- **macOS builds**: Best on macOS, but can use cross-compilation tools on Linux
+
+**Building everything at once:**
+```bash
+# Build default binaries for all platforms (universal macOS, x86_64 Windows/Linux, Docker)
+make build-all-platforms
+
+# Build all platform-specific optimized binaries (no universal binaries)
+make build-all-specific
+
+# Create distribution packages for all platforms
+make package-all
+```
+
+**Why choose platform-specific builds?**
+- **Smaller file sizes**: Platform-specific binaries are typically 30-40% smaller than universal binaries
+- **Better optimization**: Compiler can optimize specifically for the target architecture
+- **Faster startup**: No need to select the correct architecture at runtime
+- **Use case**: Best for controlled deployments where you know the target platform
+
+**When to use universal/default builds?**
+- **macOS universal binary**: Best for general distribution when you don't know if users have Intel or Apple Silicon
+- **Default builds** (`make build-macos`, `make build-windows`, etc.): Convenient shortcuts that build the most common architecture
+- **Docker**: Platform-agnostic container that runs anywhere
+
+### Docker
+
+Build and run using Docker:
+
+```bash
+# Build Docker image
+make docker-build
+
+# Run Docker container
+make docker-run
+
+# Or use docker-compose
+make docker-compose-up
+make docker-compose-logs
+make docker-compose-down
+```
+
+The Docker setup:
+- Uses multi-stage builds for minimal image size
+- Excludes test files from production builds
+- Runs as non-root user for security
+- Persists database in mounted volume
+
+### Testing
+
+```bash
+# Run all tests
+make test
+
+# Run with verbose output
+make test-verbose
+
+# Generate coverage report
+make test-coverage
+```
+
+Tests use SQLite and automatically clean up test databases and processes.
 
 ### Database Migrations
+
 ```bash
-goose -dir migrations sqlite3 ./freelance_tracker.db up
+# Run migrations
+make migrate
+
+# Check migration status
+make migrate-status
+
+# Manual migration (if needed)
+go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations sqlite3 ./freelance_tracker.db up
 ```
 
+Migrations run automatically on application startup.
+
 ### Code Generation
+
 ```bash
-sqlc generate
+# Generate type-safe Go code from SQL queries
+make generate
+
+# Or use sqlc directly
+go run github.com/sqlc-dev/sqlc/cmd/sqlc@latest generate
+```
+
+Run this command whenever you modify SQL queries in the `queries/` directory.
+
+### Build Tools
+
+Development tools (goose, sqlc) are version-pinned in `tools.go` and managed via Go modules:
+
+```bash
+# Install tools locally
+make install-tools
+
+# Tools are also available via go run
+go run github.com/sqlc-dev/sqlc/cmd/sqlc@latest generate
+go run github.com/pressly/goose/v3/cmd/goose@latest -dir migrations sqlite3 ./freelance_tracker.db up
+```
+
+### Continuous Integration
+
+The project uses GitHub Actions for automated testing on every push and pull request:
+
+- **Test Job**: Runs all tests with race detection and coverage
+- **Build Job**: Builds optimized binary with version info
+- **Lint Job**: Runs golangci-lint for code quality
+- **Docker Job**: Tests Docker build process
+
+See `.github/workflows/test.yml` for details.
+
+### Reproducible Builds
+
+All builds are reproducible using:
+
+1. **Go Modules**: Exact dependency versions in `go.mod` and `go.sum`
+2. **Pinned Tools**: Build tools versioned in `tools.go`
+3. **Version Info**: Git-based versioning in binaries
+4. **Docker**: Containerized builds with locked dependencies
+
+Build artifacts include version and build time:
+```bash
+VERSION=$(git describe --tags --always --dirty)
+make build-release
 ```

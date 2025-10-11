@@ -1,0 +1,57 @@
+# Git files
+.git
+.gitignore
+
+# Development files
+.idea
+.vscode
+.DS_Store
+
+# Test files - exclude from production builds
+*_test.go
+testdata/
+test_*.db
+
+# Build artifacts
+bin/
+web
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Configuration
+.env
+.env.*
+cookies.txt
+
+# TLS certificates (generate fresh in container if needed)
+tls/
+
+# Coverage reports
+coverage.out
+coverage.html
+
+# Temporary files
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE specific
+.claude/
+
+# Docker files
+Dockerfile
+.dockerignore
+docker-compose.yml
