@@ -1,8 +1,8 @@
 # Build stage
 FROM golang:1.24-alpine AS builder
 
-# Install build dependencies
-RUN apk add --no-cache git make
+# Install build dependencies (gcc and musl-dev needed for CGO/SQLite)
+RUN apk add --no-cache git make gcc musl-dev
 
 # Set working directory
 WORKDIR /build
@@ -63,4 +63,4 @@ ENV ADDR=":8080"
 ENV DSN="/data/freelance_tracker.db"
 
 # Run the application
-CMD ["./web", "-addr=${ADDR}", "-dsn=${DSN}"]
+CMD ["./web", "-addr=:8080", "-dsn=/data/freelance_tracker.db"]
