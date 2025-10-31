@@ -17,30 +17,42 @@ type paginationData struct {
 	HasNext     bool // Whether there's a next page
 	PrevPage    int
 	NextPage    int
-	PageSize    int  // Number of items per page
+	PageSize    int // Number of items per page
+}
+
+// userWithRoles holds a user and their associated roles for display in user lists.
+type userWithRoles struct {
+	User  models.User
+	Roles []models.Role
 }
 
 // templateData is a struct that holds all the dynamic data passed to HTML templates.
 // Not all fields are used in every template - only the relevant ones are populated.
 type templateData struct {
-	CurrentYear        int
-	Client             *models.Client                // Pointer allows nil (no client) or a single client
-	Clients            []models.Client               // Slice (dynamic array) of multiple clients
-	Project            *models.Project
-	Projects           []models.Project
-	ProjectsWithClient []models.ProjectWithClient
-	Timesheets         []models.Timesheet
-	Invoices           []models.Invoice
+	CurrentYear         int
+	Client              *models.Client  // Pointer allows nil (no client) or a single client
+	Clients             []models.Client // Slice (dynamic array) of multiple clients
+	Project             *models.Project
+	Projects            []models.Project
+	ProjectsWithClient  []models.ProjectWithClient
+	Timesheets          []models.Timesheet
+	Invoices            []models.Invoice
 	InvoicesWithProject []models.InvoiceWithProject
-	Settings           []models.AppSetting
-	Form               any                          // 'any' (interface{}) accepts any type - for form data
-	Pagination         *paginationData
-	Flash              string                       // One-time message to display (e.g., "Client created successfully")
-	IsAuthenticated    bool
-	SearchTerm         string
+	Settings            []models.AppSetting
+	User                *models.User    // Current user or user being edited
+	Users               []models.User   // List of all users
+	UsersWithRoles      []userWithRoles // List of users with their roles
+	UserRoles           []models.Role   // Roles assigned to a user
+	Roles               []models.Role   // All available roles
+	Form                any             // 'any' (interface{}) accepts any type - for form data
+	Pagination          *paginationData
+	Flash               string // One-time message to display (e.g., "Client created successfully")
+	IsAuthenticated     bool
+	Permissions         []string // User's permissions for template conditionals
+	SearchTerm          string
 	// Additional fields for income report
-	Total              float64
-	Year               int
+	Total float64
+	Year  int
 }
 
 // humanDate formats a time.Time into a human-readable string.
@@ -94,6 +106,17 @@ func formatAdjustmentAmount(adjustment *float64) string {
 	return fmt.Sprintf("%.2f", *adjustment)
 }
 
+// hasPermission checks if a permission exists in a slice of permissions.
+// This function can be called from templates to conditionally show UI elements.
+func hasPermission(permissions []string, permission string) bool {
+	for _, p := range permissions {
+		if p == permission {
+			return true
+		}
+	}
+	return false
+}
+
 // functions is a FuncMap that registers custom functions to use in templates.
 // var declares a package-level variable that's accessible throughout this package.
 // template.FuncMap is a map[string]interface{} that maps function names to functions.
@@ -106,6 +129,7 @@ var functions = template.FuncMap{
 	"mul":                      mul,
 	"formatDiscountPercent":    formatDiscountPercent,
 	"formatAdjustmentAmount":   formatAdjustmentAmount,
+	"hasPermission":            hasPermission,
 }
 
 // newTemplateCache creates a cache of all compiled HTML templates.

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-playground/form/v4"
+	"github.com/paulboeck/FreelanceTrackerGo/internal/models"
 )
 
 // serverError logs a server error with stack trace and sends a 500 response to the client.
@@ -70,6 +71,21 @@ func (app *application) render(resp http.ResponseWriter, req *http.Request, stat
 
 // newTemplateData creates a templateData struct with common data needed by all templates.
 func (app *application) newTemplateData(req *http.Request) templateData {
+	isAuth := app.isAuthenticated(req)
+	perms := getUserPermissions(req)
+
+	// Get current user if authenticated
+	var currentUser *models.User
+	if isAuth {
+		userID := getUserID(req)
+		if userID != 0 {
+			user, err := app.users.Get(userID)
+			if err == nil {
+				currentUser = &user
+			}
+		}
+	}
+
 	return templateData{
 		CurrentYear: time.Now().Year(),
 
@@ -80,7 +96,13 @@ func (app *application) newTemplateData(req *http.Request) templateData {
 		Flash: app.sessionManager.PopString(req.Context(), "flash"),
 
 		// Check if the user is authenticated
-		IsAuthenticated: app.isAuthenticated(req),
+		IsAuthenticated: isAuth,
+
+		// Current authenticated user
+		User: currentUser,
+
+		// Load user permissions for template conditionals
+		Permissions: perms,
 	}
 }
 
@@ -111,32 +133,66 @@ func (app *application) decodePostForm(r *http.Request, dst any) error {
 }
 
 // isAuthenticated returns true if the current request is from an authenticated user.
-// Currently hardcoded to true, but commented code shows how to check from context.
 func (app *application) isAuthenticated(r *http.Request) bool {
-	// The commented code shows how to retrieve a value from the request context:
-	//isAuthenticated, ok := r.Context().Value(isAuthenticatedContextKey).(bool)
-	//if !ok {
-	//return false
-	//}
-	//return isAuthenticated
-
-	// TODO: Currently returns true for all requests (authentication disabled)
-	return true
+	isAuthenticated, ok := r.Context().Value(isAuthenticatedContextKey).(bool)
+	if !ok {
+		return false
+	}
+	return isAuthenticated
 }
 
 // contextKey is a custom type for context keys to avoid collisions with other packages.
 // Using a custom type prevents conflicts if other packages use string keys.
 type contextKey string
 
-// isAuthenticatedContextKey is the key used to store authentication status in the request context.
-// The const keyword defines a constant that cannot be changed.
-const isAuthenticatedContextKey = contextKey("isAuthenticated")
+// Context keys for storing request-scoped values
+const (
+	isAuthenticatedContextKey = contextKey("isAuthenticated")
+	userIDContextKey          = contextKey("userID")
+	permissionsContextKey     = contextKey("permissions")
+)
 
-// contextSetUser adds the user authentication status to the request context.
+// contextSetUser adds the user authentication status and ID to the request context.
 // context.Context is used to pass request-scoped values through the call chain.
 // This is Go's way of passing data through middleware and handlers without global variables.
 func contextSetUser(ctx context.Context, userID int) context.Context {
-	// context.WithValue returns a copy of the parent context with the new key-value pair
-	// userID != 0 is a boolean expression (true if userID is not zero)
-	return context.WithValue(ctx, isAuthenticatedContextKey, userID != 0)
+	// Set authentication status
+	ctx = context.WithValue(ctx, isAuthenticatedContextKey, userID != 0)
+	// Set user ID
+	ctx = context.WithValue(ctx, userIDContextKey, userID)
+	return ctx
+}
+
+// contextSetPermissions adds user permissions to the request context.
+func contextSetPermissions(ctx context.Context, permissions []string) context.Context {
+	return context.WithValue(ctx, permissionsContextKey, permissions)
+}
+
+// getUserID returns the authenticated user's ID from the request context.
+func getUserID(r *http.Request) int {
+	userID, ok := r.Context().Value(userIDContextKey).(int)
+	if !ok {
+		return 0
+	}
+	return userID
+}
+
+// getUserPermissions returns the user's permissions from the request context.
+func getUserPermissions(r *http.Request) []string {
+	permissions, ok := r.Context().Value(permissionsContextKey).([]string)
+	if !ok {
+		return []string{}
+	}
+	return permissions
+}
+
+// hasPermission checks if the user has a specific permission.
+func (app *application) hasPermission(r *http.Request, permission string) bool {
+	permissions := getUserPermissions(r)
+	for _, p := range permissions {
+		if p == permission {
+			return true
+		}
+	}
+	return false
 }

@@ -1,0 +1,51 @@
+{{define "title"}}Edit User{{end}}
+
+{{define "main"}}
+<h2>Edit User</h2>
+<div class="form-container">
+    <form action='/user/edit/{{.User.ID}}' method='POST' novalidate>
+        <div class="form-group">
+            <label>Name:</label>
+            {{with .Form.FieldErrors.name}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='text' name='name' value="{{.Form.Name}}" {{with .Form.FieldErrors.name}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+
+        <div class="form-group">
+            <label>Email:</label>
+            {{with .Form.FieldErrors.email}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <input type='email' name='email' value="{{.Form.Email}}" {{with .Form.FieldErrors.email}}class="form-input error"{{else}}class="form-input"{{end}}>
+        </div>
+
+        <div class="form-group">
+            <label>Roles:</label>
+            {{with .Form.FieldErrors.roles}}
+                <label class="error">{{.}}</label>
+            {{end}}
+            <div class="checkbox-group">
+                {{range .Roles}}
+                    <div class="checkbox-item">
+                        <input type="checkbox"
+                               id="role_{{.ID}}"
+                               name="roles"
+                               value="{{.ID}}"
+                               {{range $.UserRoles}}{{if eq .ID $.ID}}checked{{end}}{{end}}>
+                        <label for="role_{{.ID}}">{{.Name}}</label>
+                        {{if .Description}}
+                            <small>{{.Description}}</small>
+                        {{end}}
+                    </div>
+                {{end}}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <input type='submit' value='Update User'>
+            <a href="/users" class="btn-cancel">Cancel</a>
+        </div>
+    </form>
+</div>
+{{end}}

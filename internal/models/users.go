@@ -12,13 +12,14 @@ import (
 )
 
 type User struct {
-	ID             int
-	Name           string
-	Email          string
-	HashedPassword []byte
-	Updated        time.Time
-	Created        time.Time
-	DeletedAt      *time.Time
+	ID                    int
+	Name                  string
+	Email                 string
+	HashedPassword        []byte
+	RequirePasswordChange bool
+	Updated               time.Time
+	Created               time.Time
+	DeletedAt             *time.Time
 }
 
 // UserModel wraps the generated SQLC Queries for user operations
@@ -35,11 +36,12 @@ func (m *UserModel) Insert(name, email, password string) (int, error) {
 		return 0, err
 	}
 
-	// Insert the user
+	// Insert the user with require_password_change flag set to 1 (true)
 	id, err := m.queries.InsertUser(ctx, db.InsertUserParams{
-		Name:           name,
-		Email:          email,
-		HashedPassword: hashedPassword,
+		Name:                  name,
+		Email:                 email,
+		HashedPassword:        hashedPassword,
+		RequirePasswordChange: 1, // Force password change on first login
 	})
 	if err != nil {
 		// Check for duplicate email error
@@ -75,12 +77,13 @@ func (m *UserModel) Get(id int) (User, error) {
 
 	// Convert from db.User to models.User
 	user := User{
-		ID:             int(dbUser.ID),
-		Name:           dbUser.Name,
-		Email:          dbUser.Email,
-		HashedPassword: hashedPassword,
-		Updated:        dbUser.UpdatedAt,
-		Created:        dbUser.CreatedAt,
+		ID:                    int(dbUser.ID),
+		Name:                  dbUser.Name,
+		Email:                 dbUser.Email,
+		HashedPassword:        hashedPassword,
+		RequirePasswordChange: dbUser.RequirePasswordChange != 0,
+		Updated:               dbUser.UpdatedAt,
+		Created:               dbUser.CreatedAt,
 	}
 
 	if dbUser.DeletedAt != nil {
@@ -113,7 +116,7 @@ func (m *UserModel) Authenticate(email, password string) (int, error) {
 	} else {
 		return 0, errors.New("invalid hashed password type")
 	}
-	
+
 	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
@@ -137,12 +140,68 @@ func (m *UserModel) Exists(email string) (bool, error) {
 	return exists == 1, nil
 }
 
+func (m *UserModel) UpdatePassword(id int, password string) error {
+	ctx := context.Background()
+
+	// Hash the new password
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	if err != nil {
+		return err
+	}
+
+	// Update the password and clear the require_password_change flag
+	return m.queries.UpdateUserPassword(ctx, db.UpdateUserPasswordParams{
+		HashedPassword: hashedPassword,
+		ID:             int64(id),
+	})
+}
+
+func (m *UserModel) GetAll() ([]User, error) {
+	ctx := context.Background()
+
+	dbUsers, err := m.queries.GetAllUsers(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	users := make([]User, len(dbUsers))
+	for i, dbUser := range dbUsers {
+		// Convert HashedPassword from interface{} to []byte
+		var hashedPassword []byte
+		if hashedPasswordStr, ok := dbUser.HashedPassword.(string); ok {
+			hashedPassword = []byte(hashedPasswordStr)
+		} else if hashedPasswordBytes, ok := dbUser.HashedPassword.([]byte); ok {
+			hashedPassword = hashedPasswordBytes
+		}
+
+		users[i] = User{
+			ID:                    int(dbUser.ID),
+			Name:                  dbUser.Name,
+			Email:                 dbUser.Email,
+			HashedPassword:        hashedPassword,
+			RequirePasswordChange: dbUser.RequirePasswordChange != 0,
+			Updated:               dbUser.UpdatedAt,
+			Created:               dbUser.CreatedAt,
+		}
+
+		if dbUser.DeletedAt != nil {
+			if deletedAt, ok := dbUser.DeletedAt.(time.Time); ok {
+				users[i].DeletedAt = &deletedAt
+			}
+		}
+	}
+
+	return users, nil
+}
+
 // UserModelInterface defines the interface for user operations
 type UserModelInterface interface {
 	Insert(name, email, password string) (int, error)
 	Get(id int) (User, error)
 	Authenticate(email, password string) (int, error)
 	Exists(email string) (bool, error)
+	UpdatePassword(id int, password string) error
+	GetAll() ([]User, error)
 }
 
 // Ensure implementation satisfies the interface

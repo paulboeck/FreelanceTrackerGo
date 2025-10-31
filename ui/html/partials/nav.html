@@ -1,18 +1,23 @@
 {{define "nav"}}
   <nav>
+    {{if .IsAuthenticated}}
     <div>
       <a href="/clients">Clients</a>
       <a href="/projects">Projects</a>
       <a href="/reports/income">Reports</a>
       <a href="/settings">Settings</a>
+      {{if hasPermission .Permissions "users.list"}}
+      <a href="/users">Users</a>
+      {{end}}
     </div>
-    {{if .IsAuthenticated}}
     <div class="auth-nav">
+      {{if .User}}
+      <span class="user-info">{{.User.Name}}</span>
+      {{end}}
       <a href='/user/logout'>Logout</a>
     </div>
     {{else}}
     <div class="auth-nav">
-      <a href='/user/signup'>Signup</a>
       <a href='/user/login'>Login</a>
     </div>
     {{end}}

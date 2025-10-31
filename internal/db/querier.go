@@ -9,14 +9,20 @@ import (
 )
 
 type Querier interface {
+	AssignPermissionToRole(ctx context.Context, arg AssignPermissionToRoleParams) error
+	AssignRoleToUser(ctx context.Context, arg AssignRoleToUserParams) error
 	DeleteClient(ctx context.Context, id int64) error
 	DeleteInvoice(ctx context.Context, id int64) error
 	DeleteProject(ctx context.Context, id int64) error
+	DeleteRole(ctx context.Context, id int64) error
 	DeleteTimesheet(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
 	GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
+	GetAllPermissions(ctx context.Context) ([]Permission, error)
 	GetAllProjectsWithClient(ctx context.Context) ([]GetAllProjectsWithClientRow, error)
+	GetAllRoles(ctx context.Context) ([]Role, error)
 	GetAllSettings(ctx context.Context) ([]Setting, error)
+	GetAllUsers(ctx context.Context) ([]GetAllUsersRow, error)
 	GetClient(ctx context.Context, id int64) (GetClientRow, error)
 	GetClientsCount(ctx context.Context) (int64, error)
 	GetClientsWithPagination(ctx context.Context, arg GetClientsWithPaginationParams) ([]GetClientsWithPaginationRow, error)
@@ -25,20 +31,32 @@ type Querier interface {
 	GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceForPDFRow, error)
 	GetInvoicesByProject(ctx context.Context, projectID int64) ([]GetInvoicesByProjectRow, error)
 	GetPaidInvoicesForYear(ctx context.Context, arg GetPaidInvoicesForYearParams) ([]GetPaidInvoicesForYearRow, error)
+	GetPermissionByID(ctx context.Context, id int64) (Permission, error)
+	GetPermissionByName(ctx context.Context, name string) (Permission, error)
 	GetProject(ctx context.Context, id int64) (GetProjectRow, error)
 	GetProjectsByClient(ctx context.Context, clientID int64) ([]GetProjectsByClientRow, error)
 	GetProjectsCount(ctx context.Context) (int64, error)
 	GetProjectsWithClientPagination(ctx context.Context, arg GetProjectsWithClientPaginationParams) ([]GetProjectsWithClientPaginationRow, error)
+	GetRoleByID(ctx context.Context, id int64) (Role, error)
+	GetRoleByName(ctx context.Context, name string) (Role, error)
+	GetRolePermissions(ctx context.Context, roleID int64) ([]Permission, error)
 	GetSetting(ctx context.Context, key string) (Setting, error)
 	GetTimesheet(ctx context.Context, id int64) (GetTimesheetRow, error)
 	GetTimesheetsByProject(ctx context.Context, projectID int64) ([]GetTimesheetsByProjectRow, error)
-	GetUserByEmail(ctx context.Context, email string) (User, error)
-	GetUserByID(ctx context.Context, id int64) (User, error)
+	GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error)
+	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
+	GetUserPermissions(ctx context.Context, userID int64) ([]Permission, error)
+	GetUserRoles(ctx context.Context, userID int64) ([]Role, error)
 	InsertClient(ctx context.Context, arg InsertClientParams) (int64, error)
 	InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error)
 	InsertProject(ctx context.Context, arg InsertProjectParams) (int64, error)
+	InsertRole(ctx context.Context, arg InsertRoleParams) (int64, error)
 	InsertTimesheet(ctx context.Context, arg InsertTimesheetParams) (int64, error)
 	InsertUser(ctx context.Context, arg InsertUserParams) (int64, error)
+	RemoveAllPermissionsFromRole(ctx context.Context, roleID int64) error
+	RemoveAllRolesFromUser(ctx context.Context, userID int64) error
+	RemovePermissionFromRole(ctx context.Context, arg RemovePermissionFromRoleParams) error
+	RemoveRoleFromUser(ctx context.Context, arg RemoveRoleFromUserParams) error
 	SearchClientsCount(ctx context.Context, arg SearchClientsCountParams) (int64, error)
 	SearchClientsWithPagination(ctx context.Context, arg SearchClientsWithPaginationParams) ([]SearchClientsWithPaginationRow, error)
 	SearchProjectsCount(ctx context.Context, arg SearchProjectsCountParams) (int64, error)
@@ -46,9 +64,11 @@ type Querier interface {
 	UpdateClient(ctx context.Context, arg UpdateClientParams) error
 	UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
+	UpdateRole(ctx context.Context, arg UpdateRoleParams) error
 	UpdateSetting(ctx context.Context, arg UpdateSettingParams) error
 	UpdateTimesheet(ctx context.Context, arg UpdateTimesheetParams) error
 	UpdateUser(ctx context.Context, arg UpdateUserParams) error
+	UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error
 	UserExists(ctx context.Context, email string) (int64, error)
 }
 

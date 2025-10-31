@@ -101,7 +101,6 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 		}
 
 		// Check if the user still exists in the database
-		// The underscore (_) discards the user data since we only care if it exists
 		_, err := app.users.Get(id)
 		if err != nil {
 			// If the error is NOT "no record found", it's a server error
@@ -110,11 +109,88 @@ func (app *application) authenticate(next http.Handler) http.Handler {
 				return
 			}
 			// User doesn't exist anymore, continue without authentication
-		} else {
-			// User exists, add authentication status to the request context
-			ctx := contextSetUser(r.Context(), id)
-			// WithContext creates a shallow copy of the request with the new context
-			r = r.WithContext(ctx)
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// User exists, add authentication status and user ID to the request context
+		ctx := contextSetUser(r.Context(), id)
+
+		// Load user's permissions and add to context
+		permissions, err := app.permissions.GetUserPermissionNames(id)
+		if err != nil {
+			app.serverError(w, r, err)
+			return
+		}
+		ctx = contextSetPermissions(ctx, permissions)
+
+		// WithContext creates a shallow copy of the request with the new context
+		r = r.WithContext(ctx)
+
+		next.ServeHTTP(w, r)
+	})
+}
+
+// requirePermission is middleware factory that creates middleware to check for a specific permission.
+// It returns a middleware function that checks if the authenticated user has the required permission.
+func (app *application) requirePermission(permission string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Check if the user is authenticated
+			if !app.isAuthenticated(r) {
+				http.Redirect(w, r, "/user/login", http.StatusSeeOther)
+				return
+			}
+
+			// Check if the user has the required permission
+			if !app.hasPermission(r, permission) {
+				// User is authenticated but doesn't have permission - show forbidden error
+				app.clientError(w, http.StatusForbidden)
+				return
+			}
+
+			// User has permission, continue to the next handler
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
+// requirePasswordChange is middleware that redirects users who need to change their password.
+// This ensures users with require_password_change flag set must change their password before accessing the app.
+func (app *application) requirePasswordChange(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Only check for authenticated users
+		if !app.isAuthenticated(r) {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Get user ID from context
+		userID := getUserID(r)
+		if userID == 0 {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// Get user from database
+		user, err := app.users.Get(userID)
+		if err != nil {
+			if err != models.ErrNoRecord {
+				app.serverError(w, r, err)
+				return
+			}
+			next.ServeHTTP(w, r)
+			return
+		}
+
+		// If user requires password change, redirect to password change page
+		// But allow access to the password change page itself and logout
+		if user.RequirePasswordChange {
+			// Allow access to password change page and logout
+			if r.URL.Path != "/user/password/change" && r.URL.Path != "/user/logout" {
+				http.Redirect(w, r, "/user/password/change", http.StatusSeeOther)
+				return
+			}
 		}
 
 		next.ServeHTTP(w, r)

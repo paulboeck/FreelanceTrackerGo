@@ -17,7 +17,9 @@
                 <a href="#features">Features</a>
                 <a href="#pricing">Pricing</a>
                 <a href="#contact">Contact</a>
+                <!--
                 <a href="get-started.html" class="btn-nav">Get Started</a>
+                -->
             </div>
         </div>
     </nav>
@@ -29,7 +31,9 @@
                 <h1 class="hero-title">Project & Invoice Management <span class="highlight">Made Simple</span></h1>
                 <p class="hero-subtitle">Built by a freelancer, for freelancers. Keep your projects organized, track your time, and generate professional invoices—all from your own computer.</p>
                 <div class="hero-cta">
+                    <!--
                     <a href="get-started.html" class="btn-primary">Get Started - $49</a>
+                    -->
                     <a href="#features" class="btn-secondary">Learn More</a>
                 </div>
                 <div class="hero-badges">
@@ -175,10 +179,11 @@
                     <li>Full access to all features</li>
                     <li>Unlimited clients and projects</li>
                     <li>Unlimited invoice generation</li>
-                    <li>Install on your computer</li>
                     <li>No recurring fees, ever</li>
                 </ul>
+                <!--
                 <a href="get-started.html" class="btn-primary btn-large">Get Started Now</a>
+                -->
                 <p class="pricing-note">Stop paying monthly for tools you've already bought.</p>
             </div>
         </div>
@@ -191,8 +196,10 @@
                 <h2>Questions? Get in Touch</h2>
                 <p>I'm here to help. Send me a message and I'll get back to you soon.</p>
             </div>
-            <form class="contact-form" id="contactForm">
+            <form action="https://api.web3forms.com/submit" method="POST" id="contactForm">
                 <div class="form-row">
+                    <input type="hidden" name="access_key" value="b43431db-4f15-45a1-84bc-a1494a2cdf1f">
+                    <input type="hidden" name="subject" value="Contact Form Submission">
                     <div class="form-group">
                         <label for="name">Name</label>
                         <input type="text" id="name" name="name" required>
@@ -201,10 +208,10 @@
                         <label for="email">Email</label>
                         <input type="email" id="email" name="email" required>
                     </div>
-                </div>
-                <div class="form-group">
-                    <label for="message">Message</label>
-                    <textarea id="message" name="message" rows="5" required></textarea>
+                    <div class="form-group">
+                        <label for="message">Message</label>
+                        <textarea id="message" name="message" rows="5" required></textarea>
+                    </div>
                 </div>
                 <button type="submit" class="btn-primary">Send Message</button>
                 <p class="form-status" id="formStatus"></p>
@@ -220,6 +227,5 @@
         </div>
     </footer>
 
-    <script src="contact-form.js"></script>
 </body>
 </html>

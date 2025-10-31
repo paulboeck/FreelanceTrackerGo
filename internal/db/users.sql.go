@@ -7,6 +7,7 @@ package db
 
 import (
 	"context"
+	"time"
 )
 
 const deleteUser = `-- name: DeleteUser :exec
@@ -20,20 +21,82 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 	return err
 }
 
+const getAllUsers = `-- name: GetAllUsers :many
+SELECT id, name, email, hashed_password, require_password_change, created_at, updated_at, deleted_at
+FROM user
+WHERE deleted_at IS NULL
+ORDER BY name
+`
+
+type GetAllUsersRow struct {
+	ID                    int64       `json:"id"`
+	Name                  string      `json:"name"`
+	Email                 string      `json:"email"`
+	HashedPassword        interface{} `json:"hashed_password"`
+	RequirePasswordChange int64       `json:"require_password_change"`
+	CreatedAt             time.Time   `json:"created_at"`
+	UpdatedAt             time.Time   `json:"updated_at"`
+	DeletedAt             interface{} `json:"deleted_at"`
+}
+
+func (q *Queries) GetAllUsers(ctx context.Context) ([]GetAllUsersRow, error) {
+	rows, err := q.db.QueryContext(ctx, getAllUsers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetAllUsersRow{}
+	for rows.Next() {
+		var i GetAllUsersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Email,
+			&i.HashedPassword,
+			&i.RequirePasswordChange,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.DeletedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getUserByEmail = `-- name: GetUserByEmail :one
-SELECT id, name, email, hashed_password, created_at, updated_at, deleted_at 
-FROM user 
+SELECT id, name, email, hashed_password, require_password_change, created_at, updated_at, deleted_at
+FROM user
 WHERE email = ? AND deleted_at IS NULL
 `
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error) {
+type GetUserByEmailRow struct {
+	ID                    int64       `json:"id"`
+	Name                  string      `json:"name"`
+	Email                 string      `json:"email"`
+	HashedPassword        interface{} `json:"hashed_password"`
+	RequirePasswordChange int64       `json:"require_password_change"`
+	CreatedAt             time.Time   `json:"created_at"`
+	UpdatedAt             time.Time   `json:"updated_at"`
+	DeletedAt             interface{} `json:"deleted_at"`
+}
+
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (GetUserByEmailRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
-	var i User
+	var i GetUserByEmailRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
 		&i.HashedPassword,
+		&i.RequirePasswordChange,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -42,19 +105,31 @@ func (q *Queries) GetUserByEmail(ctx context.Context, email string) (User, error
 }
 
 const getUserByID = `-- name: GetUserByID :one
-SELECT id, name, email, hashed_password, created_at, updated_at, deleted_at 
-FROM user 
+SELECT id, name, email, hashed_password, require_password_change, created_at, updated_at, deleted_at
+FROM user
 WHERE id = ? AND deleted_at IS NULL
 `
 
-func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
+type GetUserByIDRow struct {
+	ID                    int64       `json:"id"`
+	Name                  string      `json:"name"`
+	Email                 string      `json:"email"`
+	HashedPassword        interface{} `json:"hashed_password"`
+	RequirePasswordChange int64       `json:"require_password_change"`
+	CreatedAt             time.Time   `json:"created_at"`
+	UpdatedAt             time.Time   `json:"updated_at"`
+	DeletedAt             interface{} `json:"deleted_at"`
+}
+
+func (q *Queries) GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByID, id)
-	var i User
+	var i GetUserByIDRow
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
 		&i.Email,
 		&i.HashedPassword,
+		&i.RequirePasswordChange,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.DeletedAt,
@@ -63,18 +138,24 @@ func (q *Queries) GetUserByID(ctx context.Context, id int64) (User, error) {
 }
 
 const insertUser = `-- name: InsertUser :execlastid
-INSERT INTO user (name, email, hashed_password) 
-VALUES (?, ?, ?)
+INSERT INTO user (name, email, hashed_password, require_password_change)
+VALUES (?, ?, ?, ?)
 `
 
 type InsertUserParams struct {
-	Name           string      `json:"name"`
-	Email          string      `json:"email"`
-	HashedPassword interface{} `json:"hashed_password"`
+	Name                  string      `json:"name"`
+	Email                 string      `json:"email"`
+	HashedPassword        interface{} `json:"hashed_password"`
+	RequirePasswordChange int64       `json:"require_password_change"`
 }
 
 func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (int64, error) {
-	result, err := q.db.ExecContext(ctx, insertUser, arg.Name, arg.Email, arg.HashedPassword)
+	result, err := q.db.ExecContext(ctx, insertUser,
+		arg.Name,
+		arg.Email,
+		arg.HashedPassword,
+		arg.RequirePasswordChange,
+	)
 	if err != nil {
 		return 0, err
 	}
@@ -82,8 +163,8 @@ func (q *Queries) InsertUser(ctx context.Context, arg InsertUserParams) (int64, 
 }
 
 const updateUser = `-- name: UpdateUser :exec
-UPDATE user 
-SET name = ?, email = ?, updated_at = CURRENT_TIMESTAMP 
+UPDATE user
+SET name = ?, email = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND deleted_at IS NULL
 `
 
@@ -95,6 +176,22 @@ type UpdateUserParams struct {
 
 func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
 	_, err := q.db.ExecContext(ctx, updateUser, arg.Name, arg.Email, arg.ID)
+	return err
+}
+
+const updateUserPassword = `-- name: UpdateUserPassword :exec
+UPDATE user
+SET hashed_password = ?, require_password_change = 0, updated_at = CURRENT_TIMESTAMP
+WHERE id = ? AND deleted_at IS NULL
+`
+
+type UpdateUserPasswordParams struct {
+	HashedPassword interface{} `json:"hashed_password"`
+	ID             int64       `json:"id"`
+}
+
+func (q *Queries) UpdateUserPassword(ctx context.Context, arg UpdateUserPasswordParams) error {
+	_, err := q.db.ExecContext(ctx, updateUserPassword, arg.HashedPassword, arg.ID)
 	return err
 }
 

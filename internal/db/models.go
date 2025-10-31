@@ -47,6 +47,15 @@ type Invoice struct {
 	DisplayDetails bool        `json:"display_details"`
 }
 
+type Permission struct {
+	ID          int64          `json:"id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   interface{}    `json:"deleted_at"`
+}
+
 type Project struct {
 	ID                     int64           `json:"id"`
 	Name                   string          `json:"name"`
@@ -71,6 +80,21 @@ type Project struct {
 	CurrencyConversionRate float64         `json:"currency_conversion_rate"`
 	FlatFeeInvoice         int64           `json:"flat_fee_invoice"`
 	Notes                  sql.NullString  `json:"notes"`
+}
+
+type Role struct {
+	ID          int64          `json:"id"`
+	Name        string         `json:"name"`
+	Description sql.NullString `json:"description"`
+	CreatedAt   time.Time      `json:"created_at"`
+	UpdatedAt   time.Time      `json:"updated_at"`
+	DeletedAt   interface{}    `json:"deleted_at"`
+}
+
+type RolePermission struct {
+	RoleID       int64     `json:"role_id"`
+	PermissionID int64     `json:"permission_id"`
+	CreatedAt    time.Time `json:"created_at"`
 }
 
 type Session struct {
@@ -101,11 +125,18 @@ type Timesheet struct {
 }
 
 type User struct {
-	ID             int64       `json:"id"`
-	Name           string      `json:"name"`
-	Email          string      `json:"email"`
-	HashedPassword interface{} `json:"hashed_password"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	DeletedAt      interface{} `json:"deleted_at"`
+	ID                    int64       `json:"id"`
+	Name                  string      `json:"name"`
+	Email                 string      `json:"email"`
+	HashedPassword        interface{} `json:"hashed_password"`
+	CreatedAt             time.Time   `json:"created_at"`
+	UpdatedAt             time.Time   `json:"updated_at"`
+	DeletedAt             interface{} `json:"deleted_at"`
+	RequirePasswordChange int64       `json:"require_password_change"`
+}
+
+type UserRole struct {
+	UserID    int64     `json:"user_id"`
+	RoleID    int64     `json:"role_id"`
+	CreatedAt time.Time `json:"created_at"`
 }

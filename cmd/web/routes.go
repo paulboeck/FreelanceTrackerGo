@@ -24,56 +24,79 @@ func (app *application) routes() http.Handler {
 	// Create middleware chains using alice (makes chaining middleware cleaner)
 	// dynamic chain: runs on all dynamic routes (not static files)
 	dynamic := alice.New(app.sessionManager.LoadAndSave, app.authenticate)
-	// protected chain: adds authentication requirement to the dynamic chain
-	protected := dynamic.Append(app.requireAuthentication)
+	// protected chain: adds authentication requirement and password change check to the dynamic chain
+	protected := dynamic.Append(app.requireAuthentication, app.requirePasswordChange)
 
 	// Public routes (no authentication required)
 	// dynamic.ThenFunc wraps the handler function with the dynamic middleware chain
-	// The route pattern "GET /user/signup" specifies both the HTTP method and path
-	mux.Handle("GET /user/signup", dynamic.ThenFunc(app.userSignup))
-	mux.Handle("POST /user/signup", dynamic.ThenFunc(app.userSignupPost))
+	// The route pattern "GET /user/login" specifies both the HTTP method and path
 	mux.Handle("GET /user/login", dynamic.ThenFunc(app.userLogin))
 	mux.Handle("POST /user/login", dynamic.ThenFunc(app.userLoginPost))
 
-	// Protected routes (authentication required)
-	// These use the protected chain which includes requireAuthentication middleware
+	// Password change route (authenticated but bypasses password change check for this specific route)
+	mux.Handle("GET /user/password/change", dynamic.Append(app.requireAuthentication).ThenFunc(app.userPasswordChange))
+	mux.Handle("POST /user/password/change", dynamic.Append(app.requireAuthentication).ThenFunc(app.userPasswordChangePost))
+
+	// Protected routes with permission checks
 	// {$} means exact match - only "/" not "/something"
-	mux.Handle("GET /{$}", protected.ThenFunc(app.clientsList))
-	mux.Handle("GET /clients", protected.ThenFunc(app.clientsList))
-	mux.Handle("GET /projects", protected.ThenFunc(app.projectsList))
-	mux.Handle("GET /project/create", protected.ThenFunc(app.projectCreateGeneral))
-	mux.Handle("POST /project/create", protected.ThenFunc(app.projectCreateGeneralPost))
 	// {id} is a path parameter - it captures the value from the URL (e.g., /client/view/42 -> id=42)
-	mux.Handle("GET /client/view/{id}", protected.ThenFunc(app.clientView))
-	mux.Handle("GET /client/create", protected.ThenFunc(app.clientCreate))
-	mux.Handle("POST /client/create", protected.ThenFunc(app.clientCreatePost))
-	mux.Handle("GET /client/update/{id}", protected.ThenFunc(app.clientUpdate))
-	mux.Handle("POST /client/update/{id}", protected.ThenFunc(app.clientUpdatePost))
-	mux.Handle("POST /client/delete/{id}", protected.ThenFunc(app.clientDelete))
-	mux.Handle("GET /client/{id}/project/create", protected.ThenFunc(app.projectCreate))
-	mux.Handle("POST /client/{id}/project/create", protected.ThenFunc(app.projectCreatePost))
-	mux.Handle("GET /project/view/{id}", protected.ThenFunc(app.projectView))
-	mux.Handle("GET /project/update/{id}", protected.ThenFunc(app.projectUpdate))
-	mux.Handle("POST /project/update/{id}", protected.ThenFunc(app.projectUpdatePost))
-	mux.Handle("POST /project/delete/{id}", protected.ThenFunc(app.projectDelete))
-	mux.Handle("GET /project/{id}/timesheet/create", protected.ThenFunc(app.timesheetCreate))
-	mux.Handle("POST /project/{id}/timesheet/create", protected.ThenFunc(app.timesheetCreatePost))
-	mux.Handle("GET /timesheet/update/{id}", protected.ThenFunc(app.timesheetUpdate))
-	mux.Handle("POST /timesheet/update/{id}", protected.ThenFunc(app.timesheetUpdatePost))
-	mux.Handle("POST /timesheet/delete/{id}", protected.ThenFunc(app.timesheetDelete))
-	mux.Handle("GET /project/{id}/invoice/create", protected.ThenFunc(app.invoiceCreate))
-	mux.Handle("POST /project/{id}/invoice/create", protected.ThenFunc(app.invoiceCreatePost))
-	mux.Handle("GET /invoice/update/{id}", protected.ThenFunc(app.invoiceUpdate))
-	mux.Handle("POST /invoice/update/{id}", protected.ThenFunc(app.invoiceUpdatePost))
-	mux.Handle("POST /invoice/delete/{id}", protected.ThenFunc(app.invoiceDelete))
-	mux.Handle("GET /invoice/print/{id}", protected.ThenFunc(app.invoicePrint))
-	mux.Handle("POST /invoice/email/{id}", protected.ThenFunc(app.invoiceEmail))
-	mux.Handle("GET /reports/income", protected.ThenFunc(app.incomeReport))
-	mux.Handle("POST /reports/income", protected.ThenFunc(app.incomeReportPost))
-	mux.Handle("GET /settings", protected.ThenFunc(app.settingsView))
-	mux.Handle("GET /settings/edit", protected.ThenFunc(app.settingsEdit))
-	mux.Handle("POST /settings/edit", protected.ThenFunc(app.settingsEditPost))
-	mux.Handle("GET /api/client/{id}/hourlyrate", protected.ThenFunc(app.clientHourlyRateAPI))
+
+	// Client routes
+	mux.Handle("GET /{$}", protected.Append(app.requirePermission("clients.list")).ThenFunc(app.clientsList))
+	mux.Handle("GET /clients", protected.Append(app.requirePermission("clients.list")).ThenFunc(app.clientsList))
+	mux.Handle("GET /client/view/{id}", protected.Append(app.requirePermission("clients.view")).ThenFunc(app.clientView))
+	mux.Handle("GET /client/create", protected.Append(app.requirePermission("clients.create")).ThenFunc(app.clientCreate))
+	mux.Handle("POST /client/create", protected.Append(app.requirePermission("clients.create")).ThenFunc(app.clientCreatePost))
+	mux.Handle("GET /client/update/{id}", protected.Append(app.requirePermission("clients.edit")).ThenFunc(app.clientUpdate))
+	mux.Handle("POST /client/update/{id}", protected.Append(app.requirePermission("clients.edit")).ThenFunc(app.clientUpdatePost))
+	mux.Handle("POST /client/delete/{id}", protected.Append(app.requirePermission("clients.delete")).ThenFunc(app.clientDelete))
+	mux.Handle("GET /api/client/{id}/hourlyrate", protected.Append(app.requirePermission("clients.view")).ThenFunc(app.clientHourlyRateAPI))
+
+	// Project routes
+	mux.Handle("GET /projects", protected.Append(app.requirePermission("projects.list")).ThenFunc(app.projectsList))
+	mux.Handle("GET /project/view/{id}", protected.Append(app.requirePermission("projects.view")).ThenFunc(app.projectView))
+	mux.Handle("GET /project/create", protected.Append(app.requirePermission("projects.create")).ThenFunc(app.projectCreateGeneral))
+	mux.Handle("POST /project/create", protected.Append(app.requirePermission("projects.create")).ThenFunc(app.projectCreateGeneralPost))
+	mux.Handle("GET /client/{id}/project/create", protected.Append(app.requirePermission("projects.create")).ThenFunc(app.projectCreate))
+	mux.Handle("POST /client/{id}/project/create", protected.Append(app.requirePermission("projects.create")).ThenFunc(app.projectCreatePost))
+	mux.Handle("GET /project/update/{id}", protected.Append(app.requirePermission("projects.edit")).ThenFunc(app.projectUpdate))
+	mux.Handle("POST /project/update/{id}", protected.Append(app.requirePermission("projects.edit")).ThenFunc(app.projectUpdatePost))
+	mux.Handle("POST /project/delete/{id}", protected.Append(app.requirePermission("projects.delete")).ThenFunc(app.projectDelete))
+
+	// Timesheet routes
+	mux.Handle("GET /project/{id}/timesheet/create", protected.Append(app.requirePermission("timesheets.create")).ThenFunc(app.timesheetCreate))
+	mux.Handle("POST /project/{id}/timesheet/create", protected.Append(app.requirePermission("timesheets.create")).ThenFunc(app.timesheetCreatePost))
+	mux.Handle("GET /timesheet/update/{id}", protected.Append(app.requirePermission("timesheets.edit")).ThenFunc(app.timesheetUpdate))
+	mux.Handle("POST /timesheet/update/{id}", protected.Append(app.requirePermission("timesheets.edit")).ThenFunc(app.timesheetUpdatePost))
+	mux.Handle("POST /timesheet/delete/{id}", protected.Append(app.requirePermission("timesheets.delete")).ThenFunc(app.timesheetDelete))
+
+	// Invoice routes
+	mux.Handle("GET /project/{id}/invoice/create", protected.Append(app.requirePermission("invoices.create")).ThenFunc(app.invoiceCreate))
+	mux.Handle("POST /project/{id}/invoice/create", protected.Append(app.requirePermission("invoices.create")).ThenFunc(app.invoiceCreatePost))
+	mux.Handle("GET /invoice/update/{id}", protected.Append(app.requirePermission("invoices.edit")).ThenFunc(app.invoiceUpdate))
+	mux.Handle("POST /invoice/update/{id}", protected.Append(app.requirePermission("invoices.edit")).ThenFunc(app.invoiceUpdatePost))
+	mux.Handle("POST /invoice/delete/{id}", protected.Append(app.requirePermission("invoices.delete")).ThenFunc(app.invoiceDelete))
+	mux.Handle("GET /invoice/print/{id}", protected.Append(app.requirePermission("invoices.print")).ThenFunc(app.invoicePrint))
+	mux.Handle("POST /invoice/email/{id}", protected.Append(app.requirePermission("invoices.email")).ThenFunc(app.invoiceEmail))
+
+	// Report routes
+	mux.Handle("GET /reports/income", protected.Append(app.requirePermission("reports.view")).ThenFunc(app.incomeReport))
+	mux.Handle("POST /reports/income", protected.Append(app.requirePermission("reports.view")).ThenFunc(app.incomeReportPost))
+
+	// Settings routes
+	mux.Handle("GET /settings", protected.Append(app.requirePermission("settings.view")).ThenFunc(app.settingsView))
+	mux.Handle("GET /settings/edit", protected.Append(app.requirePermission("settings.edit")).ThenFunc(app.settingsEdit))
+	mux.Handle("POST /settings/edit", protected.Append(app.requirePermission("settings.edit")).ThenFunc(app.settingsEditPost))
+
+	// User management routes
+	mux.Handle("GET /users", protected.Append(app.requirePermission("users.list")).ThenFunc(app.usersList))
+	mux.Handle("GET /user/create", protected.Append(app.requirePermission("users.create")).ThenFunc(app.userSignup))
+	mux.Handle("POST /user/create", protected.Append(app.requirePermission("users.create")).ThenFunc(app.userSignupPost))
+	mux.Handle("GET /user/edit/{id}", protected.Append(app.requirePermission("users.edit")).ThenFunc(app.userEdit))
+	mux.Handle("POST /user/edit/{id}", protected.Append(app.requirePermission("users.edit")).ThenFunc(app.userEditPost))
+	mux.Handle("POST /user/delete/{id}", protected.Append(app.requirePermission("users.delete")).ThenFunc(app.userDelete))
+
+	// Logout route (no special permission required, just authentication)
 	mux.Handle("GET /user/logout", protected.ThenFunc(app.userLogout))
 
 	// Create the standard middleware chain that wraps ALL routes

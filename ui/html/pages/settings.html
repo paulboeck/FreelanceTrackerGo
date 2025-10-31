@@ -8,9 +8,11 @@
         <div class="client-content">
             Configure values for application-wide settings
         </div>
+        {{if hasPermission .Permissions "settings.edit"}}
         <div class="client-actions">
             <a href="/settings/edit" class="btn-client-action">Edit Setting Values</a>
         </div>
+        {{end}}
     </div>
     
     <!-- Email Settings Section -->

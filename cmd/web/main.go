@@ -33,6 +33,8 @@ type application struct {
 	invoices       models.InvoiceModelInterface       // Interface for invoice database operations
 	settings       models.AppSettingModelInterface    // Interface for application settings operations
 	users          models.UserModelInterface          // Interface for user database operations
+	roles          models.RoleModelInterface          // Interface for role database operations
+	permissions    models.PermissionModelInterface    // Interface for permission database operations
 	emailService   *email.Service                     // Email service for sending invoices
 	templateCache  map[string]*template.Template      // Cache of compiled HTML templates (map is like a dictionary: key -> value)
 	formDecoder    *form.Decoder                      // Decoder for parsing HTML form data into Go structs
@@ -129,8 +131,13 @@ func main() {
 
 	// Set up session management for user login/logout
 	sessionManager := scs.New()
-	sessionManager.Store = sqlite3store.New(db) // Store sessions in SQLite database
-	sessionManager.Lifetime = 12 * time.Hour     // Sessions expire after 12 hours
+	sessionManager.Store = sqlite3store.New(db)           // Store sessions in SQLite database
+	sessionManager.Lifetime = 12 * time.Hour               // Sessions expire after 12 hours
+	sessionManager.Cookie.Name = "session"                 // Explicit cookie name
+	sessionManager.Cookie.HttpOnly = true                  // Prevent JavaScript access to cookie (security)
+	sessionManager.Cookie.Persist = true                   // Sessions persist across browser restarts
+	sessionManager.Cookie.SameSite = http.SameSiteLaxMode // Allow cookie in same-site and safe cross-site requests
+	// Note: Secure flag is auto-detected from X-Forwarded-Proto header (set by fly.io)
 
 	// Create encryption seed from DSN for consistent key generation
 	encryptionSeed := "FreelanceTrackerGo-" + *dsn
@@ -143,6 +150,8 @@ func main() {
 	invoiceModel := models.NewInvoiceModel(db)
 	settingModel := models.NewAppSettingModel(db, encryptionSeed)
 	userModel := models.NewUserModel(db)
+	roleModel := models.NewRoleModel(db)
+	permissionModel := models.NewPermissionModel(db)
 	logger.Info("Using SQLite models")
 
 	// Initialize email service for sending invoices
@@ -167,6 +176,8 @@ func main() {
 		formDecoder:    formDecoder,
 		sessionManager: sessionManager,
 		users:          userModel,
+		roles:          roleModel,
+		permissions:    permissionModel,
 	}
 
 	// Configure TLS (HTTPS) settings for security
