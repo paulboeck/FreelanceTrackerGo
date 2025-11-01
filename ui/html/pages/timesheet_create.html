@@ -42,7 +42,7 @@
             {{with .Form.FieldErrors.description}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='text' name='description' value="{{.Form.Description}}" maxlength="255" placeholder="Brief description of work performed" {{with .Form.FieldErrors.description}}class="form-input error"{{else}}class="form-input"{{end}}>
+            <input type='text' name='description' value="{{.Form.Description}}" maxlength="255" {{with .Form.FieldErrors.description}}class="form-input error"{{else}}class="form-input"{{end}}>
             <small class="form-help">Brief description of work performed (max 255 characters)</small>
         </div>
         <div class="form-actions">

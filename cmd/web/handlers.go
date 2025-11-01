@@ -1212,6 +1212,51 @@ func (app *application) projectDelete(res http.ResponseWriter, req *http.Request
 	http.Redirect(res, req, fmt.Sprintf("/client/view/%d", project.ClientID), http.StatusSeeOther)
 }
 
+// recalculateProjectInvoiceAmounts recalculates and updates amount_due for all unpaid invoices on a project
+// This should be called whenever timesheets are created, updated, or deleted
+func (app *application) recalculateProjectInvoiceAmounts(projectID int) error {
+	// Get all timesheets for the project
+	timesheets, err := app.timesheets.GetByProject(projectID)
+	if err != nil {
+		return err
+	}
+
+	// Get project details (for discount/adjustment calculations)
+	project, err := app.projects.Get(projectID)
+	if err != nil {
+		return err
+	}
+
+	// Calculate the current adjusted amount due
+	adjustedAmountDue := project.AdjustedAmountDue(timesheets)
+
+	// Get all invoices for this project
+	invoices, err := app.invoices.GetByProject(projectID)
+	if err != nil {
+		return err
+	}
+
+	// Update each unpaid invoice's amount_due
+	for _, invoice := range invoices {
+		// Only update unpaid invoices (date_paid is NULL)
+		if invoice.DatePaid == nil {
+			err = app.invoices.Update(
+				invoice.ID,
+				invoice.InvoiceDate,
+				invoice.DatePaid,
+				invoice.PaymentTerms,
+				adjustedAmountDue,
+				invoice.DisplayDetails,
+			)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
 // timesheetCreate handles a GET request which returns an empty timesheet creation form
 func (app *application) timesheetCreate(res http.ResponseWriter, req *http.Request) {
 	projectID, err := strconv.Atoi(req.PathValue("id"))
@@ -1336,6 +1381,13 @@ func (app *application) timesheetCreatePost(res http.ResponseWriter, req *http.R
 	if err != nil {
 		app.serverError(res, req, err)
 		return
+	}
+
+	// Recalculate invoice amounts for this project (in case there are unpaid invoices)
+	err = app.recalculateProjectInvoiceAmounts(projectID)
+	if err != nil {
+		app.logger.Error("Failed to recalculate invoice amounts after timesheet creation", "error", err.Error(), "project_id", projectID)
+		// Don't fail the request, just log the error
 	}
 
 	// Use the Put() method to add a string value ("Timesheet successfully
@@ -1494,6 +1546,14 @@ func (app *application) timesheetUpdatePost(res http.ResponseWriter, req *http.R
 		app.serverError(res, req, err)
 		return
 	}
+
+	// Recalculate invoice amounts for this project (in case there are unpaid invoices)
+	err = app.recalculateProjectInvoiceAmounts(timesheet.ProjectID)
+	if err != nil {
+		app.logger.Error("Failed to recalculate invoice amounts after timesheet update", "error", err.Error(), "project_id", timesheet.ProjectID)
+		// Don't fail the request, just log the error
+	}
+
 	http.Redirect(res, req, fmt.Sprintf("/project/view/%d", timesheet.ProjectID), http.StatusSeeOther)
 }
 
@@ -1520,6 +1580,13 @@ func (app *application) timesheetDelete(res http.ResponseWriter, req *http.Reque
 	if err != nil {
 		app.serverError(res, req, err)
 		return
+	}
+
+	// Recalculate invoice amounts for this project (in case there are unpaid invoices)
+	err = app.recalculateProjectInvoiceAmounts(timesheet.ProjectID)
+	if err != nil {
+		app.logger.Error("Failed to recalculate invoice amounts after timesheet deletion", "error", err.Error(), "project_id", timesheet.ProjectID)
+		// Don't fail the request, just log the error
 	}
 
 	// Redirect to project view page after successful deletion

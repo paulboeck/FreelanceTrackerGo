@@ -110,7 +110,7 @@
             {{with .Form.FieldErrors.discount_percent}}
                 <label class="error">{{.}}</label>
             {{end}}
-            <input type='number' name='discount_percent' value="{{.Form.DiscountPercent}}" step="0.01" min="0" max="100" placeholder="10.00" {{with .Form.FieldErrors.discount_percent}}class="form-input error"{{else}}class="form-input"{{end}}>
+            <input type='number' name='discount_percent' value="{{.Form.DiscountPercent}}" step="0.01" min="0" max="100" {{with .Form.FieldErrors.discount_percent}}class="form-input error"{{else}}class="form-input"{{end}}>
             <small class="form-help">Enter percentage (e.g., 10 for 10%)</small>
         </div>
         

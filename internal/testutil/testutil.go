@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -134,7 +135,7 @@ func createSchema(db *sql.DB) error {
 			FOREIGN KEY (project_id) REFERENCES project(id)
 		);
 		
-		CREATE TABLE IF NOT EXISTS settings (
+		CREATE TABLE IF NOT EXISTS setting (
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL,
 			data_type TEXT NOT NULL CHECK (data_type IN ('string', 'int', 'float', 'decimal', 'bool')),
@@ -142,12 +143,13 @@ func createSchema(db *sql.DB) error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
-		
+
 		CREATE TABLE IF NOT EXISTS user (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			name TEXT NOT NULL,
 			email TEXT NOT NULL UNIQUE,
 			hashed_password TEXT(60) NOT NULL,
+			require_password_change INTEGER NOT NULL DEFAULT 0,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			deleted_at DATETIME NULL
@@ -163,14 +165,21 @@ func createSchema(db *sql.DB) error {
 		);
 		
 		CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);
-		
-		INSERT OR IGNORE INTO settings (key, value, data_type, description) VALUES 
+
+		INSERT OR IGNORE INTO setting (key, value, data_type, description) VALUES
 			('default_hourly_rate', '85.00', 'decimal', 'Default hourly rate for new projects'),
 			('invoice_title', 'Invoice for Academic Editing', 'string', 'Title displayed on generated invoices'),
 			('freelancer_name', 'Your Name Here', 'string', 'Freelancer name for invoices'),
 			('freelancer_address', 'Your Address', 'string', 'Freelancer address for invoices'),
 			('freelancer_phone', 'Your Phone', 'string', 'Freelancer phone for invoices'),
-			('freelancer_email', 'your.email@example.com', 'string', 'Freelancer email for invoices');
+			('freelancer_email', 'your.email@example.com', 'string', 'Freelancer email for invoices'),
+			('email_enabled', 'false', 'bool', 'Enable email notifications'),
+			('smtp_host', '', 'string', 'SMTP server hostname'),
+			('smtp_port', '587', 'int', 'SMTP server port'),
+			('smtp_username', '', 'string', 'SMTP username'),
+			('smtp_password', '', 'string', 'SMTP password (encrypted)'),
+			('smtp_from_name', 'Freelance Tracker', 'string', 'Email from name'),
+			('smtp_use_tls', 'true', 'bool', 'Use TLS for SMTP connection');
 	`
 
 	_, err := db.Exec(schema)
@@ -241,6 +250,59 @@ func (td *TestDatabase) InsertTestInvoice(t *testing.T, projectID int, invoiceDa
 
 	result, err := td.DB.Exec("INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due, display_details) VALUES (?, ?, ?, ?, ?, ?)",
 		projectID, invoiceDate, datePaidParam, paymentTerms, amountDue, false)
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	return int(id)
+}
+
+// InsertTestProjectWithRate inserts a test project with specified hourly rate and returns its ID
+func (td *TestDatabase) InsertTestProjectWithRate(t *testing.T, clientID int, name string, hourlyRate float64) int {
+	result, err := td.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, currency_display, currency_conversion_rate, flat_fee_invoice)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`, name, clientID, "Estimating", hourlyRate, "USD", 1.0, 0)
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	return int(id)
+}
+
+// InsertTestProjectWithDiscount inserts a test project with discount and returns its ID
+func (td *TestDatabase) InsertTestProjectWithDiscount(t *testing.T, clientID int, name string, hourlyRate float64, discountPercent float64, discountReason string) int {
+	result, err := td.DB.Exec(`INSERT INTO project (name, client_id, status, hourly_rate, discount_percent, discount_reason, currency_display, currency_conversion_rate, flat_fee_invoice)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`, name, clientID, "Estimating", hourlyRate, discountPercent, discountReason, "USD", 1.0, 0)
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	return int(id)
+}
+
+// InsertTestTimesheetWithTime inserts a test timesheet with time.Time and float64 parameters and returns its ID
+func (td *TestDatabase) InsertTestTimesheetWithTime(t *testing.T, projectID int, workDate time.Time, hoursWorked float64, hourlyRate float64, description string) int {
+	result, err := td.DB.Exec("INSERT INTO timesheet (project_id, work_date, hours_worked, hourly_rate, description) VALUES (?, ?, ?, ?, ?)",
+		projectID, workDate.Format("2006-01-02"), hoursWorked, hourlyRate, description)
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	return int(id)
+}
+
+// InsertTestInvoiceWithTime inserts a test invoice with time.Time parameters and returns its ID
+func (td *TestDatabase) InsertTestInvoiceWithTime(t *testing.T, projectID int, invoiceDate time.Time, datePaid *time.Time, paymentTerms string, amountDue float64, displayDetails bool) int {
+	var datePaidParam interface{}
+	if datePaid != nil {
+		datePaidParam = datePaid.Format("2006-01-02")
+	}
+
+	result, err := td.DB.Exec("INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due, display_details) VALUES (?, ?, ?, ?, ?, ?)",
+		projectID, invoiceDate.Format("2006-01-02"), datePaidParam, paymentTerms, amountDue, displayDetails)
 	require.NoError(t, err)
 
 	id, err := result.LastInsertId()
