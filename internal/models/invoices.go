@@ -540,8 +540,17 @@ func (i *InvoiceModel) GenerateHTMLPDF(id int, settings map[string]AppSettingVal
 		os.WriteFile("/tmp/debug_invoice.html", htmlBuffer.Bytes(), 0644)
 	}
 
-	// Create context for chromedp
-	ctx, cancel := chromedp.NewContext(context.Background())
+	// Create context for chromedp with appropriate options for CI
+	opts := append(chromedp.DefaultExecAllocatorOptions[:],
+		chromedp.DisableGPU,
+		chromedp.NoSandbox, // Required for CI environments
+		chromedp.Flag("disable-dev-shm-usage", true),
+	)
+
+	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	defer allocCancel()
+
+	ctx, cancel := chromedp.NewContext(allocCtx)
 	defer cancel()
 
 	// Generate PDF using chromedp with temporary file approach
