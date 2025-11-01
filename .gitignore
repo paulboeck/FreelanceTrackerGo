@@ -7,7 +7,7 @@ freelance_tracker.db
 
 # Build artifacts
 bin/
-web
+/web
 *.exe
 *.dll
 *.so
