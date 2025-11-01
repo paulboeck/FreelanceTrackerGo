@@ -140,6 +140,16 @@ func (m *UserModel) Exists(email string) (bool, error) {
 	return exists == 1, nil
 }
 
+func (m *UserModel) Update(id int, name, email string) error {
+	ctx := context.Background()
+
+	return m.queries.UpdateUser(ctx, db.UpdateUserParams{
+		Name:  name,
+		Email: email,
+		ID:    int64(id),
+	})
+}
+
 func (m *UserModel) UpdatePassword(id int, password string) error {
 	ctx := context.Background()
 
@@ -200,6 +210,7 @@ type UserModelInterface interface {
 	Get(id int) (User, error)
 	Authenticate(email, password string) (int, error)
 	Exists(email string) (bool, error)
+	Update(id int, name, email string) error
 	UpdatePassword(id int, password string) error
 	GetAll() ([]User, error)
 }

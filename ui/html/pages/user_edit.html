@@ -26,16 +26,16 @@
                 <label class="error">{{.}}</label>
             {{end}}
             <div class="checkbox-group">
-                {{range .Roles}}
+                {{range $role := .Roles}}
                     <div class="checkbox-item">
                         <input type="checkbox"
-                               id="role_{{.ID}}"
+                               id="role_{{$role.ID}}"
                                name="roles"
-                               value="{{.ID}}"
-                               {{range $.UserRoles}}{{if eq .ID $.ID}}checked{{end}}{{end}}>
-                        <label for="role_{{.ID}}">{{.Name}}</label>
-                        {{if .Description}}
-                            <small>{{.Description}}</small>
+                               value="{{$role.ID}}"
+                               {{range $.UserRoles}}{{if eq .ID $role.ID}}checked{{end}}{{end}}>
+                        <label for="role_{{$role.ID}}">{{$role.Name}}</label>
+                        {{if $role.Description}}
+                            <small>{{$role.Description}}</small>
                         {{end}}
                     </div>
                 {{end}}

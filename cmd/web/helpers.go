@@ -86,6 +86,16 @@ func (app *application) newTemplateData(req *http.Request) templateData {
 		}
 	}
 
+	// Safely get flash message - only if session context exists
+	var flash string
+	defer func() {
+		if r := recover(); r != nil {
+			// If session context doesn't exist (e.g., in tests), ignore and continue
+			flash = ""
+		}
+	}()
+	flash = app.sessionManager.PopString(req.Context(), "flash")
+
 	return templateData{
 		CurrentYear: time.Now().Year(),
 
@@ -93,7 +103,7 @@ func (app *application) newTemplateData(req *http.Request) templateData {
 		// PopString() also deletes the key and value from the session data, so it
 		// behaves like a one-time fetch. If there is no matching key in the session
 		// data this will return the empty string.
-		Flash: app.sessionManager.PopString(req.Context(), "flash"),
+		Flash: flash,
 
 		// Check if the user is authenticated
 		IsAuthenticated: isAuth,

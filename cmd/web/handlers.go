@@ -2122,12 +2122,20 @@ func (app *application) settingsEditPost(res http.ResponseWriter, req *http.Requ
 		}
 	}
 
+	// Check if email is enabled to determine if SMTP fields are required
+	emailEnabled := form.Settings["email_enabled"] == "true"
+
 	// Validate each setting based on its data type
 	for _, setting := range settings {
 		value, exists := form.Settings[setting.Key]
 		if !exists {
 			// SMTP password is optional - empty means "keep current password"
 			if setting.Key == "smtp_password" {
+				continue
+			}
+			// SMTP fields are optional when email is disabled
+			if !emailEnabled && (setting.Key == "smtp_username" || setting.Key == "smtp_host" ||
+				setting.Key == "smtp_port" || setting.Key == "smtp_from_name" || setting.Key == "smtp_use_tls") {
 				continue
 			}
 			form.AddFieldError(setting.Key, "This field is required")
@@ -2662,10 +2670,47 @@ func (app *application) userEditPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Update user
-	// Note: We're not updating the password here, that's handled separately
-	// The user model's Update method would need to be implemented
-	// For now, this is a placeholder showing the structure
+	// Update user name and email
+	err = app.users.Update(id, form.Name, form.Email)
+	if err != nil {
+		if err.Error() == "UNIQUE constraint failed: user.email" {
+			form.AddFieldError("email", "Email address is already in use")
+			userRoles, _ := app.roles.GetUserRoles(id)
+			allRoles, _ := app.roles.GetAll()
+			data := app.newTemplateData(r)
+			data.Form = form
+			data.User = &user
+			data.UserRoles = userRoles
+			data.Roles = allRoles
+			app.render(w, r, http.StatusUnprocessableEntity, "user_edit.html", data)
+		} else {
+			app.serverError(w, r, err)
+		}
+		return
+	}
+
+	// Update role assignments
+	// Get the selected role IDs from the form
+	selectedRoleIDs := r.Form["roles"]
+
+	// Remove all existing roles first
+	err = app.roles.RemoveAllFromUser(id)
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+
+	// Assign the selected roles
+	for _, roleIDStr := range selectedRoleIDs {
+		roleID, err := strconv.Atoi(roleIDStr)
+		if err != nil {
+			continue // Skip invalid role IDs
+		}
+		err = app.roles.AssignToUser(id, roleID)
+		if err != nil {
+			app.sessionManager.Put(r.Context(), "flash", fmt.Sprintf("Warning: Failed to assign role %d", roleID))
+		}
+	}
 
 	app.sessionManager.Put(r.Context(), "flash", "User updated successfully!")
 	http.Redirect(w, r, "/users", http.StatusSeeOther)
