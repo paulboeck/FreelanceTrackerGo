@@ -312,18 +312,91 @@ The Docker setup:
 
 ### Testing
 
+FreelanceTrackerGo has comprehensive test coverage including unit tests, HTTP integration tests, and end-to-end browser tests.
+
+#### Running Tests
+
 ```bash
 # Run all tests
 make test
 
-# Run with verbose output
+# Run all tests with verbose output
 make test-verbose
 
-# Generate coverage report
+# Run tests with race detection and coverage (matches CI environment)
+make test-ci
+
+# Generate HTML coverage report
 make test-coverage
 ```
 
-Tests use SQLite and automatically clean up test databases and processes.
+#### Test Types
+
+The project includes three types of tests:
+
+**Unit Tests** - Test individual components in isolation:
+```bash
+make test-unit
+```
+
+**HTTP Integration Tests** - Test HTTP handlers with real requests:
+```bash
+make test-http
+```
+
+**End-to-End (E2E) Tests** - Full browser automation tests using Rod:
+```bash
+make test-e2e
+```
+
+E2E tests require Chrome/Chromium to be installed on your system. The tests:
+- Start a real HTTP server on port 9876
+- Use an isolated SQLite test database
+- Interact with the actual UI using a headless browser
+- Automatically clean up all resources after completion
+
+#### Test Statistics
+
+The project currently has **120+ automated tests** covering:
+- Client CRUD operations
+- Project management workflows
+- Timesheet tracking
+- Invoice generation with PDFs
+- User authentication flows
+- Settings management
+- Full UI workflows
+
+#### Continuous Integration
+
+Tests run automatically on GitHub Actions for:
+- Every push to the `main` branch
+- All pull requests
+
+The CI environment:
+- Installs Chrome for e2e tests
+- Runs all tests with race detection (`-race` flag)
+- Generates code coverage reports
+- Uploads coverage to Codecov
+- Cleans up test artifacts and orphaned processes
+
+See `.github/workflows/test.yml` for the full CI configuration.
+
+#### Test Cleanup
+
+Tests automatically clean up after themselves, but you can manually clean test artifacts:
+
+```bash
+# Clean build artifacts and test databases
+make clean
+
+# This removes:
+# - Built binaries
+# - Test database files (test_*.db)
+# - Coverage reports
+# - Orphaned test processes
+```
+
+**Note:** Tests use SQLite with isolated test databases and automatically clean up resources after completion.
 
 ### Database Migrations
 

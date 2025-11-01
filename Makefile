@@ -1,4 +1,4 @@
-.PHONY: help build build-release test test-verbose clean run migrate generate install-tools tidy docker-build docker-run \
+.PHONY: help build build-release test test-verbose test-coverage test-ci test-e2e test-unit test-http clean run migrate generate install-tools tidy docker-build docker-run \
 	build-macos build-macos-intel build-macos-arm build-macos-universal build-macos-app \
 	build-windows build-windows-amd64 build-windows-arm64 \
 	build-linux build-linux-amd64 build-linux-arm64 build-linux-arm \
@@ -29,7 +29,7 @@ help: ## Show this help message
 	@echo 'Usage: make [target]'
 	@echo ''
 	@echo 'Available targets:'
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-20s %s\n", $$1, $$2}'
 
 build: ## Build the application binary
 	@echo "Building $(BINARY_NAME)..."
@@ -55,6 +55,23 @@ test-coverage: ## Run tests with coverage report
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
+
+test-ci: ## Run tests with CI settings (race detector, coverage)
+	@echo "Running tests with CI configuration..."
+	go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+	@echo "Tests completed. Coverage report: coverage.out"
+
+test-e2e: ## Run only end-to-end browser tests
+	@echo "Running e2e tests..."
+	go test -v -run "TestE2E" ./cmd/web -timeout=60s
+
+test-unit: ## Run only unit tests (exclude e2e and HTTP integration tests)
+	@echo "Running unit tests..."
+	go test -v -short ./internal/...
+
+test-http: ## Run only HTTP integration tests
+	@echo "Running HTTP integration tests..."
+	go test -v -run "Test.*Handler" ./cmd/web -timeout=30s
 
 clean: ## Clean build artifacts and test databases
 	@echo "Cleaning build artifacts..."

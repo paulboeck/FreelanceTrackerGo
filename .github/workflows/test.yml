@@ -30,6 +30,11 @@ jobs:
     - name: Generate code with sqlc
       run: go run github.com/sqlc-dev/sqlc/cmd/sqlc@latest generate
 
+    - name: Install Chrome for e2e tests
+      uses: browser-actions/setup-chrome@v1
+      with:
+        chrome-version: stable
+
     - name: Run tests
       run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
