@@ -11,6 +11,27 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// createCompleteSettingsForm creates a form with all required settings fields
+// This helper ensures tests send complete form data that matches what the handler expects
+func createCompleteSettingsForm() url.Values {
+	form := url.Values{}
+	// Required settings that must be in every form submission
+	form.Add("default_hourly_rate", "85.00")
+	form.Add("invoice_title", "Invoice for Academic Editing")
+	form.Add("freelancer_name", "Your Name Here")
+	form.Add("freelancer_address", "Your Address")
+	form.Add("freelancer_phone", "Your Phone")
+	form.Add("freelancer_email", "your.email@example.com")
+	form.Add("email_enabled", "false")
+	form.Add("smtp_host", "")
+	form.Add("smtp_port", "587")
+	form.Add("smtp_username", "")
+	form.Add("smtp_password", "")
+	form.Add("smtp_from_name", "Freelance Tracker")
+	form.Add("smtp_use_tls", "true")
+	return form
+}
+
 func TestSettingsView(t *testing.T) {
 	app, testDB := createTestApp(t)
 	defer testDB.Cleanup(t)
@@ -52,8 +73,11 @@ func TestSettingsEditPost_BooleanPersistence(t *testing.T) {
 
 	t.Run("boolean setting persists correctly", func(t *testing.T) {
 		// Test updating a boolean setting to true
-		form := url.Values{}
-		form.Add("email_enabled", "true")
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		// When email is enabled, SMTP fields are required
+		form.Set("smtp_host", "smtp.gmail.com")
+		form.Set("smtp_username", "test@gmail.com")
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -80,8 +104,8 @@ func TestSettingsEditPost_BooleanPersistence(t *testing.T) {
 		require.NoError(t, err)
 
 		// Now test updating to false
-		form := url.Values{}
-		form.Add("email_enabled", "false")
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "false")
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -108,9 +132,11 @@ func TestSettingsEditPost_SMTPPasswordEncryption(t *testing.T) {
 	t.Run("SMTP password is encrypted when stored", func(t *testing.T) {
 		plainPassword := "my-secret-gmail-app-password"
 
-		form := url.Values{}
-		form.Add("smtp_password", plainPassword)
-		form.Add("smtp_username", "test@gmail.com")
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		form.Set("smtp_password", plainPassword)
+		form.Set("smtp_username", "test@gmail.com")
+		form.Set("smtp_host", "smtp.gmail.com")
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -138,8 +164,11 @@ func TestSettingsEditPost_SMTPPasswordEncryption(t *testing.T) {
 	t.Run("empty SMTP password field preserves existing password", func(t *testing.T) {
 		// First set a password
 		originalPassword := "original-password"
-		form := url.Values{}
-		form.Add("smtp_password", originalPassword)
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		form.Set("smtp_password", originalPassword)
+		form.Set("smtp_username", "test@gmail.com")
+		form.Set("smtp_host", "smtp.gmail.com")
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -156,9 +185,11 @@ func TestSettingsEditPost_SMTPPasswordEncryption(t *testing.T) {
 		assert.Equal(t, originalPassword, decryptedPassword)
 
 		// Now submit form with empty password field
-		form = url.Values{}
-		form.Add("smtp_password", "") // Empty password
-		form.Add("smtp_username", "updated@gmail.com")
+		form = createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		form.Set("smtp_password", "") // Empty password - should preserve existing
+		form.Set("smtp_username", "updated@gmail.com")
+		form.Set("smtp_host", "smtp.gmail.com")
 
 		req = httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -182,8 +213,11 @@ func TestSettingsEditPost_SMTPPasswordEncryption(t *testing.T) {
 	t.Run("SMTP password no double encryption", func(t *testing.T) {
 		// Set initial password
 		originalPassword := "test-password-123"
-		form := url.Values{}
-		form.Add("smtp_password", originalPassword)
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		form.Set("smtp_password", originalPassword)
+		form.Set("smtp_username", "test@gmail.com")
+		form.Set("smtp_host", "smtp.gmail.com")
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -199,8 +233,11 @@ func TestSettingsEditPost_SMTPPasswordEncryption(t *testing.T) {
 		require.NoError(t, err)
 
 		// Submit same form again (which would previously cause double encryption)
-		form = url.Values{}
-		form.Add("smtp_password", originalPassword)
+		form = createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		form.Set("smtp_password", originalPassword)
+		form.Set("smtp_username", "test@gmail.com")
+		form.Set("smtp_host", "smtp.gmail.com")
 
 		req = httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -230,14 +267,14 @@ func TestSettingsEditPost_MultipleSettings(t *testing.T) {
 	defer testDB.Cleanup(t)
 
 	t.Run("multiple settings updated simultaneously", func(t *testing.T) {
-		form := url.Values{}
-		form.Add("email_enabled", "true")
-		form.Add("smtp_host", "smtp.gmail.com")
-		form.Add("smtp_port", "587")
-		form.Add("smtp_username", "freelancer@example.com")
-		form.Add("smtp_password", "app-password-123")
-		form.Add("smtp_from_name", "My Freelance Business")
-		form.Add("smtp_use_tls", "true")
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		form.Set("smtp_host", "smtp.gmail.com")
+		form.Set("smtp_port", "587")
+		form.Set("smtp_username", "freelancer@example.com")
+		form.Set("smtp_password", "app-password-123")
+		form.Set("smtp_from_name", "My Freelance Business")
+		form.Set("smtp_use_tls", "true")
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -287,8 +324,8 @@ func TestSettingsEditPost_ValidationErrors(t *testing.T) {
 	defer testDB.Cleanup(t)
 
 	t.Run("invalid port number", func(t *testing.T) {
-		form := url.Values{}
-		form.Add("smtp_port", "invalid-port")
+		form := createCompleteSettingsForm()
+		form.Set("smtp_port", "invalid-port")
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -301,12 +338,12 @@ func TestSettingsEditPost_ValidationErrors(t *testing.T) {
 		// Should return form with validation error
 		assert.Equal(t, http.StatusUnprocessableEntity, rr.Code)
 		body := rr.Body.String()
-		assert.Contains(t, body, "Must be a valid number")
+		assert.Contains(t, body, "Must be a valid integer")
 	})
 
 	t.Run("invalid boolean value", func(t *testing.T) {
-		form := url.Values{}
-		form.Add("email_enabled", "maybe") // Invalid boolean
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "maybe") // Invalid boolean
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -323,10 +360,11 @@ func TestSettingsEditPost_ValidationErrors(t *testing.T) {
 	})
 
 	t.Run("empty SMTP password is allowed", func(t *testing.T) {
-		form := url.Values{}
-		form.Add("email_enabled", "true")
-		form.Add("smtp_username", "test@example.com")
-		// Intentionally not adding smtp_password (empty field)
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		form.Set("smtp_username", "test@example.com")
+		form.Set("smtp_host", "smtp.gmail.com")
+		form.Set("smtp_password", "") // Empty password should be allowed
 
 		req := httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -368,10 +406,11 @@ func TestSettingsIntegration(t *testing.T) {
 		assert.Contains(t, body, "Email Settings") // Grouped settings
 
 		// 3. Update settings
-		form := url.Values{}
-		form.Add("email_enabled", "true")
-		form.Add("smtp_username", "freelancer@gmail.com")
-		form.Add("smtp_password", "gmail-app-password-123")
+		form := createCompleteSettingsForm()
+		form.Set("email_enabled", "true")
+		form.Set("smtp_username", "freelancer@gmail.com")
+		form.Set("smtp_password", "gmail-app-password-123")
+		form.Set("smtp_host", "smtp.gmail.com")
 
 		req = httptest.NewRequest(http.MethodPost, "/settings/edit", strings.NewReader(form.Encode()))
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")

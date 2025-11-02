@@ -17,7 +17,7 @@ func TestUserModel_Insert(t *testing.T) {
 	model := NewUserModel(testDB.DB)
 
 	t.Run("successful insert", func(t *testing.T) {
-		testDB.TruncateTable(t, "users")
+		testDB.TruncateTable(t, "user")
 
 		name := "Test User"
 		email := "test@example.com"
@@ -30,7 +30,7 @@ func TestUserModel_Insert(t *testing.T) {
 
 		// Verify the user was actually inserted using direct query
 		var insertedName, insertedEmail string
-		err = testDB.DB.QueryRow("SELECT name, email FROM users WHERE id = ?", id).Scan(&insertedName, &insertedEmail)
+		err = testDB.DB.QueryRow("SELECT name, email FROM user WHERE id = ?", id).Scan(&insertedName, &insertedEmail)
 		require.NoError(t, err)
 		assert.Equal(t, name, insertedName)
 		assert.Equal(t, email, insertedEmail)
@@ -46,7 +46,7 @@ func TestUserModel_Authenticate(t *testing.T) {
 	model := NewUserModel(testDB.DB)
 
 	t.Run("successful authentication", func(t *testing.T) {
-		testDB.TruncateTable(t, "users")
+		testDB.TruncateTable(t, "user")
 
 		name := "Auth User"
 		email := "auth@example.com"
@@ -63,7 +63,7 @@ func TestUserModel_Authenticate(t *testing.T) {
 	})
 
 	t.Run("invalid password", func(t *testing.T) {
-		testDB.TruncateTable(t, "users")
+		testDB.TruncateTable(t, "user")
 
 		name := "Auth User"
 		email := "auth2@example.com"
@@ -79,7 +79,7 @@ func TestUserModel_Authenticate(t *testing.T) {
 	})
 
 	t.Run("nonexistent user", func(t *testing.T) {
-		testDB.TruncateTable(t, "users")
+		testDB.TruncateTable(t, "user")
 
 		// Test non-existent user
 		_, err := model.Authenticate("nonexistent@example.com", "password")
@@ -96,7 +96,7 @@ func TestUserModel_Exists(t *testing.T) {
 	model := NewUserModel(testDB.DB)
 
 	t.Run("user does not exist", func(t *testing.T) {
-		testDB.TruncateTable(t, "users")
+		testDB.TruncateTable(t, "user")
 
 		email := "nonexistent@example.com"
 
@@ -106,7 +106,7 @@ func TestUserModel_Exists(t *testing.T) {
 	})
 
 	t.Run("user exists", func(t *testing.T) {
-		testDB.TruncateTable(t, "users")
+		testDB.TruncateTable(t, "user")
 
 		name := "Existing User"
 		email := "existing@example.com"
