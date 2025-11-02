@@ -944,6 +944,11 @@ func TestInvoiceModel_GetComprehensiveForPDF(t *testing.T) {
 }
 
 func TestInvoiceModel_GenerateComprehensivePDF(t *testing.T) {
+	// Skip PDF generation tests in CI due to Chrome startup timing issues
+	if testing.Short() {
+		t.Skip("Skipping PDF generation tests in CI (use -short flag)")
+	}
+
 	// Setup test database
 	testDB := testutil.SetupTestSQLite(t)
 	defer testDB.Cleanup(t)

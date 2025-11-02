@@ -61,6 +61,11 @@ The following tests are skipped in CI (when `-short` flag is used):
   - Status: Works reliably locally
   - Issue: Browser takes ~57 seconds to start in CI, leaving little time for redirect handling
 
+- **`TestInvoiceModel_GenerateComprehensivePDF`** (`internal/models/invoices_test.go`)
+  - Reason: Chrome startup timing issues in CI (websocket url timeout)
+  - Status: Works reliably locally (all 8 subtests pass)
+  - Issue: chromedp WebSocket connection times out waiting for Chrome to start in CI environment
+
 ### Best Practices
 
 1. **Always run locally without `-short` first** to ensure tests pass
@@ -86,6 +91,7 @@ t.Run("flaky operation", func(t *testing.T) {
 
 - **Total Tests**: 120+
 - **E2E Tests**: 4 (1 skipped in CI)
+- **PDF Generation Tests**: 8 (all skipped in CI)
 - **Unit Tests**: ~70
 - **Integration Tests**: ~50
 
