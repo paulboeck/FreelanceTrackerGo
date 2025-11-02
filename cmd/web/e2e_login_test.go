@@ -66,8 +66,24 @@ func TestE2EUserLogin(t *testing.T) {
 		})
 		require.NoError(t, err)
 
-		// Wait a moment for the redirect chain to complete
-		time.Sleep(1 * time.Second)
+		// Wait for the redirect chain to complete by polling the URL
+		// This is more reliable than a fixed sleep, especially in CI
+		foundLogin := false
+		deadline := time.Now().Add(10 * time.Second)
+		for time.Now().Before(deadline) {
+			// Use Try to avoid panics from timing issues
+			var currentURL string
+			err := rod.Try(func() {
+				info := ctx.Page.MustInfo()
+				currentURL = info.URL
+			})
+			if err == nil && currentURL == ctx.ServerURL+"/user/login" {
+				foundLogin = true
+				break
+			}
+			time.Sleep(100 * time.Millisecond)
+		}
+		require.True(t, foundLogin, "Timeout waiting for redirect to /user/login after logout")
 
 		// Should be redirected to login page after logout
 		ctx.AssertURL("/user/login")
