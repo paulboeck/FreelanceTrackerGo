@@ -1418,10 +1418,11 @@ func TestInvoiceModel_ComprehensiveIntegration(t *testing.T) {
 		// Test with minimal data
 		clientID := testDB.InsertTestClient(t, "Minimal Client")
 		project := Project{
-			Name:       "Minimal Project",
-			ClientID:   clientID,
-			Status:     "Complete",
-			HourlyRate: 50.0,
+			Name:          "Minimal Project",
+			ClientID:      clientID,
+			Status:        "Complete",
+			HourlyRate:    50.0,
+			FlatFeeInvoice: true, // Set to true since we're using an explicit invoice amount
 		}
 		projectID, err := projectModel.Insert(project)
 		require.NoError(t, err)
