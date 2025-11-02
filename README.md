@@ -332,7 +332,25 @@ make test-coverage
 
 #### Test Types
 
-The project includes three types of tests:
+The project includes four types of tests:
+
+**Security Tests** - OWASP Top 10 vulnerability testing:
+```bash
+# Run all security tests
+go test -v -run TestOWASP ./cmd/web
+
+# Run specific security test category
+go test -v -run TestOWASP_SQLInjection ./cmd/web
+```
+
+Security tests verify protection against:
+- SQL injection attacks (11 payloads tested)
+- Cross-site scripting (XSS) attacks (8 payloads tested)
+- Broken access control
+- Authentication failures
+- Sensitive data exposure
+- Input validation vulnerabilities
+- Security misconfiguration
 
 **Unit Tests** - Test individual components in isolation:
 ```bash
@@ -357,14 +375,19 @@ E2E tests require Chrome/Chromium to be installed on your system. The tests:
 
 #### Test Statistics
 
-The project currently has **120+ automated tests** covering:
-- Client CRUD operations
-- Project management workflows
-- Timesheet tracking
-- Invoice generation with PDFs
-- User authentication flows
-- Settings management
-- Full UI workflows
+The project currently has **356+ automated test cases** covering:
+- **Security**: 24 tests verifying OWASP Top 10 protections
+- **E2E Browser Tests**: 8 full user workflow tests
+- **Client Management**: CRUD operations and validation
+- **Project Management**: Complete project lifecycle workflows
+- **Timesheet Tracking**: Time entry and validation
+- **Invoice Generation**: PDF creation, calculations, and email delivery
+- **User Authentication**: Login, password hashing, and session security
+- **Settings Management**: Application configuration and encryption
+- **HTTP Handlers**: ~50 integration tests for all endpoints
+- **Model Unit Tests**: ~80 tests for database operations
+
+For detailed testing documentation, see [.github/TESTING.md](.github/TESTING.md) and [.github/SECURITY.md](.github/SECURITY.md).
 
 #### Continuous Integration
 
