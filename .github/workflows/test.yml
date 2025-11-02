@@ -35,8 +35,13 @@ jobs:
       with:
         chrome-version: stable
 
+    - name: Verify Chrome installation
+      run: |
+        which google-chrome || which chromium || which chrome || echo "Chrome not found in PATH"
+        google-chrome --version || chromium --version || chrome --version || echo "Could not get Chrome version"
+
     - name: Run tests
-      run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+      run: go test -v -race -timeout=20m -coverprofile=coverage.out -covermode=atomic ./...
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
