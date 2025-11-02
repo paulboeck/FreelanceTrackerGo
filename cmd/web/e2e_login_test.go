@@ -2,7 +2,9 @@ package main
 
 import (
 	"testing"
+	"time"
 
+	"github.com/go-rod/rod"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -57,8 +59,15 @@ func TestE2EUserLogin(t *testing.T) {
 		// Should be on home page after login
 		ctx.AssertURL("/")
 
-		// Navigate to logout
-		ctx.Navigate("/user/logout")
+		// Navigate to logout - use direct navigation without waiting for load
+		// since logout immediately redirects (causing MustWaitLoad to timeout)
+		err = rod.Try(func() {
+			ctx.Page.Timeout(5 * time.Second).MustNavigate(ctx.ServerURL + "/user/logout")
+		})
+		require.NoError(t, err)
+
+		// Wait a moment for the redirect chain to complete
+		time.Sleep(1 * time.Second)
 
 		// Should be redirected to login page after logout
 		ctx.AssertURL("/user/login")
