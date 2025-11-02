@@ -22,6 +22,7 @@ import (
 // Invoice represents an invoice in the system
 type Invoice struct {
 	ID             int
+	InvoiceNum     int
 	ProjectID      int
 	InvoiceDate    time.Time
 	DatePaid       *time.Time
@@ -94,8 +95,14 @@ func (i *InvoiceModel) Get(id int) (Invoice, error) {
 		}
 	}
 
+	var invoiceNum int
+	if row.InvoiceNum.Valid {
+		invoiceNum = int(row.InvoiceNum.Int64)
+	}
+
 	invoice := Invoice{
 		ID:             int(row.ID),
+		InvoiceNum:     invoiceNum,
 		ProjectID:      int(row.ProjectID),
 		InvoiceDate:    row.InvoiceDate,
 		DatePaid:       datePaid,
@@ -134,8 +141,14 @@ func (i *InvoiceModel) GetByProject(projectID int) ([]Invoice, error) {
 			}
 		}
 
+		var invoiceNum int
+		if row.InvoiceNum.Valid {
+			invoiceNum = int(row.InvoiceNum.Int64)
+		}
+
 		invoices[j] = Invoice{
 			ID:             int(row.ID),
+			InvoiceNum:     invoiceNum,
 			ProjectID:      int(row.ProjectID),
 			InvoiceDate:    row.InvoiceDate,
 			DatePaid:       datePaid,
@@ -256,8 +269,14 @@ func (i *InvoiceModel) GetComprehensiveForPDF(id int) (ComprehensiveInvoiceData,
 		}
 	}
 
+	var invoiceNum int
+	if row.InvoiceNum.Valid {
+		invoiceNum = int(row.InvoiceNum.Int64)
+	}
+
 	invoice := Invoice{
 		ID:             int(row.ID),
+		InvoiceNum:     invoiceNum,
 		ProjectID:      int(row.ProjectID),
 		InvoiceDate:    row.InvoiceDate,
 		DatePaid:       datePaid,
@@ -659,9 +678,15 @@ func (i *InvoiceModel) GetPaidInvoicesForYear(year int) ([]InvoiceWithProject, e
 			}
 		}
 
+		var invoiceNum int
+		if row.InvoiceNum.Valid {
+			invoiceNum = int(row.InvoiceNum.Int64)
+		}
+
 		invoice := InvoiceWithProject{
 			Invoice: Invoice{
 				ID:             int(row.ID),
+				InvoiceNum:     invoiceNum,
 				ProjectID:      int(row.ProjectID),
 				InvoiceDate:    row.InvoiceDate,
 				DatePaid:       datePaid,

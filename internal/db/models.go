@@ -35,16 +35,17 @@ type Client struct {
 }
 
 type Invoice struct {
-	ID             int64       `json:"id"`
-	ProjectID      int64       `json:"project_id"`
-	InvoiceDate    time.Time   `json:"invoice_date"`
-	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
-	AmountDue      float64     `json:"amount_due"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	DeletedAt      interface{} `json:"deleted_at"`
-	DisplayDetails bool        `json:"display_details"`
+	ID             int64         `json:"id"`
+	ProjectID      int64         `json:"project_id"`
+	InvoiceDate    time.Time     `json:"invoice_date"`
+	DatePaid       interface{}   `json:"date_paid"`
+	PaymentTerms   string        `json:"payment_terms"`
+	AmountDue      float64       `json:"amount_due"`
+	CreatedAt      time.Time     `json:"created_at"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+	DeletedAt      interface{}   `json:"deleted_at"`
+	DisplayDetails bool          `json:"display_details"`
+	InvoiceNum     sql.NullInt64 `json:"invoice_num"`
 }
 
 type Permission struct {
