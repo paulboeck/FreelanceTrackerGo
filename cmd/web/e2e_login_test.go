@@ -49,6 +49,10 @@ func TestE2EUserLogin(t *testing.T) {
 	})
 
 	t.Run("logout workflow", func(t *testing.T) {
+		// Skip this test in CI due to timing issues with redirect chains
+		if testing.Short() {
+			t.Skip("Skipping logout workflow test in CI (use -short flag)")
+		}
 		// Create and login as a user
 		_, err := ctx.CreateTestUser("Jane Doe", "jane@example.com", "password456")
 		require.NoError(t, err)

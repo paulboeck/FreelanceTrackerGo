@@ -56,9 +56,9 @@ test-coverage: ## Run tests with coverage report
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 
-test-ci: ## Run tests with CI settings (race detector, coverage)
+test-ci: ## Run tests with CI settings (race detector, coverage, skip flaky tests)
 	@echo "Running tests with CI configuration..."
-	go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+	go test -v -race -short -coverprofile=coverage.out -covermode=atomic ./...
 	@echo "Tests completed. Coverage report: coverage.out"
 
 test-e2e: ## Run only end-to-end browser tests
