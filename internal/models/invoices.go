@@ -67,6 +67,16 @@ func (i *InvoiceModel) Insert(projectID int, invoiceDate time.Time, datePaid *ti
 	if err != nil {
 		return 0, err
 	}
+
+	// Set invoice_num to match the id (business logic in application, not database)
+	err = i.queries.UpdateInvoiceNum(ctx, db.UpdateInvoiceNumParams{
+		InvoiceNum: sql.NullInt64{Int64: id, Valid: true},
+		ID:         id,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to set invoice_num: %w", err)
+	}
+
 	return int(id), nil
 }
 

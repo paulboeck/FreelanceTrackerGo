@@ -377,8 +377,8 @@ func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (i
 }
 
 const updateInvoice = `-- name: UpdateInvoice :exec
-UPDATE invoice 
-SET invoice_date = ?, date_paid = ?, payment_terms = ?, amount_due = ?, display_details = ?, updated_at = CURRENT_TIMESTAMP 
+UPDATE invoice
+SET invoice_date = ?, date_paid = ?, payment_terms = ?, amount_due = ?, display_details = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND deleted_at IS NULL
 `
 
@@ -400,5 +400,21 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) er
 		arg.DisplayDetails,
 		arg.ID,
 	)
+	return err
+}
+
+const updateInvoiceNum = `-- name: UpdateInvoiceNum :exec
+UPDATE invoice
+SET invoice_num = ?
+WHERE id = ?
+`
+
+type UpdateInvoiceNumParams struct {
+	InvoiceNum sql.NullInt64 `json:"invoice_num"`
+	ID         int64         `json:"id"`
+}
+
+func (q *Queries) UpdateInvoiceNum(ctx context.Context, arg UpdateInvoiceNumParams) error {
+	_, err := q.db.ExecContext(ctx, updateInvoiceNum, arg.InvoiceNum, arg.ID)
 	return err
 }

@@ -127,7 +127,7 @@ func createSchema(db *sql.DB) error {
 			project_id INTEGER NOT NULL,
 			invoice_date DATE NOT NULL,
 			date_paid DATE NULL,
-			payment_terms TEXT NOT NULL,
+			payment_terms TEXT NULL,
 			amount_due DECIMAL(10,2) NOT NULL,
 			display_details BOOLEAN NOT NULL DEFAULT false,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -135,14 +135,6 @@ func createSchema(db *sql.DB) error {
 			deleted_at DATETIME NULL,
 			FOREIGN KEY (project_id) REFERENCES project(id)
 		);
-
-		-- Create trigger to automatically set invoice_num to id on insert
-		CREATE TRIGGER IF NOT EXISTS set_invoice_num_after_insert
-		AFTER INSERT ON invoice
-		FOR EACH ROW
-		BEGIN
-			UPDATE invoice SET invoice_num = NEW.id WHERE id = NEW.id;
-		END;
 		
 		CREATE TABLE IF NOT EXISTS setting (
 			key TEXT PRIMARY KEY,

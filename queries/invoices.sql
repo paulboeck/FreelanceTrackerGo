@@ -14,9 +14,14 @@ WHERE project_id = ? AND deleted_at IS NULL
 ORDER BY invoice_date DESC, created_at DESC;
 
 -- name: UpdateInvoice :exec
-UPDATE invoice 
-SET invoice_date = ?, date_paid = ?, payment_terms = ?, amount_due = ?, display_details = ?, updated_at = CURRENT_TIMESTAMP 
+UPDATE invoice
+SET invoice_date = ?, date_paid = ?, payment_terms = ?, amount_due = ?, display_details = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND deleted_at IS NULL;
+
+-- name: UpdateInvoiceNum :exec
+UPDATE invoice
+SET invoice_num = ?
+WHERE id = ?;
 
 -- name: DeleteInvoice :exec
 UPDATE invoice 

@@ -63,6 +63,7 @@ type Querier interface {
 	SearchProjectsWithClientPagination(ctx context.Context, arg SearchProjectsWithClientPaginationParams) ([]SearchProjectsWithClientPaginationRow, error)
 	UpdateClient(ctx context.Context, arg UpdateClientParams) error
 	UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) error
+	UpdateInvoiceNum(ctx context.Context, arg UpdateInvoiceNumParams) error
 	UpdateProject(ctx context.Context, arg UpdateProjectParams) error
 	UpdateRole(ctx context.Context, arg UpdateRoleParams) error
 	UpdateSetting(ctx context.Context, arg UpdateSettingParams) error

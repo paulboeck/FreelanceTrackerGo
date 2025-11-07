@@ -42,6 +42,12 @@ build-release: ## Build optimized release binary with version info
 	go build -trimpath $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) ./cmd/web
 	@echo "Built $(BINARY_NAME) $(VERSION) at $(BUILD_TIME)"
 
+build-migrate-mysql: ## Build MySQL to SQLite migration tool
+	@echo "Building MySQL migration tool..."
+	@mkdir -p $(BUILD_DIR)
+	go build -o $(BUILD_DIR)/migrate-mysql ./cmd/migrate-mysql
+	@echo "Built migration tool: $(BUILD_DIR)/migrate-mysql"
+
 test: ## Run all tests
 	@echo "Running tests..."
 	go test ./...
