@@ -1289,8 +1289,9 @@ func (app *application) timesheetCreate(res http.ResponseWriter, req *http.Reque
 
 	data := app.newTemplateData(req)
 	data.Form = timesheetForm{
-		WorkDate:   time.Now().Format("2006-01-02"),
-		HourlyRate: fmt.Sprintf("%.2f", project.HourlyRate), // Default from project
+		WorkDate:    time.Now().Format("2006-01-02"),
+		HourlyRate:  fmt.Sprintf("%.2f", project.HourlyRate), // Default from project
+		Description: project.Name,                            // Default to project name
 	}
 	data.Project = &project
 	data.Client = &client

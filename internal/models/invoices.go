@@ -22,6 +22,7 @@ import (
 // Invoice represents an invoice in the system
 type Invoice struct {
 	ID             int
+	InvoiceNum     int
 	ProjectID      int
 	InvoiceDate    time.Time
 	DatePaid       *time.Time
@@ -54,18 +55,40 @@ func (i *InvoiceModel) Insert(projectID int, invoiceDate time.Time, datePaid *ti
 		datePaidPtr = *datePaid
 	}
 
+	// Convert payment terms to interface{} (nullable TEXT)
+	var paymentTermsPtr interface{}
+	if paymentTerms != "" {
+		paymentTermsPtr = paymentTerms
+	}
+
+	// Convert displayDetails bool to int64 for database
+	var displayDetailsInt int64
+	if displayDetails {
+		displayDetailsInt = 1
+	}
+
 	params := db.InsertInvoiceParams{
 		ProjectID:      int64(projectID),
 		InvoiceDate:    invoiceDate,
 		DatePaid:       datePaidPtr,
-		PaymentTerms:   paymentTerms,
+		PaymentTerms:   paymentTermsPtr,
 		AmountDue:      amountDue,
-		DisplayDetails: displayDetails,
+		DisplayDetails: displayDetailsInt,
 	}
 	id, err := i.queries.InsertInvoice(ctx, params)
 	if err != nil {
 		return 0, err
 	}
+
+	// Set invoice_num to match the id (business logic in application, not database)
+	err = i.queries.UpdateInvoiceNum(ctx, db.UpdateInvoiceNumParams{
+		InvoiceNum: sql.NullInt64{Int64: id, Valid: true},
+		ID:         id,
+	})
+	if err != nil {
+		return 0, fmt.Errorf("failed to set invoice_num: %w", err)
+	}
+
 	return int(id), nil
 }
 
@@ -94,14 +117,31 @@ func (i *InvoiceModel) Get(id int) (Invoice, error) {
 		}
 	}
 
+	var invoiceNum int
+	if row.InvoiceNum.Valid {
+		invoiceNum = int(row.InvoiceNum.Int64)
+	}
+
+	// Convert PaymentTerms from interface{} to string
+	var paymentTerms string
+	if row.PaymentTerms != nil {
+		if pt, ok := row.PaymentTerms.(string); ok {
+			paymentTerms = pt
+		}
+	}
+
+	// Convert DisplayDetails from int64 to bool
+	displayDetails := row.DisplayDetails != 0
+
 	invoice := Invoice{
 		ID:             int(row.ID),
+		InvoiceNum:     invoiceNum,
 		ProjectID:      int(row.ProjectID),
 		InvoiceDate:    row.InvoiceDate,
 		DatePaid:       datePaid,
-		PaymentTerms:   row.PaymentTerms,
+		PaymentTerms:   paymentTerms,
 		AmountDue:      row.AmountDue,
-		DisplayDetails: row.DisplayDetails,
+		DisplayDetails: displayDetails,
 		Updated:        row.UpdatedAt,
 		Created:        row.CreatedAt,
 		DeletedAt:      deletedAt,
@@ -134,14 +174,31 @@ func (i *InvoiceModel) GetByProject(projectID int) ([]Invoice, error) {
 			}
 		}
 
+		var invoiceNum int
+		if row.InvoiceNum.Valid {
+			invoiceNum = int(row.InvoiceNum.Int64)
+		}
+
+		// Convert PaymentTerms from interface{} to string
+		var paymentTerms string
+		if row.PaymentTerms != nil {
+			if pt, ok := row.PaymentTerms.(string); ok {
+				paymentTerms = pt
+			}
+		}
+
+		// Convert DisplayDetails from int64 to bool
+		displayDetails := row.DisplayDetails != 0
+
 		invoices[j] = Invoice{
 			ID:             int(row.ID),
+			InvoiceNum:     invoiceNum,
 			ProjectID:      int(row.ProjectID),
 			InvoiceDate:    row.InvoiceDate,
 			DatePaid:       datePaid,
-			PaymentTerms:   row.PaymentTerms,
+			PaymentTerms:   paymentTerms,
 			AmountDue:      row.AmountDue,
-			DisplayDetails: row.DisplayDetails,
+			DisplayDetails: displayDetails,
 			Updated:        row.UpdatedAt,
 			Created:        row.CreatedAt,
 			DeletedAt:      deletedAt,
@@ -160,13 +217,25 @@ func (i *InvoiceModel) Update(id int, invoiceDate time.Time, datePaid *time.Time
 		datePaidPtr = *datePaid
 	}
 
+	// Convert payment terms to interface{} (nullable TEXT)
+	var paymentTermsPtr interface{}
+	if paymentTerms != "" {
+		paymentTermsPtr = paymentTerms
+	}
+
+	// Convert displayDetails bool to int64 for database
+	var displayDetailsInt int64
+	if displayDetails {
+		displayDetailsInt = 1
+	}
+
 	params := db.UpdateInvoiceParams{
 		ID:             int64(id),
 		InvoiceDate:    invoiceDate,
 		DatePaid:       datePaidPtr,
-		PaymentTerms:   paymentTerms,
+		PaymentTerms:   paymentTermsPtr,
 		AmountDue:      amountDue,
-		DisplayDetails: displayDetails,
+		DisplayDetails: displayDetailsInt,
 	}
 	return i.queries.UpdateInvoice(ctx, params)
 }
@@ -256,14 +325,31 @@ func (i *InvoiceModel) GetComprehensiveForPDF(id int) (ComprehensiveInvoiceData,
 		}
 	}
 
+	var invoiceNum int
+	if row.InvoiceNum.Valid {
+		invoiceNum = int(row.InvoiceNum.Int64)
+	}
+
+	// Convert PaymentTerms from interface{} to string
+	var paymentTerms string
+	if row.PaymentTerms != nil {
+		if pt, ok := row.PaymentTerms.(string); ok {
+			paymentTerms = pt
+		}
+	}
+
+	// Convert DisplayDetails from int64 to bool
+	displayDetails := row.DisplayDetails != 0
+
 	invoice := Invoice{
 		ID:             int(row.ID),
+		InvoiceNum:     invoiceNum,
 		ProjectID:      int(row.ProjectID),
 		InvoiceDate:    row.InvoiceDate,
 		DatePaid:       datePaid,
-		PaymentTerms:   row.PaymentTerms,
+		PaymentTerms:   paymentTerms,
 		AmountDue:      row.AmountDue,
-		DisplayDetails: row.DisplayDetails,
+		DisplayDetails: displayDetails,
 		Updated:        row.UpdatedAt,
 		Created:        row.CreatedAt,
 		DeletedAt:      deletedAt,
@@ -659,15 +745,32 @@ func (i *InvoiceModel) GetPaidInvoicesForYear(year int) ([]InvoiceWithProject, e
 			}
 		}
 
+		var invoiceNum int
+		if row.InvoiceNum.Valid {
+			invoiceNum = int(row.InvoiceNum.Int64)
+		}
+
+		// Convert PaymentTerms from interface{} to string
+		var paymentTerms string
+		if row.PaymentTerms != nil {
+			if pt, ok := row.PaymentTerms.(string); ok {
+				paymentTerms = pt
+			}
+		}
+
+		// Convert DisplayDetails from int64 to bool
+		displayDetails := row.DisplayDetails != 0
+
 		invoice := InvoiceWithProject{
 			Invoice: Invoice{
 				ID:             int(row.ID),
+				InvoiceNum:     invoiceNum,
 				ProjectID:      int(row.ProjectID),
 				InvoiceDate:    row.InvoiceDate,
 				DatePaid:       datePaid,
-				PaymentTerms:   row.PaymentTerms,
+				PaymentTerms:   paymentTerms,
 				AmountDue:      row.AmountDue,
-				DisplayDetails: row.DisplayDetails,
+				DisplayDetails: displayDetails,
 				Updated:        row.UpdatedAt,
 				Created:        row.CreatedAt,
 				DeletedAt:      deletedAt,
@@ -675,10 +778,10 @@ func (i *InvoiceModel) GetPaidInvoicesForYear(year int) ([]InvoiceWithProject, e
 			ProjectName: row.ProjectName,
 			ClientName:  row.ClientName,
 		}
-		
+
 		invoices = append(invoices, invoice)
 	}
-	
+
 	return invoices, nil
 }
 

@@ -23,22 +23,23 @@ func (q *Queries) DeleteInvoice(ctx context.Context, id int64) error {
 }
 
 const getInvoice = `-- name: GetInvoice :one
-SELECT id, project_id, invoice_date, date_paid, payment_terms, amount_due, display_details, updated_at, created_at, deleted_at 
-FROM invoice 
+SELECT id, invoice_num, project_id, invoice_date, date_paid, payment_terms, amount_due, display_details, updated_at, created_at, deleted_at
+FROM invoice
 WHERE id = ? AND deleted_at IS NULL
 `
 
 type GetInvoiceRow struct {
-	ID             int64       `json:"id"`
-	ProjectID      int64       `json:"project_id"`
-	InvoiceDate    time.Time   `json:"invoice_date"`
-	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
-	AmountDue      float64     `json:"amount_due"`
-	DisplayDetails bool        `json:"display_details"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	CreatedAt      time.Time   `json:"created_at"`
-	DeletedAt      interface{} `json:"deleted_at"`
+	ID             int64         `json:"id"`
+	InvoiceNum     sql.NullInt64 `json:"invoice_num"`
+	ProjectID      int64         `json:"project_id"`
+	InvoiceDate    time.Time     `json:"invoice_date"`
+	DatePaid       interface{}   `json:"date_paid"`
+	PaymentTerms   interface{}   `json:"payment_terms"`
+	AmountDue      float64       `json:"amount_due"`
+	DisplayDetails int64         `json:"display_details"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+	CreatedAt      time.Time     `json:"created_at"`
+	DeletedAt      interface{}   `json:"deleted_at"`
 }
 
 func (q *Queries) GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, error) {
@@ -46,6 +47,7 @@ func (q *Queries) GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, erro
 	var i GetInvoiceRow
 	err := row.Scan(
 		&i.ID,
+		&i.InvoiceNum,
 		&i.ProjectID,
 		&i.InvoiceDate,
 		&i.DatePaid,
@@ -60,16 +62,16 @@ func (q *Queries) GetInvoice(ctx context.Context, id int64) (GetInvoiceRow, erro
 }
 
 const getInvoiceComprehensiveForPDF = `-- name: GetInvoiceComprehensiveForPDF :one
-SELECT 
-    i.id, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
+SELECT
+    i.id, i.invoice_num, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
     i.updated_at, i.created_at, i.deleted_at,
     p.name as project_name, p.status as project_status, p.hourly_rate as project_hourly_rate,
     p.discount_percent, p.discount_reason, p.adjustment_amount, p.adjustment_reason,
     p.currency_display, p.currency_conversion_rate, p.flat_fee_invoice,
     p.additional_info as project_additional_info, p.additional_info2 as project_additional_info2,
     c.id as client_id, c.name as client_name, c.email as client_email,
-    c.phone as client_phone, c.address1 as client_address1, c.address2 as client_address2, 
-    c.address3 as client_address3, c.city as client_city, c.state as client_state, 
+    c.phone as client_phone, c.address1 as client_address1, c.address2 as client_address2,
+    c.address3 as client_address3, c.city as client_city, c.state as client_state,
     c.zip_code as client_zip_code, c.bill_to as client_bill_to,
     c.include_address_on_invoice, c.university_affiliation,
     c.additional_info as client_additional_info, c.additional_info2 as client_additional_info2
@@ -81,12 +83,13 @@ WHERE i.id = ? AND i.deleted_at IS NULL
 
 type GetInvoiceComprehensiveForPDFRow struct {
 	ID                      int64           `json:"id"`
+	InvoiceNum              sql.NullInt64   `json:"invoice_num"`
 	ProjectID               int64           `json:"project_id"`
 	InvoiceDate             time.Time       `json:"invoice_date"`
 	DatePaid                interface{}     `json:"date_paid"`
-	PaymentTerms            string          `json:"payment_terms"`
+	PaymentTerms            interface{}     `json:"payment_terms"`
 	AmountDue               float64         `json:"amount_due"`
-	DisplayDetails          bool            `json:"display_details"`
+	DisplayDetails          int64           `json:"display_details"`
 	UpdatedAt               time.Time       `json:"updated_at"`
 	CreatedAt               time.Time       `json:"created_at"`
 	DeletedAt               interface{}     `json:"deleted_at"`
@@ -124,6 +127,7 @@ func (q *Queries) GetInvoiceComprehensiveForPDF(ctx context.Context, id int64) (
 	var i GetInvoiceComprehensiveForPDFRow
 	err := row.Scan(
 		&i.ID,
+		&i.InvoiceNum,
 		&i.ProjectID,
 		&i.InvoiceDate,
 		&i.DatePaid,
@@ -165,8 +169,8 @@ func (q *Queries) GetInvoiceComprehensiveForPDF(ctx context.Context, id int64) (
 }
 
 const getInvoiceForPDF = `-- name: GetInvoiceForPDF :one
-SELECT 
-    i.id, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
+SELECT
+    i.id, i.invoice_num, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
     i.updated_at, i.created_at, i.deleted_at,
     p.name as project_name,
     c.name as client_name
@@ -177,18 +181,19 @@ WHERE i.id = ? AND i.deleted_at IS NULL
 `
 
 type GetInvoiceForPDFRow struct {
-	ID             int64       `json:"id"`
-	ProjectID      int64       `json:"project_id"`
-	InvoiceDate    time.Time   `json:"invoice_date"`
-	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
-	AmountDue      float64     `json:"amount_due"`
-	DisplayDetails bool        `json:"display_details"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	CreatedAt      time.Time   `json:"created_at"`
-	DeletedAt      interface{} `json:"deleted_at"`
-	ProjectName    string      `json:"project_name"`
-	ClientName     string      `json:"client_name"`
+	ID             int64         `json:"id"`
+	InvoiceNum     sql.NullInt64 `json:"invoice_num"`
+	ProjectID      int64         `json:"project_id"`
+	InvoiceDate    time.Time     `json:"invoice_date"`
+	DatePaid       interface{}   `json:"date_paid"`
+	PaymentTerms   interface{}   `json:"payment_terms"`
+	AmountDue      float64       `json:"amount_due"`
+	DisplayDetails int64         `json:"display_details"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+	CreatedAt      time.Time     `json:"created_at"`
+	DeletedAt      interface{}   `json:"deleted_at"`
+	ProjectName    string        `json:"project_name"`
+	ClientName     string        `json:"client_name"`
 }
 
 func (q *Queries) GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceForPDFRow, error) {
@@ -196,6 +201,7 @@ func (q *Queries) GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceFor
 	var i GetInvoiceForPDFRow
 	err := row.Scan(
 		&i.ID,
+		&i.InvoiceNum,
 		&i.ProjectID,
 		&i.InvoiceDate,
 		&i.DatePaid,
@@ -212,23 +218,24 @@ func (q *Queries) GetInvoiceForPDF(ctx context.Context, id int64) (GetInvoiceFor
 }
 
 const getInvoicesByProject = `-- name: GetInvoicesByProject :many
-SELECT id, project_id, invoice_date, date_paid, payment_terms, amount_due, display_details, updated_at, created_at, deleted_at 
-FROM invoice 
+SELECT id, invoice_num, project_id, invoice_date, date_paid, payment_terms, amount_due, display_details, updated_at, created_at, deleted_at
+FROM invoice
 WHERE project_id = ? AND deleted_at IS NULL
 ORDER BY invoice_date DESC, created_at DESC
 `
 
 type GetInvoicesByProjectRow struct {
-	ID             int64       `json:"id"`
-	ProjectID      int64       `json:"project_id"`
-	InvoiceDate    time.Time   `json:"invoice_date"`
-	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
-	AmountDue      float64     `json:"amount_due"`
-	DisplayDetails bool        `json:"display_details"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	CreatedAt      time.Time   `json:"created_at"`
-	DeletedAt      interface{} `json:"deleted_at"`
+	ID             int64         `json:"id"`
+	InvoiceNum     sql.NullInt64 `json:"invoice_num"`
+	ProjectID      int64         `json:"project_id"`
+	InvoiceDate    time.Time     `json:"invoice_date"`
+	DatePaid       interface{}   `json:"date_paid"`
+	PaymentTerms   interface{}   `json:"payment_terms"`
+	AmountDue      float64       `json:"amount_due"`
+	DisplayDetails int64         `json:"display_details"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+	CreatedAt      time.Time     `json:"created_at"`
+	DeletedAt      interface{}   `json:"deleted_at"`
 }
 
 func (q *Queries) GetInvoicesByProject(ctx context.Context, projectID int64) ([]GetInvoicesByProjectRow, error) {
@@ -242,6 +249,7 @@ func (q *Queries) GetInvoicesByProject(ctx context.Context, projectID int64) ([]
 		var i GetInvoicesByProjectRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.InvoiceNum,
 			&i.ProjectID,
 			&i.InvoiceDate,
 			&i.DatePaid,
@@ -266,16 +274,16 @@ func (q *Queries) GetInvoicesByProject(ctx context.Context, projectID int64) ([]
 }
 
 const getPaidInvoicesForYear = `-- name: GetPaidInvoicesForYear :many
-SELECT 
-    i.id, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
+SELECT
+    i.id, i.invoice_num, i.project_id, i.invoice_date, i.date_paid, i.payment_terms, i.amount_due, i.display_details,
     i.updated_at, i.created_at, i.deleted_at,
     p.name as project_name,
     c.name as client_name
 FROM invoice i
 JOIN project p ON i.project_id = p.id
 JOIN client c ON p.client_id = c.id
-WHERE i.date_paid IS NOT NULL 
-AND i.date_paid >= ? 
+WHERE i.date_paid IS NOT NULL
+AND i.date_paid >= ?
 AND i.date_paid < ?
 AND i.deleted_at IS NULL
 ORDER BY i.date_paid DESC
@@ -287,18 +295,19 @@ type GetPaidInvoicesForYearParams struct {
 }
 
 type GetPaidInvoicesForYearRow struct {
-	ID             int64       `json:"id"`
-	ProjectID      int64       `json:"project_id"`
-	InvoiceDate    time.Time   `json:"invoice_date"`
-	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
-	AmountDue      float64     `json:"amount_due"`
-	DisplayDetails bool        `json:"display_details"`
-	UpdatedAt      time.Time   `json:"updated_at"`
-	CreatedAt      time.Time   `json:"created_at"`
-	DeletedAt      interface{} `json:"deleted_at"`
-	ProjectName    string      `json:"project_name"`
-	ClientName     string      `json:"client_name"`
+	ID             int64         `json:"id"`
+	InvoiceNum     sql.NullInt64 `json:"invoice_num"`
+	ProjectID      int64         `json:"project_id"`
+	InvoiceDate    time.Time     `json:"invoice_date"`
+	DatePaid       interface{}   `json:"date_paid"`
+	PaymentTerms   interface{}   `json:"payment_terms"`
+	AmountDue      float64       `json:"amount_due"`
+	DisplayDetails int64         `json:"display_details"`
+	UpdatedAt      time.Time     `json:"updated_at"`
+	CreatedAt      time.Time     `json:"created_at"`
+	DeletedAt      interface{}   `json:"deleted_at"`
+	ProjectName    string        `json:"project_name"`
+	ClientName     string        `json:"client_name"`
 }
 
 func (q *Queries) GetPaidInvoicesForYear(ctx context.Context, arg GetPaidInvoicesForYearParams) ([]GetPaidInvoicesForYearRow, error) {
@@ -312,6 +321,7 @@ func (q *Queries) GetPaidInvoicesForYear(ctx context.Context, arg GetPaidInvoice
 		var i GetPaidInvoicesForYearRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.InvoiceNum,
 			&i.ProjectID,
 			&i.InvoiceDate,
 			&i.DatePaid,
@@ -346,9 +356,9 @@ type InsertInvoiceParams struct {
 	ProjectID      int64       `json:"project_id"`
 	InvoiceDate    time.Time   `json:"invoice_date"`
 	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
+	PaymentTerms   interface{} `json:"payment_terms"`
 	AmountDue      float64     `json:"amount_due"`
-	DisplayDetails bool        `json:"display_details"`
+	DisplayDetails int64       `json:"display_details"`
 }
 
 func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error) {
@@ -367,17 +377,17 @@ func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (i
 }
 
 const updateInvoice = `-- name: UpdateInvoice :exec
-UPDATE invoice 
-SET invoice_date = ?, date_paid = ?, payment_terms = ?, amount_due = ?, display_details = ?, updated_at = CURRENT_TIMESTAMP 
+UPDATE invoice
+SET invoice_date = ?, date_paid = ?, payment_terms = ?, amount_due = ?, display_details = ?, updated_at = CURRENT_TIMESTAMP
 WHERE id = ? AND deleted_at IS NULL
 `
 
 type UpdateInvoiceParams struct {
 	InvoiceDate    time.Time   `json:"invoice_date"`
 	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
+	PaymentTerms   interface{} `json:"payment_terms"`
 	AmountDue      float64     `json:"amount_due"`
-	DisplayDetails bool        `json:"display_details"`
+	DisplayDetails int64       `json:"display_details"`
 	ID             int64       `json:"id"`
 }
 
@@ -390,5 +400,21 @@ func (q *Queries) UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) er
 		arg.DisplayDetails,
 		arg.ID,
 	)
+	return err
+}
+
+const updateInvoiceNum = `-- name: UpdateInvoiceNum :exec
+UPDATE invoice
+SET invoice_num = ?
+WHERE id = ?
+`
+
+type UpdateInvoiceNumParams struct {
+	InvoiceNum sql.NullInt64 `json:"invoice_num"`
+	ID         int64         `json:"id"`
+}
+
+func (q *Queries) UpdateInvoiceNum(ctx context.Context, arg UpdateInvoiceNumParams) error {
+	_, err := q.db.ExecContext(ctx, updateInvoiceNum, arg.InvoiceNum, arg.ID)
 	return err
 }

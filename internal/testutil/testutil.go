@@ -123,10 +123,11 @@ func createSchema(db *sql.DB) error {
 		
 		CREATE TABLE IF NOT EXISTS invoice (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			invoice_num INTEGER,
 			project_id INTEGER NOT NULL,
 			invoice_date DATE NOT NULL,
 			date_paid DATE NULL,
-			payment_terms TEXT NOT NULL,
+			payment_terms TEXT NULL,
 			amount_due DECIMAL(10,2) NOT NULL,
 			display_details BOOLEAN NOT NULL DEFAULT false,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

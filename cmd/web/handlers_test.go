@@ -1263,6 +1263,28 @@ func TestTimesheetCreate(t *testing.T) {
 		assert.Contains(t, body, `value="95.75"`) // Hourly rate from project
 	})
 
+	t.Run("timesheet form defaults description to project name", func(t *testing.T) {
+		testDB.TruncateTable(t, "timesheet")
+		testDB.TruncateTable(t, "project")
+		testDB.TruncateTable(t, "client")
+
+		// Insert test client and project with a specific name
+		clientID := testDB.InsertTestClient(t, "Test Client")
+		projectID := testDB.InsertTestProject(t, "My Awesome Project", clientID)
+
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/project/%d/timesheet/create", projectID), nil)
+		req.SetPathValue("id", strconv.Itoa(projectID))
+		rr := httptest.NewRecorder()
+
+		app.timesheetCreate(rr, req)
+
+		assert.Equal(t, http.StatusOK, rr.Code)
+		body := rr.Body.String()
+
+		// Check that description defaults to project name
+		assert.Contains(t, body, `value="My Awesome Project"`)
+	})
+
 	t.Run("timesheet create for non-existent project", func(t *testing.T) {
 		testDB.TruncateTable(t, "project")
 
