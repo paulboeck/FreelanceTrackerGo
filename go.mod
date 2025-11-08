@@ -9,6 +9,7 @@ require (
 	github.com/chromedp/chromedp v0.14.1
 	github.com/go-playground/form/v4 v4.2.1
 	github.com/go-rod/rod v0.116.2
+	github.com/go-sql-driver/mysql v1.9.2
 	github.com/justinas/alice v1.2.0
 	github.com/pressly/goose/v3 v3.24.3
 	github.com/stretchr/testify v1.10.0
@@ -31,7 +32,6 @@ require (
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
 	github.com/go-json-experiment/json v0.0.0-20250725192818-e39067aee2d2 // indirect
-	github.com/go-sql-driver/mysql v1.9.2 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect

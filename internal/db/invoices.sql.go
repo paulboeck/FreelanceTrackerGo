@@ -34,9 +34,9 @@ type GetInvoiceRow struct {
 	ProjectID      int64         `json:"project_id"`
 	InvoiceDate    time.Time     `json:"invoice_date"`
 	DatePaid       interface{}   `json:"date_paid"`
-	PaymentTerms   string        `json:"payment_terms"`
+	PaymentTerms   interface{}   `json:"payment_terms"`
 	AmountDue      float64       `json:"amount_due"`
-	DisplayDetails bool          `json:"display_details"`
+	DisplayDetails int64         `json:"display_details"`
 	UpdatedAt      time.Time     `json:"updated_at"`
 	CreatedAt      time.Time     `json:"created_at"`
 	DeletedAt      interface{}   `json:"deleted_at"`
@@ -87,9 +87,9 @@ type GetInvoiceComprehensiveForPDFRow struct {
 	ProjectID               int64           `json:"project_id"`
 	InvoiceDate             time.Time       `json:"invoice_date"`
 	DatePaid                interface{}     `json:"date_paid"`
-	PaymentTerms            string          `json:"payment_terms"`
+	PaymentTerms            interface{}     `json:"payment_terms"`
 	AmountDue               float64         `json:"amount_due"`
-	DisplayDetails          bool            `json:"display_details"`
+	DisplayDetails          int64           `json:"display_details"`
 	UpdatedAt               time.Time       `json:"updated_at"`
 	CreatedAt               time.Time       `json:"created_at"`
 	DeletedAt               interface{}     `json:"deleted_at"`
@@ -186,9 +186,9 @@ type GetInvoiceForPDFRow struct {
 	ProjectID      int64         `json:"project_id"`
 	InvoiceDate    time.Time     `json:"invoice_date"`
 	DatePaid       interface{}   `json:"date_paid"`
-	PaymentTerms   string        `json:"payment_terms"`
+	PaymentTerms   interface{}   `json:"payment_terms"`
 	AmountDue      float64       `json:"amount_due"`
-	DisplayDetails bool          `json:"display_details"`
+	DisplayDetails int64         `json:"display_details"`
 	UpdatedAt      time.Time     `json:"updated_at"`
 	CreatedAt      time.Time     `json:"created_at"`
 	DeletedAt      interface{}   `json:"deleted_at"`
@@ -230,9 +230,9 @@ type GetInvoicesByProjectRow struct {
 	ProjectID      int64         `json:"project_id"`
 	InvoiceDate    time.Time     `json:"invoice_date"`
 	DatePaid       interface{}   `json:"date_paid"`
-	PaymentTerms   string        `json:"payment_terms"`
+	PaymentTerms   interface{}   `json:"payment_terms"`
 	AmountDue      float64       `json:"amount_due"`
-	DisplayDetails bool          `json:"display_details"`
+	DisplayDetails int64         `json:"display_details"`
 	UpdatedAt      time.Time     `json:"updated_at"`
 	CreatedAt      time.Time     `json:"created_at"`
 	DeletedAt      interface{}   `json:"deleted_at"`
@@ -300,9 +300,9 @@ type GetPaidInvoicesForYearRow struct {
 	ProjectID      int64         `json:"project_id"`
 	InvoiceDate    time.Time     `json:"invoice_date"`
 	DatePaid       interface{}   `json:"date_paid"`
-	PaymentTerms   string        `json:"payment_terms"`
+	PaymentTerms   interface{}   `json:"payment_terms"`
 	AmountDue      float64       `json:"amount_due"`
-	DisplayDetails bool          `json:"display_details"`
+	DisplayDetails int64         `json:"display_details"`
 	UpdatedAt      time.Time     `json:"updated_at"`
 	CreatedAt      time.Time     `json:"created_at"`
 	DeletedAt      interface{}   `json:"deleted_at"`
@@ -356,9 +356,9 @@ type InsertInvoiceParams struct {
 	ProjectID      int64       `json:"project_id"`
 	InvoiceDate    time.Time   `json:"invoice_date"`
 	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
+	PaymentTerms   interface{} `json:"payment_terms"`
 	AmountDue      float64     `json:"amount_due"`
-	DisplayDetails bool        `json:"display_details"`
+	DisplayDetails int64       `json:"display_details"`
 }
 
 func (q *Queries) InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error) {
@@ -385,9 +385,9 @@ WHERE id = ? AND deleted_at IS NULL
 type UpdateInvoiceParams struct {
 	InvoiceDate    time.Time   `json:"invoice_date"`
 	DatePaid       interface{} `json:"date_paid"`
-	PaymentTerms   string      `json:"payment_terms"`
+	PaymentTerms   interface{} `json:"payment_terms"`
 	AmountDue      float64     `json:"amount_due"`
-	DisplayDetails bool        `json:"display_details"`
+	DisplayDetails int64       `json:"display_details"`
 	ID             int64       `json:"id"`
 }
 
