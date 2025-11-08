@@ -11,7 +11,7 @@ primary_region = 'ord'
 [[mounts]]
   source = 'freelance_demo_data'
   destination = '/data'
-  initial_size = '512mb'
+  initial_size = '1gb'
 
 [http_service]
   internal_port = 8080

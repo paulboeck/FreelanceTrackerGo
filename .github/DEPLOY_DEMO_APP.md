@@ -19,30 +19,7 @@ The demo app is a separate instance with:
 flyctl apps create freelance-tracker-demo --org personal
 ```
 
-### Step 2: Create the Volume
-
-```bash
-# Create a 512MB volume for the demo database
-flyctl volumes create freelance_demo_data \
-  --region ord \
-  --size 512 \
-  --app freelance-tracker-demo
-```
-
-**Note:** The volume name must match the `source` in `fly.demo.toml` (`freelance_demo_data`).
-
-### Step 3: Verify Configuration
-
-Check that `fly.demo.toml` references the correct volume:
-
-```toml
-[[mounts]]
-  source = 'freelance_demo_data'
-  destination = '/data'
-  initial_size = '512mb'
-```
-
-### Step 4: Initial Deployment
+### Step 2: Initial Deployment
 
 Deploy the demo app for the first time:
 
@@ -57,7 +34,7 @@ This will:
 - Create a fresh SQLite database on the volume
 - Run database migrations automatically
 
-### Step 5: Verify Deployment
+### Step 3: Verify Deployment
 
 ```bash
 # Check app status
