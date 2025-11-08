@@ -6,7 +6,7 @@ This guide explains how to set up and deploy the demo instance of FreelanceTrack
 
 The demo app is a separate instance with:
 - **App name:** `freelance-tracker-demo`
-- **Volume:** `freelance_demo_data` (512MB)
+- **Volume:** `freelance_demo_data` (1GB)
 - **Configuration:** `fly.demo.toml`
 - **Auto-deploy:** Pushes to `main` branch trigger deployment (both production and demo deploy together)
 
@@ -211,7 +211,7 @@ The demo app has identical configuration to production except:
 |---------|------------|------|
 | App name | `freelance-tracker` | `freelance-tracker-demo` |
 | Volume name | `freelance_data` | `freelance_demo_data` |
-| Volume size | 1GB | 512MB |
+| Volume size | 1GB | 1GB |
 | Auto-deploy branch | `main` | `main` |
 | Config file | `fly.toml` | `fly.demo.toml` |
 
