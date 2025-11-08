@@ -2,13 +2,17 @@
 
 name: Fly Deploy Demo
 on:
-  push:
+  workflow_run:
+    workflows: ["Test"]
+    types:
+      - completed
     branches:
       - main
 jobs:
   deploy:
     name: Deploy demo app
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     concurrency: deploy-demo-group    # optional: ensure only one action runs at a time
     steps:
       - uses: actions/checkout@v4
