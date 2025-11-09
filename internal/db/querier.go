@@ -11,12 +11,17 @@ import (
 type Querier interface {
 	AssignPermissionToRole(ctx context.Context, arg AssignPermissionToRoleParams) error
 	AssignRoleToUser(ctx context.Context, arg AssignRoleToUserParams) error
+	CountAPIKeysByUserID(ctx context.Context, userID int64) (int64, error)
 	DeleteClient(ctx context.Context, id int64) error
 	DeleteInvoice(ctx context.Context, id int64) error
 	DeleteProject(ctx context.Context, id int64) error
 	DeleteRole(ctx context.Context, id int64) error
 	DeleteTimesheet(ctx context.Context, id int64) error
 	DeleteUser(ctx context.Context, id int64) error
+	GetAPIKeyByHash(ctx context.Context, keyHash string) (ApiKey, error)
+	GetAPIKeyByID(ctx context.Context, id int64) (ApiKey, error)
+	GetAPIKeysByPrefix(ctx context.Context, keyPrefix string) ([]ApiKey, error)
+	GetAPIKeysByUserID(ctx context.Context, userID int64) ([]ApiKey, error)
 	GetAllClients(ctx context.Context) ([]GetAllClientsRow, error)
 	GetAllPermissions(ctx context.Context) ([]Permission, error)
 	GetAllProjectsWithClient(ctx context.Context) ([]GetAllProjectsWithClientRow, error)
@@ -47,6 +52,7 @@ type Querier interface {
 	GetUserByID(ctx context.Context, id int64) (GetUserByIDRow, error)
 	GetUserPermissions(ctx context.Context, userID int64) ([]Permission, error)
 	GetUserRoles(ctx context.Context, userID int64) ([]Role, error)
+	InsertAPIKey(ctx context.Context, arg InsertAPIKeyParams) (int64, error)
 	InsertClient(ctx context.Context, arg InsertClientParams) (int64, error)
 	InsertInvoice(ctx context.Context, arg InsertInvoiceParams) (int64, error)
 	InsertProject(ctx context.Context, arg InsertProjectParams) (int64, error)
@@ -61,6 +67,9 @@ type Querier interface {
 	SearchClientsWithPagination(ctx context.Context, arg SearchClientsWithPaginationParams) ([]SearchClientsWithPaginationRow, error)
 	SearchProjectsCount(ctx context.Context, arg SearchProjectsCountParams) (int64, error)
 	SearchProjectsWithClientPagination(ctx context.Context, arg SearchProjectsWithClientPaginationParams) ([]SearchProjectsWithClientPaginationRow, error)
+	SoftDeleteAPIKey(ctx context.Context, id int64) error
+	UpdateAPIKey(ctx context.Context, arg UpdateAPIKeyParams) error
+	UpdateAPIKeyLastUsed(ctx context.Context, id int64) error
 	UpdateClient(ctx context.Context, arg UpdateClientParams) error
 	UpdateInvoice(ctx context.Context, arg UpdateInvoiceParams) error
 	UpdateInvoiceNum(ctx context.Context, arg UpdateInvoiceNumParams) error

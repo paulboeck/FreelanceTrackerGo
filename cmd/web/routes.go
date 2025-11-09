@@ -99,6 +99,11 @@ func (app *application) routes() http.Handler {
 	// Logout route (no special permission required, just authentication)
 	mux.Handle("GET /user/logout", protected.ThenFunc(app.userLogout))
 
+	// REST API routes (separate router with JWT/API key authentication)
+	// The API routes are handled by their own router with different authentication
+	apiRouter := app.apiRoutes(app.apiKeys)
+	mux.Handle("/api/", http.StripPrefix("", apiRouter))
+
 	// Create the standard middleware chain that wraps ALL routes
 	// Order matters: recoverPanic runs first (outermost), then logRequest, then commonHeaders
 	standardChain := alice.New(app.recoverPanic, app.logRequest, commonHeaders)

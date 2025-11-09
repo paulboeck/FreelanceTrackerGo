@@ -167,6 +167,23 @@ func createSchema(db *sql.DB) error {
 		
 		CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);
 
+		CREATE TABLE IF NOT EXISTS api_keys (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER NOT NULL REFERENCES user(id),
+			name TEXT NOT NULL,
+			key_hash TEXT NOT NULL UNIQUE,
+			key_prefix TEXT NOT NULL,
+			scopes TEXT NOT NULL,
+			last_used_at TIMESTAMP,
+			created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			updated TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+			deleted_at TIMESTAMP
+		);
+
+		CREATE INDEX IF NOT EXISTS idx_api_keys_user_id ON api_keys(user_id);
+		CREATE INDEX IF NOT EXISTS idx_api_keys_key_hash ON api_keys(key_hash);
+		CREATE INDEX IF NOT EXISTS idx_api_keys_deleted_at ON api_keys(deleted_at);
+
 		INSERT OR IGNORE INTO setting (key, value, data_type, description) VALUES
 			('default_hourly_rate', '85.00', 'decimal', 'Default hourly rate for new projects'),
 			('invoice_title', 'Invoice for Academic Editing', 'string', 'Title displayed on generated invoices'),
@@ -304,6 +321,31 @@ func (td *TestDatabase) InsertTestInvoiceWithTime(t *testing.T, projectID int, i
 
 	result, err := td.DB.Exec("INSERT INTO invoice (project_id, invoice_date, date_paid, payment_terms, amount_due, display_details) VALUES (?, ?, ?, ?, ?, ?)",
 		projectID, invoiceDate.Format("2006-01-02"), datePaidParam, paymentTerms, amountDue, displayDetails)
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	return int(id)
+}
+
+// InsertTestUser inserts a test user and returns its ID
+// The password is hashed using bcrypt before insertion
+func (td *TestDatabase) InsertTestUser(t *testing.T, name, email, hashedPassword string) int {
+	result, err := td.DB.Exec("INSERT INTO user (name, email, hashed_password) VALUES (?, ?, ?)",
+		name, email, hashedPassword)
+	require.NoError(t, err)
+
+	id, err := result.LastInsertId()
+	require.NoError(t, err)
+
+	return int(id)
+}
+
+// InsertTestAPIKey inserts a test API key and returns its ID
+func (td *TestDatabase) InsertTestAPIKey(t *testing.T, userID int, name, keyHash, keyPrefix, scopes string) int {
+	result, err := td.DB.Exec("INSERT INTO api_keys (user_id, name, key_hash, key_prefix, scopes) VALUES (?, ?, ?, ?, ?)",
+		userID, name, keyHash, keyPrefix, scopes)
 	require.NoError(t, err)
 
 	id, err := result.LastInsertId()

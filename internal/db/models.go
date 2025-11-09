@@ -9,6 +9,19 @@ import (
 	"time"
 )
 
+type ApiKey struct {
+	ID         int64        `json:"id"`
+	UserID     int64        `json:"user_id"`
+	Name       string       `json:"name"`
+	KeyHash    string       `json:"key_hash"`
+	KeyPrefix  string       `json:"key_prefix"`
+	Scopes     string       `json:"scopes"`
+	LastUsedAt sql.NullTime `json:"last_used_at"`
+	Created    time.Time    `json:"created"`
+	Updated    time.Time    `json:"updated"`
+	DeletedAt  sql.NullTime `json:"deleted_at"`
+}
+
 type Client struct {
 	ID                      int64          `json:"id"`
 	Name                    string         `json:"name"`
