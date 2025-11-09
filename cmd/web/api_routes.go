@@ -258,6 +258,49 @@ func (app *application) apiRoutes(apiKeyModel *models.APIKeyModel) http.Handler 
 		api.RateLimitMiddleware(rateLimiter),
 	))
 
+	// ========================================
+	// Utility endpoints (no authentication)
+	// ========================================
+
+	// Health check endpoint for monitoring and deployment
+	router.GET("/health", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"healthy","version":"1.0.0"}`))
+	})
+
+	// API documentation endpoint
+	router.GET("/api/docs", func(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>FreelanceTracker API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            window.ui = SwaggerUIBundle({
+                url: "https://raw.githubusercontent.com/yourusername/freelancetracker/main/docs/openapi.yaml",
+                dom_id: '#swagger-ui',
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                layout: "StandaloneLayout"
+            });
+        };
+    </script>
+</body>
+</html>`))
+	})
+
 	// Wrap router with CORS middleware
 	return api.CORSMiddleware(corsConfig)(router)
 }
