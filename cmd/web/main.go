@@ -35,6 +35,7 @@ type application struct {
 	users          models.UserModelInterface          // Interface for user database operations
 	roles          models.RoleModelInterface          // Interface for role database operations
 	permissions    models.PermissionModelInterface    // Interface for permission database operations
+	apiKeys        *models.APIKeyModel                // API key model for REST API authentication
 	emailService   *email.Service                     // Email service for sending invoices
 	templateCache  map[string]*template.Template      // Cache of compiled HTML templates (map is like a dictionary: key -> value)
 	formDecoder    *form.Decoder                      // Decoder for parsing HTML form data into Go structs
@@ -152,6 +153,7 @@ func main() {
 	userModel := models.NewUserModel(db)
 	roleModel := models.NewRoleModel(db)
 	permissionModel := models.NewPermissionModel(db)
+	apiKeyModel := models.NewAPIKeyModel(db)
 	logger.Info("Using SQLite models")
 
 	// Initialize email service for sending invoices
@@ -171,6 +173,7 @@ func main() {
 		timesheets:     timesheetModel,
 		invoices:       invoiceModel,
 		settings:       settingModel,
+		apiKeys:        apiKeyModel,
 		emailService:   emailService,
 		templateCache:  templateCache,
 		formDecoder:    formDecoder,

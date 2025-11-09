@@ -108,6 +108,226 @@ Authentication is currently disabled. To re-enable:
 1. Remove `display:none` property of nav div in main.css
 2. Uncomment `IsAuthenticated` in helpers.go.
 
+## REST API
+
+FreelanceTrackerGo includes a comprehensive REST API for programmatic access to all functionality. The API uses OAuth 2.0-style scope-based permissions, rate limiting, and versioned endpoints.
+
+### API Features
+
+- **Versioned API**: All endpoints are under `/api/v1/` for stability
+- **API Key Authentication**: Secure Bearer token authentication with bcrypt hashing
+- **Scope-Based Permissions**: Fine-grained control with OAuth 2.0-style scopes (e.g., `clients:read`, `invoices:write`)
+- **Rate Limiting**: 100 requests per minute per API key with token bucket algorithm
+- **CORS Support**: Configurable cross-origin resource sharing for browser clients
+- **Standard JSON Responses**: Consistent response format with metadata and error handling
+- **Pagination**: List endpoints support `page`, `pageSize`, and `search` query parameters
+
+### Quick Start
+
+1. **Login to get an API key:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"changeme"}'
+```
+
+Response:
+```json
+{
+  "data": {
+    "apiKey": "ftk_abc123...",
+    "keyId": 1,
+    "name": "Login 2025-01-01 10:00:00",
+    "scopes": "*",
+    "userId": 1
+  }
+}
+```
+
+2. **Use the API key to access protected endpoints:**
+```bash
+curl -X GET http://localhost:8080/api/v1/clients \
+  -H "Authorization: Bearer ftk_abc123..."
+```
+
+### Available Endpoints
+
+#### Authentication & API Keys
+- `POST /api/v1/auth/login` - Login and create API key
+- `POST /api/v1/auth/apikeys` - Create new API key (requires `apikeys:write`)
+- `GET /api/v1/auth/apikeys` - List your API keys (requires `apikeys:read`)
+- `DELETE /api/v1/auth/apikeys/:id` - Delete API key (requires `apikeys:write`)
+
+#### Clients
+- `GET /api/v1/clients` - List clients with pagination
+- `GET /api/v1/clients/:id` - Get client details
+- `POST /api/v1/clients` - Create new client
+- `PUT /api/v1/clients/:id` - Update client
+- `DELETE /api/v1/clients/:id` - Delete client
+- `GET /api/v1/clients/:id/projects` - Get client's projects
+- `GET /api/v1/clients/:id/hourlyrate` - Get client's hourly rate
+
+#### Projects
+- `GET /api/v1/projects` - List projects with pagination
+- `GET /api/v1/projects/:id` - Get project details
+- `POST /api/v1/projects` - Create new project
+- `PUT /api/v1/projects/:id` - Update project
+- `PATCH /api/v1/projects/:id/status` - Update project status only
+- `DELETE /api/v1/projects/:id` - Delete project
+- `GET /api/v1/projects/:id/timesheets` - Get project's timesheets
+- `GET /api/v1/projects/:id/invoices` - Get project's invoices
+
+#### Timesheets
+- `GET /api/v1/timesheets/:id` - Get timesheet details
+- `POST /api/v1/projects/:id/timesheets` - Create timesheet for project
+- `PUT /api/v1/timesheets/:id` - Update timesheet
+- `DELETE /api/v1/timesheets/:id` - Delete timesheet
+
+#### Invoices
+- `GET /api/v1/invoices/:id` - Get invoice details
+- `POST /api/v1/projects/:id/invoices` - Create invoice for project
+- `PUT /api/v1/invoices/:id` - Update invoice
+- `DELETE /api/v1/invoices/:id` - Delete invoice
+- `GET /api/v1/invoices/:id/pdf` - Generate PDF for invoice
+- `POST /api/v1/invoices/:id/email` - Email invoice to client
+
+#### Reports
+- `GET /api/v1/reports/income` - Get income report (monthly breakdown)
+
+#### Settings
+- `GET /api/v1/settings` - Get all settings
+- `GET /api/v1/settings/:key` - Get specific setting
+- `PUT /api/v1/settings` - Update all settings
+- `PUT /api/v1/settings/:key` - Update specific setting
+
+### API Scopes
+
+Scopes control what actions an API key can perform:
+
+- `*` - Full access to all endpoints
+- `apikeys:read`, `apikeys:write` - Manage API keys
+- `clients:read`, `clients:write` - Access client data
+- `projects:read`, `projects:write` - Access project data
+- `timesheets:read`, `timesheets:write` - Access timesheet data
+- `invoices:read`, `invoices:write` - Access invoice data
+- `reports:read` - Access financial reports
+- `settings:read`, `settings:write` - Access application settings
+
+Scopes support wildcards: `clients:*` grants both `clients:read` and `clients:write`.
+
+### Usage Examples
+
+**Create a client:**
+```bash
+curl -X POST http://localhost:8080/api/v1/clients \
+  -H "Authorization: Bearer ftk_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Acme Corp",
+    "email": "contact@acme.com",
+    "hourlyRate": 150.00
+  }'
+```
+
+**List clients with pagination:**
+```bash
+curl -X GET "http://localhost:8080/api/v1/clients?page=1&pageSize=20&search=acme" \
+  -H "Authorization: Bearer ftk_abc123..."
+```
+
+**Create a project:**
+```bash
+curl -X POST http://localhost:8080/api/v1/projects \
+  -H "Authorization: Bearer ftk_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Website Redesign",
+    "clientId": 1,
+    "status": "active",
+    "hourlyRate": 150.00,
+    "deadline": "2025-12-31"
+  }'
+```
+
+**Generate invoice PDF:**
+```bash
+curl -X GET http://localhost:8080/api/v1/invoices/1/pdf \
+  -H "Authorization: Bearer ftk_abc123..." \
+  -o invoice_1.pdf
+```
+
+**Email invoice to client:**
+```bash
+curl -X POST http://localhost:8080/api/v1/invoices/1/email \
+  -H "Authorization: Bearer ftk_abc123..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "client@example.com",
+    "subject": "Invoice #1001",
+    "body": "Please find attached your invoice."
+  }'
+```
+
+### Error Handling
+
+The API returns standard error responses:
+
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Validation failed",
+    "details": {
+      "name": "Name is required",
+      "email": "Invalid email format"
+    }
+  }
+}
+```
+
+Error codes:
+- `VALIDATION_ERROR` - Invalid request data
+- `UNAUTHORIZED` - Missing or invalid API key
+- `FORBIDDEN` - Insufficient permissions (scope check failed)
+- `NOT_FOUND` - Resource not found
+- `RATE_LIMIT_EXCEEDED` - Too many requests
+- `INTERNAL_ERROR` - Server error
+
+### Rate Limiting
+
+Each API key is limited to 100 requests per minute. When rate limited, you'll receive:
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMIT_EXCEEDED",
+    "message": "Rate limit exceeded. Please try again later."
+  }
+}
+```
+
+HTTP Status: 429 Too Many Requests
+
+### Testing the API
+
+```bash
+# Test authentication
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"admin@example.com","password":"changeme"}'
+
+# Test client listing
+export API_KEY="ftk_your_key_here"
+curl -X GET http://localhost:8080/api/v1/clients \
+  -H "Authorization: Bearer $API_KEY"
+
+# Test with invalid key (should return 401)
+curl -X GET http://localhost:8080/api/v1/clients \
+  -H "Authorization: Bearer invalid_key"
+```
+
+For a complete list of endpoints and implementation details, see [CLAUDE.md](CLAUDE.md).
+
 ## Development
 
 FreelanceTrackerGo uses a modern, reproducible build system with Make, Docker, and GitHub Actions.
