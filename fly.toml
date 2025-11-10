@@ -26,6 +26,14 @@ primary_region = 'ord'
     hard_limit = 25
     soft_limit = 20
 
+  # Health check configuration
+  [[http_service.checks]]
+    grace_period = "10s"
+    interval = "30s"
+    method = "GET"
+    timeout = "5s"
+    path = "/health"
+
 [[vm]]
   memory = '256mb'
   cpu_kind = 'shared'
